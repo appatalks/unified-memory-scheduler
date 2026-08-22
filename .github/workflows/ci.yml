@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake --preset cpu-release
+      - name: Build
+        run: cmake --build --preset cpu-release --parallel
+      - name: Test
+        run: ctest --preset cpu-release

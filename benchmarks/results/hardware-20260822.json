@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-22T15:11:11Z",
+  "system": {
+    "cpu_model": "AMD Ryzen 9 9950X 16-Core Processor",
+    "physical_core_count": 16,
+    "logical_cpu_count": 32,
+    "ram_total_bytes": 132581761024,
+    "ram_available_bytes": 115819589632,
+    "numa_nodes": "0",
+    "numa_topology": "node0 CPUs 0-31",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "kernel": "6.12.86+deb13-amd64",
+    "hugepages_total": 0,
+    "hugepages_free": 0,
+    "hugepage_size_bytes": 2097152,
+    "iommu_groups_detected": true,
+    "iommu_command_line": ""
+  },
+  "cuda": {
+    "available": true,
+    "error": "",
+    "runtime_version": 13010,
+    "driver_version": 13020,
+    "nvidia_driver_version": "595.58.03",
+    "devices": [
+      {"index": 0, "name": "NVIDIA GeForce RTX 5070 Ti", "compute_major": 12, "compute_minor": 0, "vram_total_bytes": 16587751424, "vram_free_bytes": 15255994368, "pci_bus_id": "0000:01:00.0", "pcie_generation_current": 5, "pcie_generation_max": 5, "pcie_width_current": 8, "pcie_width_max": 16, "pcie_theoretical_gb_per_second": 31.507696, "vram_theoretical_gb_per_second": 896.064, "resizable_bar_status": "enabled (16.00 GiB aperture), kernel mask 0000000000007fc0"}
+    ]
+  },
+  "benchmarks": [
+    {"name": "ram_sequential_write", "direction": "cpu_to_ram", "memory_kind": "pageable", "bytes": 268435456, "iterations": 5, "seconds": 0.066666143, "gb_per_second": 20.13281734, "available": true, "error": ""},
+    {"name": "ram_sequential_read", "direction": "ram_to_cpu", "memory_kind": "pageable", "bytes": 268435456, "iterations": 5, "seconds": 0.031835209, "gb_per_second": 42.16015293, "available": true, "error": ""},
+    {"name": "pageable_ram_to_gpu", "direction": "host_to_device", "memory_kind": "pageable", "bytes": 268435456, "iterations": 5, "seconds": 0.092134202, "gb_per_second": 14.56763342, "available": true, "error": ""},
+    {"name": "pinned_ram_to_gpu", "direction": "host_to_device", "memory_kind": "pinned", "bytes": 268435456, "iterations": 5, "seconds": 0.047061603, "gb_per_second": 28.51958273, "available": true, "error": ""},
+    {"name": "gpu_to_pageable_ram", "direction": "device_to_host", "memory_kind": "pageable", "bytes": 268435456, "iterations": 5, "seconds": 0.099461375, "gb_per_second": 13.49445732, "available": true, "error": ""},
+    {"name": "gpu_to_pinned_ram", "direction": "device_to_host", "memory_kind": "pinned", "bytes": 268435456, "iterations": 5, "seconds": 0.047004617, "gb_per_second": 28.55415841, "available": true, "error": ""},
+    {"name": "gpu_vram_copy", "direction": "device_to_device", "memory_kind": "device", "bytes": 268435456, "iterations": 5, "seconds": 0.00360439, "gb_per_second": 372.3729341, "available": true, "error": ""}
+  ]
+}

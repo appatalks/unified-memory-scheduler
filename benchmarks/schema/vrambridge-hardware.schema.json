@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vrambridge.dev/schema/vrambridge-hardware-v1.json",
+  "title": "VRAMBridge hardware and bandwidth report",
+  "type": "object",
+  "required": ["schema_version", "generated_at_utc", "system", "cuda", "benchmarks"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "generated_at_utc": { "type": "string" },
+    "system": {
+      "type": "object",
+      "required": ["cpu_model", "physical_core_count", "logical_cpu_count", "ram_total_bytes", "ram_available_bytes", "numa_nodes", "os", "kernel"]
+    },
+    "cuda": {
+      "type": "object",
+      "required": ["available", "runtime_version", "driver_version", "nvidia_driver_version", "devices"]
+    },
+    "benchmarks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "direction", "memory_kind", "bytes", "iterations", "seconds", "gb_per_second", "available"]
+      }
+    }
+  }
+}

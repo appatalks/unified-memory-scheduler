@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vrambridge.dev/schema/vrambridge-benchmark-v1.json",
+  "title": "VRAMBridge llama.cpp benchmark result",
+  "type": "object",
+  "required": ["schema_version", "created_at_utc", "host", "model", "backend", "parameters", "runs"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "created_at_utc": { "type": "string" },
+    "host": {
+      "type": "object",
+      "required": ["hostname", "platform", "python"]
+    },
+    "model": {
+      "type": "object",
+      "required": ["path", "size_bytes", "sha256_first_last_mib"]
+    },
+    "backend": {
+      "type": "object",
+      "required": ["llama_bench", "llama_cpp_commit"]
+    },
+    "parameters": { "type": "object" },
+    "runs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "command", "environment", "status"],
+        "properties": {
+          "name": { "type": "string" },
+          "command": { "type": "array", "items": { "type": "string" } },
+          "environment": { "type": "object", "additionalProperties": { "type": "string" } },
+          "status": { "enum": ["planned", "ok", "failed"] },
+          "measurements": {},
+          "return_code": { "type": "integer" },
+          "stdout": { "type": "string" },
+          "stderr": { "type": "string" }
+        }
+      }
+    }
+  }
+}
