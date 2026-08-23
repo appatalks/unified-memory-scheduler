@@ -19,6 +19,8 @@ The first measured baseline is complete: for a 44.34 GB dense Qwen2 model on a 1
 
 Sparse MoE has a materially different feasibility boundary: the local 36.90 GB Qwen3.6-35B-A3B Q8_0 model generates at 41.41 tok/s with static GPU/CPU expert placement, while the full-GPU gpt-oss-20b MXFP4 reaches 217.18 tok/s. See [docs/research/frontier-moe-feasibility.md](docs/research/frontier-moe-feasibility.md) for the measured placement, active-expert accounting, and follow-up experiments.
 
+The reviewed result index is [benchmarks/RESULTS.md](benchmarks/RESULTS.md). It links committed evidence and retains invalid-command artifacts that affected later experiment definitions.
+
 ## Build
 
 Requirements are CMake 3.24+, a C++20 compiler, and optionally the CUDA toolkit.
