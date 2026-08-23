@@ -54,3 +54,5 @@ Device-to-device copy reports payload bytes divided by elapsed time. GDDR theore
 ## Measured Baseline
 
 The first 78B dense-model matrix and bottleneck analysis are recorded in [research/baseline-calme-78b.md](research/baseline-calme-78b.md). It combines only successful comparable slices while retaining the original invalid CPU and failed Unified Memory attempts as evidence.
+
+The local frontier-MoE matrix is recorded in [research/frontier-moe-feasibility.md](research/frontier-moe-feasibility.md). It measures full-GPU, static CPU-expert, and automatic GPU/CPU expert placement through the same llama.cpp benchmark and telemetry path.

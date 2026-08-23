@@ -1,0 +1,558 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-08-23T14:33:47Z",
+  "host": {
+    "hostname": "mj420",
+    "platform": "Linux-6.12.86+deb13-amd64-x86_64-with-glibc2.41",
+    "python": "3.13.5"
+  },
+  "model": {
+    "path": "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
+    "size_bytes": 14583005504,
+    "sha256_first_last_mib": "ff04b7a0f3feae4f89be5ce396f3c94dd91271a9555ec6029dada42682f0b240"
+  },
+  "backend": {
+    "llama_bench": "/tmp/vrambridge-llama-build/bin/llama-bench",
+    "llama_cpp_commit": "b21e4de74567f5eef213765c9476a843c2e43f0d"
+  },
+  "parameters": {
+    "prompt_tokens": 512,
+    "generation_tokens": 32,
+    "repetitions": 3,
+    "fit_target_mib": 1024,
+    "fit_context": 4096
+  },
+  "runs": [
+    {
+      "name": "auto-fit",
+      "command": [
+        "/tmp/vrambridge-llama-build/bin/llama-bench",
+        "-m",
+        "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
+        "-p",
+        "512",
+        "-n",
+        "32",
+        "-r",
+        "3",
+        "-o",
+        "json",
+        "-fitt",
+        "1024",
+        "-fitc",
+        "4096"
+      ],
+      "command_shell": "/tmp/vrambridge-llama-build/bin/llama-bench -m /media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf -p 512 -n 32 -r 3 -o json -fitt 1024 -fitc 4096",
+      "environment": {},
+      "status": "ok",
+      "started_at_utc": "2026-08-23T14:33:47Z",
+      "duration_seconds": 7.127591105000192,
+      "estimated_load_and_warmup_seconds": 2.0,
+      "return_code": 0,
+      "measurements": [
+        {
+          "build_commit": "b21e4de74",
+          "build_number": 10586,
+          "cpu_info": "AMD Ryzen 9 9950X 16-Core Processor",
+          "gpu_info": "NVIDIA GeForce RTX 5070 Ti",
+          "backends": "CUDA",
+          "model_filename": "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
+          "model_type": "qwen3moe 30B.A3B Q3_K - Large",
+          "model_size": 14577033216,
+          "model_n_params": 30532122624,
+          "n_batch": 2048,
+          "n_ubatch": 512,
+          "n_threads": 16,
+          "cpu_mask": "0x0",
+          "cpu_strict": false,
+          "poll": 50,
+          "type_k": "f16",
+          "type_v": "f16",
+          "n_gpu_layers": -1,
+          "n_cpu_moe": 0,
+          "split_mode": "layer",
+          "main_gpu": 0,
+          "no_kv_offload": false,
+          "flash_attn": -1,
+          "devices": "auto",
+          "tensor_split": "0.00",
+          "tensor_buft_overrides": "none",
+          "load_mode": "auto",
+          "embeddings": false,
+          "no_op_offload": 0,
+          "no_host": false,
+          "fit_target": 1024,
+          "fit_min_ctx": 4096,
+          "n_prompt": 512,
+          "n_gen": 0,
+          "n_depth": 0,
+          "test_time": "2026-08-23T14:33:49Z",
+          "avg_ns": 126547658,
+          "stddev_ns": 3835640,
+          "avg_ts": 4048.344514,
+          "stddev_ts": 120.65242,
+          "samples_ns": [
+            130963559,
+            124634674,
+            124044741
+          ],
+          "samples_ts": [
+            3909.48,
+            4108.01,
+            4127.54
+          ]
+        },
+        {
+          "build_commit": "b21e4de74",
+          "build_number": 10586,
+          "cpu_info": "AMD Ryzen 9 9950X 16-Core Processor",
+          "gpu_info": "NVIDIA GeForce RTX 5070 Ti",
+          "backends": "CUDA",
+          "model_filename": "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
+          "model_type": "qwen3moe 30B.A3B Q3_K - Large",
+          "model_size": 14577033216,
+          "model_n_params": 30532122624,
+          "n_batch": 2048,
+          "n_ubatch": 512,
+          "n_threads": 16,
+          "cpu_mask": "0x0",
+          "cpu_strict": false,
+          "poll": 50,
+          "type_k": "f16",
+          "type_v": "f16",
+          "n_gpu_layers": -1,
+          "n_cpu_moe": 0,
+          "split_mode": "layer",
+          "main_gpu": 0,
+          "no_kv_offload": false,
+          "flash_attn": -1,
+          "devices": "auto",
+          "tensor_split": "0.00",
+          "tensor_buft_overrides": "none",
+          "load_mode": "auto",
+          "embeddings": false,
+          "no_op_offload": 0,
+          "no_host": false,
+          "fit_target": 1024,
+          "fit_min_ctx": 4096,
+          "n_prompt": 0,
+          "n_gen": 32,
+          "n_depth": 0,
+          "test_time": "2026-08-23T14:33:52Z",
+          "avg_ns": 156310903,
+          "stddev_ns": 5275240,
+          "avg_ts": 204.873652,
+          "stddev_ts": 6.820871,
+          "samples_ns": [
+            162201610,
+            154708249,
+            152022850
+          ],
+          "samples_ts": [
+            197.285,
+            206.841,
+            210.495
+          ]
+        }
+      ],
+      "telemetry": {
+        "process": {
+          "summary": {
+            "sample_count": 25,
+            "peak_process_rss_bytes": 15242420224,
+            "minimum_system_ram_available_bytes": 116834344960,
+            "whole_process": {
+              "sample_count": 25,
+              "duration_seconds": 6.012060819999988,
+              "peak_process_rss_bytes": 15242420224,
+              "minimum_system_ram_available_bytes": 116834344960,
+              "process_cpu_seconds": 12.23,
+              "average_process_cpu_percent": 203.42442244288583
+            },
+            "resident_phase": {
+              "sample_count": 12,
+              "duration_seconds": 4.259009938999952,
+              "peak_process_rss_bytes": 15242420224,
+              "minimum_system_ram_available_bytes": 116834344960,
+              "process_cpu_seconds": 10.49,
+              "average_process_cpu_percent": 246.3013740339646
+            }
+          },
+          "samples": [
+            {
+              "elapsed_seconds": 0.0007549229999312956,
+              "process_rss_bytes": 24576,
+              "process_cpu_seconds": 0.0,
+              "system_ram_available_bytes": 117392711680
+            },
+            {
+              "elapsed_seconds": 0.25115202999995745,
+              "process_rss_bytes": 312053760,
+              "process_cpu_seconds": 0.23,
+              "system_ram_available_bytes": 117213442048
+            },
+            {
+              "elapsed_seconds": 0.5015988089999155,
+              "process_rss_bytes": 374534144,
+              "process_cpu_seconds": 0.48,
+              "system_ram_available_bytes": 117155446784
+            },
+            {
+              "elapsed_seconds": 0.7519699170002241,
+              "process_rss_bytes": 374935552,
+              "process_cpu_seconds": 0.74,
+              "system_ram_available_bytes": 117154447360
+            },
+            {
+              "elapsed_seconds": 1.0023242010001923,
+              "process_rss_bytes": 374935552,
+              "process_cpu_seconds": 0.98,
+              "system_ram_available_bytes": 117129547776
+            },
+            {
+              "elapsed_seconds": 1.252659284999936,
+              "process_rss_bytes": 375001088,
+              "process_cpu_seconds": 1.24,
+              "system_ram_available_bytes": 117119279104
+            },
+            {
+              "elapsed_seconds": 1.5030236329998843,
+              "process_rss_bytes": 7578787840,
+              "process_cpu_seconds": 1.49,
+              "system_ram_available_bytes": 117102006272
+            },
+            {
+              "elapsed_seconds": 1.7538058039999669,
+              "process_rss_bytes": 14958141440,
+              "process_cpu_seconds": 1.74,
+              "system_ram_available_bytes": 117095100416
+            },
+            {
+              "elapsed_seconds": 2.004466665000109,
+              "process_rss_bytes": 14958141440,
+              "process_cpu_seconds": 1.99,
+              "system_ram_available_bytes": 117096239104
+            },
+            {
+              "elapsed_seconds": 2.255153581000286,
+              "process_rss_bytes": 14958141440,
+              "process_cpu_seconds": 2.25,
+              "system_ram_available_bytes": 117101158400
+            },
+            {
+              "elapsed_seconds": 2.5056182409998655,
+              "process_rss_bytes": 14958141440,
+              "process_cpu_seconds": 2.5,
+              "system_ram_available_bytes": 117105991680
+            },
+            {
+              "elapsed_seconds": 2.755978095000046,
+              "process_rss_bytes": 14991294464,
+              "process_cpu_seconds": 2.81,
+              "system_ram_available_bytes": 116834344960
+            },
+            {
+              "elapsed_seconds": 3.006377681000231,
+              "process_rss_bytes": 14992171008,
+              "process_cpu_seconds": 3.19,
+              "system_ram_available_bytes": 116838563840
+            },
+            {
+              "elapsed_seconds": 3.2567921700001534,
+              "process_rss_bytes": 659382272,
+              "process_cpu_seconds": 3.51,
+              "system_ram_available_bytes": 116857995264
+            },
+            {
+              "elapsed_seconds": 3.5071410280002056,
+              "process_rss_bytes": 659382272,
+              "process_cpu_seconds": 3.76,
+              "system_ram_available_bytes": 116856823808
+            },
+            {
+              "elapsed_seconds": 3.757572339000035,
+              "process_rss_bytes": 659382272,
+              "process_cpu_seconds": 4.0,
+              "system_ram_available_bytes": 116878536704
+            },
+            {
+              "elapsed_seconds": 4.008008536000034,
+              "process_rss_bytes": 659382272,
+              "process_cpu_seconds": 4.26,
+              "system_ram_available_bytes": 116879458304
+            },
+            {
+              "elapsed_seconds": 4.258441143000255,
+              "process_rss_bytes": 659410944,
+              "process_cpu_seconds": 4.52,
+              "system_ram_available_bytes": 117031657472
+            },
+            {
+              "elapsed_seconds": 4.508862790999956,
+              "process_rss_bytes": 7727865856,
+              "process_cpu_seconds": 4.76,
+              "system_ram_available_bytes": 117031047168
+            },
+            {
+              "elapsed_seconds": 4.759526079999887,
+              "process_rss_bytes": 15242420224,
+              "process_cpu_seconds": 5.02,
+              "system_ram_available_bytes": 117018845184
+            },
+            {
+              "elapsed_seconds": 5.010429595000005,
+              "process_rss_bytes": 15242420224,
+              "process_cpu_seconds": 5.27,
+              "system_ram_available_bytes": 117023895552
+            },
+            {
+              "elapsed_seconds": 5.26125769600003,
+              "process_rss_bytes": 15242420224,
+              "process_cpu_seconds": 5.52,
+              "system_ram_available_bytes": 117023145984
+            },
+            {
+              "elapsed_seconds": 5.512098230999982,
+              "process_rss_bytes": 15242420224,
+              "process_cpu_seconds": 5.77,
+              "system_ram_available_bytes": 117033816064
+            },
+            {
+              "elapsed_seconds": 5.7624685250002585,
+              "process_rss_bytes": 14983692288,
+              "process_cpu_seconds": 8.61,
+              "system_ram_available_bytes": 117032329216
+            },
+            {
+              "elapsed_seconds": 6.012815742999919,
+              "process_rss_bytes": 14983692288,
+              "process_cpu_seconds": 12.23,
+              "system_ram_available_bytes": 117016047616
+            }
+          ]
+        },
+        "gpu": {
+          "units": {
+            "pwr": "W",
+            "gtemp": "C",
+            "sm": "percent",
+            "mem": "percent",
+            "fb": "MiB",
+            "bar1": "MiB",
+            "rxpci": "MiB/s",
+            "txpci": "MiB/s"
+          },
+          "summary": {
+            "sample_count": 7,
+            "pwr": {
+              "mean": 74.14285714285714,
+              "max": 142
+            },
+            "gtemp": {
+              "mean": 45.142857142857146,
+              "max": 57
+            },
+            "sm": {
+              "mean": 48.57142857142857,
+              "max": 94
+            },
+            "mem": {
+              "mean": 10.857142857142858,
+              "max": 33
+            },
+            "fb": {
+              "mean": 4967.428571428572,
+              "max": 14603
+            },
+            "bar1": {
+              "mean": 51.142857142857146,
+              "max": 52
+            },
+            "rxpci": {
+              "mean": 4650.857142857143,
+              "max": 16198
+            },
+            "txpci": {
+              "mean": 369.42857142857144,
+              "max": 1218
+            },
+            "resident_phase": {
+              "sample_count": 2,
+              "pwr": {
+                "mean": 56.0,
+                "max": 58
+              },
+              "gtemp": {
+                "mean": 42.5,
+                "max": 43
+              },
+              "sm": {
+                "mean": 81.0,
+                "max": 82
+              },
+              "mem": {
+                "mean": 3.0,
+                "max": 3
+              },
+              "fb": {
+                "mean": 14507.0,
+                "max": 14603
+              },
+              "bar1": {
+                "mean": 52.0,
+                "max": 52
+              },
+              "rxpci": {
+                "mean": 16179.0,
+                "max": 16198
+              },
+              "txpci": {
+                "mean": 1190.0,
+                "max": 1218
+              }
+            }
+          },
+          "samples": [
+            {
+              "Date": 20260823,
+              "Time": "09:33:47",
+              "gpu": 0,
+              "pwr": 39,
+              "gtemp": 41,
+              "mtemp": null,
+              "sm": 15,
+              "mem": 13,
+              "enc": 0,
+              "dec": 0,
+              "jpg": 0,
+              "ofa": 0,
+              "fb": 1002,
+              "bar1": 49,
+              "ccpm": 0,
+              "rxpci": 64,
+              "txpci": 149
+            },
+            {
+              "Date": 20260823,
+              "Time": "09:33:48",
+              "gpu": 0,
+              "pwr": 43,
+              "gtemp": 42,
+              "mtemp": null,
+              "sm": 4,
+              "mem": 1,
+              "enc": 0,
+              "dec": 0,
+              "jpg": 0,
+              "ofa": 0,
+              "fb": 1233,
+              "bar1": 52,
+              "ccpm": 0,
+              "rxpci": 32,
+              "txpci": 8
+            },
+            {
+              "Date": 20260823,
+              "Time": "09:33:49",
+              "gpu": 0,
+              "pwr": 54,
+              "gtemp": 42,
+              "mtemp": null,
+              "sm": 82,
+              "mem": 3,
+              "enc": 0,
+              "dec": 0,
+              "jpg": 0,
+              "ofa": 0,
+              "fb": 14411,
+              "bar1": 52,
+              "ccpm": 0,
+              "rxpci": 16160,
+              "txpci": 1162
+            },
+            {
+              "Date": 20260823,
+              "Time": "09:33:50",
+              "gpu": 0,
+              "pwr": 142,
+              "gtemp": 57,
+              "mtemp": null,
+              "sm": 94,
+              "mem": 22,
+              "enc": 0,
+              "dec": 0,
+              "jpg": 0,
+              "ofa": 0,
+              "fb": 1266,
+              "bar1": 52,
+              "ccpm": 0,
+              "rxpci": 36,
+              "txpci": 11
+            },
+            {
+              "Date": 20260823,
+              "Time": "09:33:51",
+              "gpu": 0,
+              "pwr": 58,
+              "gtemp": 43,
+              "mtemp": null,
+              "sm": 5,
+              "mem": 1,
+              "enc": 0,
+              "dec": 0,
+              "jpg": 0,
+              "ofa": 0,
+              "fb": 1266,
+              "bar1": 52,
+              "ccpm": 0,
+              "rxpci": 32,
+              "txpci": 18
+            },
+            {
+              "Date": 20260823,
+              "Time": "09:33:52",
+              "gpu": 0,
+              "pwr": 58,
+              "gtemp": 43,
+              "mtemp": null,
+              "sm": 80,
+              "mem": 3,
+              "enc": 0,
+              "dec": 0,
+              "jpg": 0,
+              "ofa": 0,
+              "fb": 14603,
+              "bar1": 52,
+              "ccpm": 0,
+              "rxpci": 16198,
+              "txpci": 1218
+            },
+            {
+              "Date": 20260823,
+              "Time": "09:33:53",
+              "gpu": 0,
+              "pwr": 125,
+              "gtemp": 48,
+              "mtemp": null,
+              "sm": 60,
+              "mem": 33,
+              "enc": 0,
+              "dec": 0,
+              "jpg": 0,
+              "ofa": 0,
+              "fb": 991,
+              "bar1": 49,
+              "ccpm": 0,
+              "rxpci": 34,
+              "txpci": 20
+            }
+          ],
+          "stderr": ""
+        }
+      },
+      "parse_error": null,
+      "stdout": "[\n  {\n    \"build_commit\": \"b21e4de74\",\n    \"build_number\": 10586,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf\",\n    \"model_type\": \"qwen3moe 30B.A3B Q3_K - Large\",\n    \"model_size\": 14577033216,\n    \"model_n_params\": 30532122624,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 1024,\n    \"fit_min_ctx\": 4096,\n    \"n_prompt\": 512,\n    \"n_gen\": 0,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-23T14:33:49Z\",\n    \"avg_ns\": 126547658,\n    \"stddev_ns\": 3835640,\n    \"avg_ts\": 4048.344514,\n    \"stddev_ts\": 120.652420,\n    \"samples_ns\": [ 130963559, 124634674, 124044741 ],\n    \"samples_ts\": [ 3909.48, 4108.01, 4127.54 ]\n  },\n  {\n    \"build_commit\": \"b21e4de74\",\n    \"build_number\": 10586,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf\",\n    \"model_type\": \"qwen3moe 30B.A3B Q3_K - Large\",\n    \"model_size\": 14577033216,\n    \"model_n_params\": 30532122624,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 1024,\n    \"fit_min_ctx\": 4096,\n    \"n_prompt\": 0,\n    \"n_gen\": 32,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-23T14:33:52Z\",\n    \"avg_ns\": 156310903,\n    \"stddev_ns\": 5275240,\n    \"avg_ts\": 204.873652,\n    \"stddev_ts\": 6.820871,\n    \"samples_ns\": [ 162201610, 154708249, 152022850 ],\n    \"samples_ts\": [ 197.285, 206.841, 210.495 ]\n  }\n]\n",
+      "stderr": "ggml_cuda_init: found 1 CUDA devices (Total VRAM: 15819 MiB):\n  Device 0: NVIDIA GeForce RTX 5070 Ti, compute capability 12.0, VMM: yes, VRAM: 15819 MiB\n"
+    }
+  ]
+}

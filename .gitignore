@@ -8,3 +8,13 @@ __pycache__/
 !/benchmarks/results/20260822T153227Z-calme-3_2-instruct-78b-Q4_0.json
 !/benchmarks/results/20260822T153837Z-calme-3_2-instruct-78b-Q4_0.json
 !/benchmarks/results/20260822T155123Z-calme-3_2-instruct-78b-Q4_0.json
+!/benchmarks/results/20260823T143325Z-gpt-oss-20b-MXFP4.json
+!/benchmarks/results/20260823T143354Z-Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.json
+!/benchmarks/results/20260823T143433Z-Qwen3_6-35B-A3B-Q8_0.json
+!/benchmarks/results/20260823T143533Z-Qwen3_6-35B-A3B-Q8_0.json
+!/benchmarks/results/20260823T150213Z-Qwen3_6-35B-A3B-Q8_0.json
+!/benchmarks/results/20260823T150402Z-Qwen3_6-35B-A3B-Q8_0.json
+!/benchmarks/results/20260823T150701Z-Qwen3_6-35B-A3B-Q8_0.json
+!/benchmarks/results/20260823T151238Z-Qwen3_6-35B-A3B-Q8_0.json
+!/benchmarks/results/20260823T151455Z-gpt-oss-120b-MXFP4-00001-of-00002.json
+!/benchmarks/results/20260823T151527Z-gpt-oss-120b-MXFP4-00001-of-00002.json

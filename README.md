@@ -17,6 +17,8 @@ No dynamic tensor cache, layer streamer, expert cache, or KV migration is implem
 
 The first measured baseline is complete: for a 44.34 GB dense Qwen2 model on a 15.45 GiB RTX 5070 Ti, llama.cpp auto-fit static placement is fastest and autoregressive generation reaches the system-RAM bandwidth ceiling. CUDA Unified Memory is dominated by bidirectional migration. See [docs/research/baseline-calme-78b.md](docs/research/baseline-calme-78b.md) for the measurements and next-step decision.
 
+Sparse MoE has a materially different feasibility boundary: the local 36.90 GB Qwen3.6-35B-A3B Q8_0 model generates at 41.41 tok/s with static GPU/CPU expert placement, while the full-GPU gpt-oss-20b MXFP4 reaches 217.18 tok/s. See [docs/research/frontier-moe-feasibility.md](docs/research/frontier-moe-feasibility.md) for the measured placement, active-expert accounting, and follow-up experiments.
+
 ## Build
 
 Requirements are CMake 3.24+, a C++20 compiler, and optionally the CUDA toolkit.
@@ -87,7 +89,7 @@ The first experiment is to determine the fastest current llama.cpp method for a 
 
 Only after that baseline will VRAMBridge test whether bounded pinned staging and asynchronous transformer-aware prefetch can outperform static CPU/GPU placement and CUDA Unified Memory. MoE expert caching follows only after dense layer streaming is correct and measured.
 
-See [docs/architecture.md](docs/architecture.md), [docs/benchmarking.md](docs/benchmarking.md), [docs/research/upstream-llama.md](docs/research/upstream-llama.md), and [docs/research/baseline-calme-78b.md](docs/research/baseline-calme-78b.md) for the design, upstream findings, and measured baseline.
+See [docs/architecture.md](docs/architecture.md), [docs/benchmarking.md](docs/benchmarking.md), [docs/research/upstream-llama.md](docs/research/upstream-llama.md), [docs/research/baseline-calme-78b.md](docs/research/baseline-calme-78b.md), and [docs/research/frontier-moe-feasibility.md](docs/research/frontier-moe-feasibility.md) for the design, upstream findings, and measured dense and MoE baselines.
 
 ## License
 
