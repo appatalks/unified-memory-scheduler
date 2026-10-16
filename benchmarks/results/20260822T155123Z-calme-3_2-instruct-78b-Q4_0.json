@@ -2,12 +2,12 @@
   "schema_version": 1,
   "created_at_utc": "2026-08-22T15:39:50Z",
   "host": {
-    "hostname": "mj420",
+    "hostname": "benchmark-host",
     "platform": "Linux-6.12.86+deb13-amd64-x86_64-with-glibc2.41",
     "python": "3.13.5"
   },
   "model": {
-    "path": "/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
+    "path": "/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
     "size_bytes": 44341119072,
     "sha256_first_last_mib": "4fcfba7d4454c57f9850ac975ea368663866f84dcd91f601357e70ae1bcc7a33"
   },
@@ -28,7 +28,7 @@
       "command": [
         "/tmp/vrambridge-llama-build/bin/llama-bench",
         "-m",
-        "/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
+        "/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
         "-p",
         "512",
         "-n",
@@ -42,7 +42,7 @@
         "-dev",
         "none"
       ],
-      "command_shell": "/tmp/vrambridge-llama-build/bin/llama-bench -m /media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf -p 512 -n 32 -r 3 -o json -ngl 0 -dev none",
+      "command_shell": "/tmp/vrambridge-llama-build/bin/llama-bench -m /models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf -p 512 -n 32 -r 3 -o json -ngl 0 -dev none",
       "environment": {},
       "status": "ok",
       "started_at_utc": "2026-08-22T15:39:50Z",
@@ -56,7 +56,7 @@
           "cpu_info": "AMD Ryzen 9 9950X 16-Core Processor",
           "gpu_info": "NVIDIA GeForce RTX 5070 Ti",
           "backends": "CUDA",
-          "model_filename": "/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
+          "model_filename": "/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
           "model_type": "qwen2 ?B Q4_0",
           "model_size": 44335136640,
           "model_n_params": 77965463552,
@@ -108,7 +108,7 @@
           "cpu_info": "AMD Ryzen 9 9950X 16-Core Processor",
           "gpu_info": "NVIDIA GeForce RTX 5070 Ti",
           "backends": "CUDA",
-          "model_filename": "/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
+          "model_filename": "/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
           "model_type": "qwen2 ?B Q4_0",
           "model_size": 44335136640,
           "model_n_params": 77965463552,
@@ -8515,7 +8515,7 @@
         }
       },
       "parse_error": null,
-      "stdout": "[\n  {\n    \"build_commit\": \"b21e4de\",\n    \"build_number\": 1,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf\",\n    \"model_type\": \"qwen2 ?B Q4_0\",\n    \"model_size\": 44335136640,\n    \"model_n_params\": 77965463552,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": 0,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"none\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 0,\n    \"fit_min_ctx\": 0,\n    \"n_prompt\": 512,\n    \"n_gen\": 0,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-22T15:39:55Z\",\n    \"avg_ns\": 22675179333,\n    \"stddev_ns\": 268110463,\n    \"avg_ts\": 22.581868,\n    \"stddev_ts\": 0.267967,\n    \"samples_ns\": [ 22910982978, 22731003383, 22383551639 ],\n    \"samples_ts\": [ 22.3474, 22.5243, 22.8739 ]\n  },\n  {\n    \"build_commit\": \"b21e4de\",\n    \"build_number\": 1,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf\",\n    \"model_type\": \"qwen2 ?B Q4_0\",\n    \"model_size\": 44335136640,\n    \"model_n_params\": 77965463552,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": 0,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"none\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 0,\n    \"fit_min_ctx\": 0,\n    \"n_prompt\": 0,\n    \"n_gen\": 32,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-22T15:41:25Z\",\n    \"avg_ns\": 33493862824,\n    \"stddev_ns\": 61427400,\n    \"avg_ts\": 0.955401,\n    \"stddev_ts\": 0.001751,\n    \"samples_ns\": [ 33563413110, 33471142842, 33447032522 ],\n    \"samples_ts\": [ 0.953419, 0.956047, 0.956737 ]\n  }\n]\n",
+      "stdout": "[\n  {\n    \"build_commit\": \"b21e4de\",\n    \"build_number\": 1,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf\",\n    \"model_type\": \"qwen2 ?B Q4_0\",\n    \"model_size\": 44335136640,\n    \"model_n_params\": 77965463552,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": 0,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"none\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 0,\n    \"fit_min_ctx\": 0,\n    \"n_prompt\": 512,\n    \"n_gen\": 0,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-22T15:39:55Z\",\n    \"avg_ns\": 22675179333,\n    \"stddev_ns\": 268110463,\n    \"avg_ts\": 22.581868,\n    \"stddev_ts\": 0.267967,\n    \"samples_ns\": [ 22910982978, 22731003383, 22383551639 ],\n    \"samples_ts\": [ 22.3474, 22.5243, 22.8739 ]\n  },\n  {\n    \"build_commit\": \"b21e4de\",\n    \"build_number\": 1,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf\",\n    \"model_type\": \"qwen2 ?B Q4_0\",\n    \"model_size\": 44335136640,\n    \"model_n_params\": 77965463552,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": 0,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"none\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 0,\n    \"fit_min_ctx\": 0,\n    \"n_prompt\": 0,\n    \"n_gen\": 32,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-22T15:41:25Z\",\n    \"avg_ns\": 33493862824,\n    \"stddev_ns\": 61427400,\n    \"avg_ts\": 0.955401,\n    \"stddev_ts\": 0.001751,\n    \"samples_ns\": [ 33563413110, 33471142842, 33447032522 ],\n    \"samples_ts\": [ 0.953419, 0.956047, 0.956737 ]\n  }\n]\n",
       "stderr": "ggml_cuda_init: found 1 CUDA devices (Total VRAM: 15819 MiB):\n  Device 0: NVIDIA GeForce RTX 5070 Ti, compute capability 12.0, VMM: yes, VRAM: 15819 MiB\n"
     },
     {
@@ -8523,7 +8523,7 @@
       "command": [
         "/tmp/vrambridge-llama-build/bin/llama-bench",
         "-m",
-        "/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
+        "/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
         "-p",
         "512",
         "-n",
@@ -8535,7 +8535,7 @@
         "-ngl",
         "-1"
       ],
-      "command_shell": "/tmp/vrambridge-llama-build/bin/llama-bench -m /media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf -p 512 -n 32 -r 3 -o json -ngl -1",
+      "command_shell": "/tmp/vrambridge-llama-build/bin/llama-bench -m /models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf -p 512 -n 32 -r 3 -o json -ngl -1",
       "environment": {
         "GGML_CUDA_ENABLE_UNIFIED_MEMORY": "1"
       },
@@ -8551,7 +8551,7 @@
           "cpu_info": "AMD Ryzen 9 9950X 16-Core Processor",
           "gpu_info": "NVIDIA GeForce RTX 5070 Ti",
           "backends": "CUDA",
-          "model_filename": "/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
+          "model_filename": "/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
           "model_type": "qwen2 ?B Q4_0",
           "model_size": 44335136640,
           "model_n_params": 77965463552,
@@ -8603,7 +8603,7 @@
           "cpu_info": "AMD Ryzen 9 9950X 16-Core Processor",
           "gpu_info": "NVIDIA GeForce RTX 5070 Ti",
           "backends": "CUDA",
-          "model_filename": "/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
+          "model_filename": "/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf",
           "model_type": "qwen2 ?B Q4_0",
           "model_size": 44335136640,
           "model_n_params": 77965463552,
@@ -29637,7 +29637,7 @@
         }
       },
       "parse_error": null,
-      "stdout": "[\n  {\n    \"build_commit\": \"b21e4de\",\n    \"build_number\": 1,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf\",\n    \"model_type\": \"qwen2 ?B Q4_0\",\n    \"model_size\": 44335136640,\n    \"model_n_params\": 77965463552,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 0,\n    \"fit_min_ctx\": 0,\n    \"n_prompt\": 512,\n    \"n_gen\": 0,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-22T15:43:15Z\",\n    \"avg_ns\": 5400777891,\n    \"stddev_ns\": 56137078,\n    \"avg_ts\": 94.808023,\n    \"stddev_ts\": 0.990664,\n    \"samples_ns\": [ 5423257708, 5442191184, 5336884782 ],\n    \"samples_ts\": [ 94.4082, 94.0798, 95.9361 ]\n  },\n  {\n    \"build_commit\": \"b21e4de\",\n    \"build_number\": 1,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/media/mj420/ExpansionXFS/data/lm-studio/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf\",\n    \"model_type\": \"qwen2 ?B Q4_0\",\n    \"model_size\": 44335136640,\n    \"model_n_params\": 77965463552,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 0,\n    \"fit_min_ctx\": 0,\n    \"n_prompt\": 0,\n    \"n_gen\": 32,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-22T15:43:37Z\",\n    \"avg_ns\": 153289811047,\n    \"stddev_ns\": 1738025883,\n    \"avg_ts\": 0.208773,\n    \"stddev_ts\": 0.002381,\n    \"samples_ns\": [ 154528334295, 154038130899, 151302967947 ],\n    \"samples_ts\": [ 0.207082, 0.207741, 0.211496 ]\n  }\n]\n",
+      "stdout": "[\n  {\n    \"build_commit\": \"b21e4de\",\n    \"build_number\": 1,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf\",\n    \"model_type\": \"qwen2 ?B Q4_0\",\n    \"model_size\": 44335136640,\n    \"model_n_params\": 77965463552,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 0,\n    \"fit_min_ctx\": 0,\n    \"n_prompt\": 512,\n    \"n_gen\": 0,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-22T15:43:15Z\",\n    \"avg_ns\": 5400777891,\n    \"stddev_ns\": 56137078,\n    \"avg_ts\": 94.808023,\n    \"stddev_ts\": 0.990664,\n    \"samples_ns\": [ 5423257708, 5442191184, 5336884782 ],\n    \"samples_ts\": [ 94.4082, 94.0798, 95.9361 ]\n  },\n  {\n    \"build_commit\": \"b21e4de\",\n    \"build_number\": 1,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/models/bartowski/calme-3.2-instruct-78b-GGUF/calme-3.2-instruct-78b-Q4_0.gguf\",\n    \"model_type\": \"qwen2 ?B Q4_0\",\n    \"model_size\": 44335136640,\n    \"model_n_params\": 77965463552,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 0,\n    \"fit_min_ctx\": 0,\n    \"n_prompt\": 0,\n    \"n_gen\": 32,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-22T15:43:37Z\",\n    \"avg_ns\": 153289811047,\n    \"stddev_ns\": 1738025883,\n    \"avg_ts\": 0.208773,\n    \"stddev_ts\": 0.002381,\n    \"samples_ns\": [ 154528334295, 154038130899, 151302967947 ],\n    \"samples_ts\": [ 0.207082, 0.207741, 0.211496 ]\n  }\n]\n",
       "stderr": "ggml_cuda_init: found 1 CUDA devices (Total VRAM: 15819 MiB):\n  Device 0: NVIDIA GeForce RTX 5070 Ti, compute capability 12.0, VMM: yes, VRAM: 15819 MiB\n"
     }
   ]

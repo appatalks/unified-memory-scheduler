@@ -16,7 +16,7 @@ This machine is not similarly suitable for dense frontier models. The earlier 44
 - PCIe: Gen5 x8, 31.51 GB/s theoretical per direction
 - measured RAM read: 42.160 GB/s
 - measured pinned H2D: 28.520 GB/s
-- model storage: Samsung 990 PRO NVMe at `/media/mj420/E65882B158827FD3/0/AI-MODELS/models`
+- model storage: Samsung 990 PRO NVMe at `/models` (sanitized publication path)
 - engine: official llama.cpp commit `b21e4de74567f5eef213765c9476a843c2e43f0d`, native CUDA 12.0 build
 - workload: 512 prompt tokens, 32 generated tokens, three repetitions
 - auto-fit policy: 4,096-token fit context with a 1,024 MiB VRAM margin

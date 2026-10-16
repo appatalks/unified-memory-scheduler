@@ -2,12 +2,12 @@
   "schema_version": 1,
   "created_at_utc": "2026-08-23T15:02:11Z",
   "host": {
-    "hostname": "mj420",
+    "hostname": "benchmark-host",
     "platform": "Linux-6.12.86+deb13-amd64-x86_64-with-glibc2.41",
     "python": "3.13.5"
   },
   "model": {
-    "path": "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q8_0.gguf",
+    "path": "/models/lmstudio-community/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q8_0.gguf",
     "size_bytes": 36903139168,
     "sha256_first_last_mib": "fd911f7c571a6035b981732cd8009cb98f55a6e14a967e032858976a9d075649"
   },
@@ -28,7 +28,7 @@
       "command": [
         "/tmp/vrambridge-llama-build/bin/llama-bench",
         "-m",
-        "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q8_0.gguf",
+        "/models/lmstudio-community/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q8_0.gguf",
         "-p",
         "8192",
         "-n",
@@ -48,7 +48,7 @@
         "-ctv",
         "q8_0"
       ],
-      "command_shell": "/tmp/vrambridge-llama-build/bin/llama-bench -m /media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q8_0.gguf -p 8192 -n 32 -r 3 -o json -fitt 1024 -fitc 16384 -c 16384 -ctk q8_0 -ctv q8_0",
+      "command_shell": "/tmp/vrambridge-llama-build/bin/llama-bench -m /models/lmstudio-community/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-Q8_0.gguf -p 8192 -n 32 -r 3 -o json -fitt 1024 -fitc 16384 -c 16384 -ctk q8_0 -ctv q8_0",
       "environment": {},
       "status": "failed",
       "started_at_utc": "2026-08-23T15:02:11Z",

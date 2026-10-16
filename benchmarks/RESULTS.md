@@ -5,6 +5,11 @@ It records the conditions required to compare runs, links raw artifacts, and
 separates valid measurements from failed-command evidence. New result JSON is
 ignored by default and is added here only after review.
 
+Published JSON uses `benchmark-host` for the hostname and `/models` for
+machine-specific model storage roots, including paths embedded in commands and
+captured output. Model filenames, measurements, timestamps, and diagnostics are
+otherwise unchanged. These placeholders are not executable local paths.
+
 ## Test Host
 
 - AMD Ryzen 9 9950X: 16 physical cores

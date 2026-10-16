@@ -2,12 +2,12 @@
   "schema_version": 1,
   "created_at_utc": "2026-08-23T14:33:47Z",
   "host": {
-    "hostname": "mj420",
+    "hostname": "benchmark-host",
     "platform": "Linux-6.12.86+deb13-amd64-x86_64-with-glibc2.41",
     "python": "3.13.5"
   },
   "model": {
-    "path": "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
+    "path": "/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
     "size_bytes": 14583005504,
     "sha256_first_last_mib": "ff04b7a0f3feae4f89be5ce396f3c94dd91271a9555ec6029dada42682f0b240"
   },
@@ -28,7 +28,7 @@
       "command": [
         "/tmp/vrambridge-llama-build/bin/llama-bench",
         "-m",
-        "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
+        "/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
         "-p",
         "512",
         "-n",
@@ -42,7 +42,7 @@
         "-fitc",
         "4096"
       ],
-      "command_shell": "/tmp/vrambridge-llama-build/bin/llama-bench -m /media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf -p 512 -n 32 -r 3 -o json -fitt 1024 -fitc 4096",
+      "command_shell": "/tmp/vrambridge-llama-build/bin/llama-bench -m /models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf -p 512 -n 32 -r 3 -o json -fitt 1024 -fitc 4096",
       "environment": {},
       "status": "ok",
       "started_at_utc": "2026-08-23T14:33:47Z",
@@ -56,7 +56,7 @@
           "cpu_info": "AMD Ryzen 9 9950X 16-Core Processor",
           "gpu_info": "NVIDIA GeForce RTX 5070 Ti",
           "backends": "CUDA",
-          "model_filename": "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
+          "model_filename": "/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
           "model_type": "qwen3moe 30B.A3B Q3_K - Large",
           "model_size": 14577033216,
           "model_n_params": 30532122624,
@@ -108,7 +108,7 @@
           "cpu_info": "AMD Ryzen 9 9950X 16-Core Processor",
           "gpu_info": "NVIDIA GeForce RTX 5070 Ti",
           "backends": "CUDA",
-          "model_filename": "/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
+          "model_filename": "/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf",
           "model_type": "qwen3moe 30B.A3B Q3_K - Large",
           "model_size": 14577033216,
           "model_n_params": 30532122624,
@@ -551,7 +551,7 @@
         }
       },
       "parse_error": null,
-      "stdout": "[\n  {\n    \"build_commit\": \"b21e4de74\",\n    \"build_number\": 10586,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf\",\n    \"model_type\": \"qwen3moe 30B.A3B Q3_K - Large\",\n    \"model_size\": 14577033216,\n    \"model_n_params\": 30532122624,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 1024,\n    \"fit_min_ctx\": 4096,\n    \"n_prompt\": 512,\n    \"n_gen\": 0,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-23T14:33:49Z\",\n    \"avg_ns\": 126547658,\n    \"stddev_ns\": 3835640,\n    \"avg_ts\": 4048.344514,\n    \"stddev_ts\": 120.652420,\n    \"samples_ns\": [ 130963559, 124634674, 124044741 ],\n    \"samples_ts\": [ 3909.48, 4108.01, 4127.54 ]\n  },\n  {\n    \"build_commit\": \"b21e4de74\",\n    \"build_number\": 10586,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/media/mj420/E65882B158827FD3/0/AI-MODELS/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf\",\n    \"model_type\": \"qwen3moe 30B.A3B Q3_K - Large\",\n    \"model_size\": 14577033216,\n    \"model_n_params\": 30532122624,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 1024,\n    \"fit_min_ctx\": 4096,\n    \"n_prompt\": 0,\n    \"n_gen\": 32,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-23T14:33:52Z\",\n    \"avg_ns\": 156310903,\n    \"stddev_ns\": 5275240,\n    \"avg_ts\": 204.873652,\n    \"stddev_ts\": 6.820871,\n    \"samples_ns\": [ 162201610, 154708249, 152022850 ],\n    \"samples_ts\": [ 197.285, 206.841, 210.495 ]\n  }\n]\n",
+      "stdout": "[\n  {\n    \"build_commit\": \"b21e4de74\",\n    \"build_number\": 10586,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf\",\n    \"model_type\": \"qwen3moe 30B.A3B Q3_K - Large\",\n    \"model_size\": 14577033216,\n    \"model_n_params\": 30532122624,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 1024,\n    \"fit_min_ctx\": 4096,\n    \"n_prompt\": 512,\n    \"n_gen\": 0,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-23T14:33:49Z\",\n    \"avg_ns\": 126547658,\n    \"stddev_ns\": 3835640,\n    \"avg_ts\": 4048.344514,\n    \"stddev_ts\": 120.652420,\n    \"samples_ns\": [ 130963559, 124634674, 124044741 ],\n    \"samples_ts\": [ 3909.48, 4108.01, 4127.54 ]\n  },\n  {\n    \"build_commit\": \"b21e4de74\",\n    \"build_number\": 10586,\n    \"cpu_info\": \"AMD Ryzen 9 9950X 16-Core Processor\",\n    \"gpu_info\": \"NVIDIA GeForce RTX 5070 Ti\",\n    \"backends\": \"CUDA\",\n    \"model_filename\": \"/models/lmstudio-community/Qwen3-Coder-30B-A3B-Instruct-GGUF/Qwen3-Coder-30B-A3B-Instruct-Q3_K_L.gguf\",\n    \"model_type\": \"qwen3moe 30B.A3B Q3_K - Large\",\n    \"model_size\": 14577033216,\n    \"model_n_params\": 30532122624,\n    \"n_batch\": 2048,\n    \"n_ubatch\": 512,\n    \"n_threads\": 16,\n    \"cpu_mask\": \"0x0\",\n    \"cpu_strict\": false,\n    \"poll\": 50,\n    \"type_k\": \"f16\",\n    \"type_v\": \"f16\",\n    \"n_gpu_layers\": -1,\n    \"n_cpu_moe\": 0,\n    \"split_mode\": \"layer\",\n    \"main_gpu\": 0,\n    \"no_kv_offload\": false,\n    \"flash_attn\": -1,\n    \"devices\": \"auto\",\n    \"tensor_split\": \"0.00\",\n    \"tensor_buft_overrides\": \"none\",\n    \"load_mode\": \"auto\",\n    \"embeddings\": false,\n    \"no_op_offload\": 0,\n    \"no_host\": false,\n    \"fit_target\": 1024,\n    \"fit_min_ctx\": 4096,\n    \"n_prompt\": 0,\n    \"n_gen\": 32,\n    \"n_depth\": 0,\n    \"test_time\": \"2026-08-23T14:33:52Z\",\n    \"avg_ns\": 156310903,\n    \"stddev_ns\": 5275240,\n    \"avg_ts\": 204.873652,\n    \"stddev_ts\": 6.820871,\n    \"samples_ns\": [ 162201610, 154708249, 152022850 ],\n    \"samples_ts\": [ 197.285, 206.841, 210.495 ]\n  }\n]\n",
       "stderr": "ggml_cuda_init: found 1 CUDA devices (Total VRAM: 15819 MiB):\n  Device 0: NVIDIA GeForce RTX 5070 Ti, compute capability 12.0, VMM: yes, VRAM: 15819 MiB\n"
     }
   ]
