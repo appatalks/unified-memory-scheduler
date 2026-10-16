@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VRAMBridge downloaded-model compatibility and throughput matrix",
+  "type": "object",
+  "required": ["schema_version", "kind", "backend_commit", "runner_source_sha256", "app_source_sha256", "hybrid_patch_sha256", "context", "cpu_threads", "batch_threads", "output_tokens", "repetitions", "throughput_prompt", "runs", "restore", "performance_target_met", "limitations"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "downloaded-model-matrix"},
+    "performance_target_met": {"const": false},
+    "backend_commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "runner_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "app_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "hybrid_patch_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "plan_sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"},
+    "context": {"type": "integer", "minimum": 512, "maximum": 65536},
+    "cpu_threads": {"type": "integer", "minimum": 1},
+    "batch_threads": {"type": "integer", "minimum": 1},
+    "output_tokens": {"type": "integer", "minimum": 512, "maximum": 8192},
+    "repetitions": {"type": "integer", "minimum": 1, "maximum": 10},
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["model", "metadata", "hybrid_layout_supported", "requested_mode", "status", "samples", "answer_checks"],
+        "properties": {
+          "requested_mode": {"enum": ["standard", "auto"]},
+          "execution_profile": {"enum": ["standard", "experimental-hybrid-direct"]},
+          "hybrid_verified": {"type": "boolean"},
+          "status": {"enum": ["running", "ok", "answer_check_failed", "failed"]},
+          "samples": {"type": "array", "items": {"type": "object", "required": ["wall_decode_tok_s", "end_to_end_tok_s", "timings", "usage", "generated_text_sha256"]}},
+          "answer_checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["workload", "check_passed", "answer_sha256", "finish_reason"],
+              "properties": {"check_passed": {"type": "boolean"}}
+            }
+          }
+        }
+      }
+    },
+    "restore": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {"status": {"enum": ["pending", "ready", "failed"]}}
+    },
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+  }
+}

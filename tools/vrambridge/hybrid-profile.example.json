@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "executable": "/opt/vrambridge/patched/bin/llama-server",
+  "plan": "/path/to/unified-memory-scheduler/benchmarks/results/gpt120-trained-hot800.txt",
+  "cuda_plugin": "/opt/vrambridge/llama-b11669/libggml-cuda.so"
+}

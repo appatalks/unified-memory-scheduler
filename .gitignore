@@ -20,6 +20,7 @@ compile_commands.json
 *.local.env
 !.env.example
 !.env.*.example
+hybrid-profile.json
 
 .venv/
 venv/
@@ -34,6 +35,9 @@ htmlcov/
 
 *.gguf
 *.safetensors
+
+/llama.log
+/llama.log.*
 
 # Only explicitly reviewed benchmark evidence should be published.
 /benchmarks/results/**
@@ -52,3 +56,11 @@ htmlcov/
 !/benchmarks/results/20260823T151238Z-Qwen3_6-35B-A3B-Q8_0.json
 !/benchmarks/results/20260823T151455Z-gpt-oss-120b-MXFP4-00001-of-00002.json
 !/benchmarks/results/20260823T151527Z-gpt-oss-120b-MXFP4-00001-of-00002.json
+!/benchmarks/results/20261016-gpt120-direct-source-screen.json
+!/benchmarks/results/20261016-gpt120-direct-thread-screen.json
+!/benchmarks/results/20261016-gpt120-hybrid-block-dflash-screen.json
+!/benchmarks/results/20261016-gpt120-dual-layout-screen.json
+!/benchmarks/results/20261016-gpt120-async-copy-screen.json
+!/benchmarks/results/20261016-gpt120-logit-diagnostics.json
+!/benchmarks/results/20261016-downloaded-model-matrix.json
+!/benchmarks/results/gpt120-trained-hot800.txt

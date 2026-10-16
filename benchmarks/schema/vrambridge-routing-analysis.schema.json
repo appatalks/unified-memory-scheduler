@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vrambridge.dev/schema/routing-analysis-v1.json",
+  "title": "VRAMBridge routing cache-analysis report",
+  "type": "object",
+  "required": ["schema_version", "trace_sha256", "analysis_source_sha256", "actual_performance_claim", "production_target_met", "screening_only", "observation_equivalence", "counts", "cost_inputs", "policies", "trained_residency_plan", "fixed_residency_fractional_oracle", "limitations"],
+  "$defs": {
+    "rate": {"type": ["number", "null"], "minimum": 0},
+    "policy": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["supported", "reason"],
+          "properties": {"supported": {"const": false}, "reason": {"type": "string", "minLength": 1}}
+        },
+        {
+          "type": "object",
+          "required": ["supported", "tokens", "expert_calls", "cold_cpu_bytes", "weight_upload_bytes", "serial_estimated_tok_s", "optimistic_overlap_estimated_tok_s", "policy_bandwidth_upper_bound_tok_s"],
+          "properties": {
+            "supported": {"const": true},
+            "tokens": {"type": "integer", "minimum": 1},
+            "expert_calls": {"type": "integer", "minimum": 1},
+            "cold_cpu_bytes": {"type": "integer", "minimum": 0},
+            "weight_upload_bytes": {"type": "integer", "minimum": 0},
+            "gpu_byte_fraction": {"type": "number", "minimum": 0, "maximum": 1},
+            "serial_estimated_tok_s": {"$ref": "#/$defs/rate"},
+            "optimistic_overlap_estimated_tok_s": {"$ref": "#/$defs/rate"},
+            "policy_bandwidth_upper_bound_tok_s": {"$ref": "#/$defs/rate"}
+          }
+        }
+      ]
+    }
+  },
+  "properties": {
+    "schema_version": {"const": 1},
+    "trace_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "analysis_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "actual_performance_claim": {"const": false},
+    "production_target_met": {"const": false},
+    "screening_only": {"const": true},
+    "observation_equivalence": {
+      "type": "object",
+      "required": ["all_requests_verified", "does_not_establish_answer_quality"],
+      "properties": {
+        "all_requests_verified": {"type": "boolean"},
+        "does_not_establish_answer_quality": {"const": true}
+      }
+    },
+    "counts": {"type": "object", "required": ["train_tokens", "test_tokens", "layers", "requests"]},
+    "cost_inputs": {"type": "object", "required": ["ram_gbps", "pcie_gbps", "staging_ram_passes", "cache_capacity_bytes"]},
+    "policies": {
+      "type": "object",
+      "required": ["measured_static", "train_static", "lru", "lfu", "belady_hits", "cost_aware"],
+      "additionalProperties": {"$ref": "#/$defs/policy"}
+    },
+    "trained_residency_plan": {
+      "type": "object",
+      "required": ["source", "live_executor_implemented", "capacity_bytes", "used_bytes", "layers"],
+      "properties": {"live_executor_implemented": {"const": false}}
+    },
+    "fixed_residency_fractional_oracle": {
+      "type": "object",
+      "required": ["scope", "fractional_experts_not_implementable", "bandwidth_only_upper_bound_tok_s"],
+      "properties": {"fractional_experts_not_implementable": {"const": true}}
+    },
+    "limitations": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+  }
+}

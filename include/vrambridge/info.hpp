@@ -18,6 +18,7 @@ struct BandwidthResult {
     double gb_per_second = 0.0;
     bool available = false;
     std::string error;
+    int cpu_threads = 0;
 };
 
 struct GpuInfo {
@@ -74,6 +75,7 @@ struct BenchmarkOptions {
     std::size_t bytes = 256ULL * 1024ULL * 1024ULL;
     int iterations = 5;
     int cuda_device = 0;
+    int ram_threads = 1;
 };
 
 SystemInfo collect_system_info();

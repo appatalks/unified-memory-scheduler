@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VRAMBridge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" type="module"></script>
+</head>
+<body>
+  <header>
+    <div><h1>VRAMBridge</h1><p>Your models. Your machine.</p></div>
+    <span id="state" role="status">Connecting</span>
+  </header>
+  <main>
+    <aside>
+      <section aria-labelledby="model-title">
+        <h2 id="model-title">Run a model</h2>
+        <p>Start with a local GGUF file. No model downloads or uploads.</p>
+        <form id="load-form">
+          <label for="model">Model path</label>
+          <input id="model" name="model" placeholder="/home/you/models/model.gguf" required autocomplete="off" spellcheck="false">
+          <details>
+            <summary>Run settings</summary>
+            <label for="execution-mode">Model execution profile</label>
+            <select id="execution-mode"><option value="auto">Automatic model-specific defaults</option><option value="standard">Standard backend (manual settings)</option><option value="hybrid">Require hybrid direct DMA</option></select>
+            <p id="profile-note">Automatic chooses the optimized profile only for a supported model and installed backend. Other models use standard execution.</p>
+            <label for="placement">Execution</label>
+            <select id="placement"><option value="auto">Automatic CPU / GPU placement</option><option value="cpu">CPU only</option></select>
+            <label for="context">Context tokens</label>
+            <input id="context" type="number" value="4096" min="512" max="65536" step="1" required>
+            <p id="placement-note">Automatic uses llama.cpp fitting with a 1 GiB GPU margin. It is not a RAM-fit guarantee. Larger contexts need more memory.</p>
+            <details>
+              <summary>Advanced performance (experimental)</summary>
+              <label for="cpu-threads">Generation CPU threads</label>
+              <input id="cpu-threads" type="number" min="1" step="1" value="1" required>
+              <label for="batch-threads">Prompt CPU threads</label>
+              <input id="batch-threads" type="number" min="1" step="1" value="1" required>
+              <label for="cpu-poll">CPU polling (0-100)</label>
+              <input id="cpu-poll" type="number" min="0" max="100" step="1" value="50" required>
+              <label for="host-op-offload">Host operation execution</label>
+              <select id="host-op-offload"><option value="true">Allow upstream GPU operation offload</option><option value="false">Keep host tensor operations on CPU</option></select>
+              <label for="op-offload-min-batch">Minimum host-operation GPU batch</label>
+              <input id="op-offload-min-batch" type="number" min="1" max="8192" step="1" value="32" required>
+              <p>Official backend only. Raising the batch threshold can avoid weight-transfer overhead for short prompts while retaining GPU offload for large batches. It does not relocate already-resident GPU weights.</p>
+              <label for="load-mode">Host weight loading</label>
+              <select id="load-mode"><option value="auto">Backend default loading</option><option value="none">Copy into RAM</option></select>
+              <label for="expert-cache">GPU MoE expert cache (MiB)</label>
+              <input id="expert-cache" type="number" value="0" min="0" max="65536" step="1" required>
+              <p id="cache-note">Fewer threads can be faster. RAM loading can increase memory pressure. The upstream experimental expert cache uses VRAM, requires a supported MoE backend, and may be slower. Zero disables it.</p>
+              <label for="fit-target">VRAM reserve (MiB)</label>
+              <input id="fit-target" type="number" value="1024" min="128" max="65536" step="1" required>
+              <label for="draft-model">DFlash draft GGUF (optional)</label>
+              <input id="draft-model" placeholder="/path/to/target-trained-dflash.gguf" autocomplete="off" spellcheck="false">
+              <label for="draft-tokens">Draft tokens per verification</label>
+              <input id="draft-tokens" type="number" value="9" min="1" max="32" step="1" required>
+              <p>DFlash needs a compatible, target-trained draft, automatic placement, and no explicit expert cache. For the tested 0.8B draft, start with a 4,096 MiB reserve. This is experimental; fit and speed are not guaranteed.</p>
+              <p id="speculation-note"></p>
+            </details>
+          </details>
+          <div class="actions">
+            <button id="load" type="submit" disabled>Load model</button>
+            <button id="unload" type="button" class="secondary" disabled>Unload</button>
+          </div>
+        </form>
+        <p id="backend-help" hidden></p>
+      </section>
+      <section aria-labelledby="connect-title">
+        <h2 id="connect-title">Connect an app</h2>
+        <p>OpenAI-compatible chat API, available while a model is ready.</p>
+        <label for="endpoint">Base URL</label>
+        <div class="copy-row"><input id="endpoint" readonly><button id="copy" class="secondary" type="button">Copy</button></div>
+        <p>Model: <code>local-model</code><br>API key: <code>local</code> (placeholder; no app authentication)</p>
+        <p>Loopback only. Do not expose this service through a tunnel or reverse proxy.</p>
+      </section>
+      <section aria-labelledby="status-title">
+        <h2 id="status-title">Status</h2>
+        <p id="model-status">No model loaded.</p>
+        <p id="run-status"></p>
+        <p id="selection-reason"></p>
+        <p id="resources" role="status"></p>
+        <details><summary>Backend output</summary><pre id="logs">No output yet.</pre></details>
+      </section>
+    </aside>
+    <section class="chat" aria-labelledby="chat-title">
+      <div class="chat-heading"><h2 id="chat-title">Chat</h2><button id="clear" type="button" class="secondary">New chat</button></div>
+      <p id="execution-warning" role="note" hidden></p>
+      <div id="notice" role="alert" hidden></div>
+      <div id="messages" role="log" aria-label="Conversation"><p id="empty">Load a model to start a conversation.<br>Your chat stays in this page and is not saved.</p></div>
+      <form id="chat-form">
+        <label for="prompt">Message</label>
+        <textarea id="prompt" rows="3" placeholder="What would you like to work on?" required></textarea>
+        <div class="chat-options">
+          <div><label for="max-output">Max output tokens</label><input id="max-output" type="number" value="8192" min="1" max="65536" step="1" required></div>
+          <p>Includes reasoning and the final answer.<br><span id="context-note"></span></p>
+        </div>
+        <div class="actions"><button id="send" type="submit" disabled>Send</button><button id="stop" type="button" class="secondary" disabled>Stop</button></div>
+        <p id="timing" role="status" title="Generation speed is reported by the backend and includes reasoning tokens. Total time also includes prompt processing and network time."></p>
+      </form>
+    </section>
+  </main>
+  <footer id="execution-footer">Local preview &middot; Checking execution profile</footer>
+</body>
+</html>

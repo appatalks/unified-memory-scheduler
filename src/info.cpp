@@ -1,12 +1,15 @@
 #include "vrambridge/info.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <chrono>
+#include <condition_variable>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <map>
+#include <mutex>
 #include <numeric>
 #include <sstream>
 #include <stdexcept>
@@ -226,6 +229,7 @@ BandwidthResult measure_ram_write(std::vector<std::uint64_t> & buffer, int itera
         .seconds = seconds,
         .gb_per_second = static_cast<double>(bytes) * iterations / seconds / 1.0e9,
         .available = true,
+        .cpu_threads = 1,
     };
 }
 
@@ -250,6 +254,76 @@ BandwidthResult measure_ram_read(const std::vector<std::uint64_t> & buffer, int 
         .seconds = seconds,
         .gb_per_second = static_cast<double>(bytes) * iterations / seconds / 1.0e9,
         .available = true,
+        .cpu_threads = 1,
+    };
+}
+
+BandwidthResult measure_ram_parallel_read(const std::vector<std::uint64_t> & buffer,
+                                          int iterations, int threads) {
+    std::mutex mutex;
+    std::condition_variable gate;
+    bool started = false;
+    bool cancelled = false;
+    int ready = 0;
+    std::vector<std::uint64_t> checksums(threads);
+    std::vector<std::jthread> workers;
+    workers.reserve(threads);
+    try {
+        for (int worker = 0; worker < threads; ++worker) {
+            workers.emplace_back([&, worker] {
+                {
+                    std::unique_lock lock(mutex);
+                    ++ready;
+                    gate.notify_all();
+                    gate.wait(lock, [&] { return started || cancelled; });
+                    if (cancelled) {
+                        return;
+                    }
+                }
+                const auto begin = buffer.begin() + buffer.size() * worker / threads;
+                const auto end = buffer.begin() + buffer.size() * (worker + 1) / threads;
+                std::uint64_t checksum = 0;
+                for (int iteration = 0; iteration < iterations; ++iteration) {
+                    checksum = std::accumulate(begin, end, checksum);
+                    // Keep each timed pass a real read, even with unchanged input.
+                    std::atomic_signal_fence(std::memory_order_seq_cst);
+                }
+                checksums[worker] = checksum;
+            });
+        }
+    } catch (const std::system_error &) {
+        {
+            std::lock_guard lock(mutex);
+            cancelled = true;
+        }
+        gate.notify_all();
+        throw;
+    }
+    std::unique_lock lock(mutex);
+    gate.wait(lock, [&] { return ready == threads; });
+    const auto begin = std::chrono::steady_clock::now();
+    started = true;
+    lock.unlock();
+    gate.notify_all();
+    for (auto & worker : workers) {
+        worker.join();
+    }
+    const double seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - begin).count();
+    const auto expected = buffer.front() * static_cast<std::uint64_t>(buffer.size()) * iterations;
+    if (std::accumulate(checksums.begin(), checksums.end(), std::uint64_t{0}) != expected || seconds <= 0) {
+        throw std::runtime_error("Parallel RAM benchmark produced invalid accounting");
+    }
+    const auto bytes = buffer.size() * sizeof(buffer.front());
+    return {
+        .name = "ram_parallel_read",
+        .direction = "ram_to_cpu",
+        .memory_kind = "pageable",
+        .bytes = bytes,
+        .iterations = iterations,
+        .seconds = seconds,
+        .gb_per_second = static_cast<double>(bytes) * iterations / seconds / 1e9,
+        .available = true,
+        .cpu_threads = threads,
     };
 }
 
@@ -285,11 +359,18 @@ std::vector<BandwidthResult> run_ram_benchmarks(const BenchmarkOptions & options
     if (options.iterations <= 0) {
         throw std::invalid_argument("iterations must be greater than zero");
     }
+    if (options.ram_threads < 1 ||
+        static_cast<unsigned int>(options.ram_threads) > std::max(1U, std::thread::hardware_concurrency())) {
+        throw std::invalid_argument("RAM threads must be between 1 and the logical CPU count");
+    }
     const std::size_t elements = std::max<std::size_t>(1, options.bytes / sizeof(std::uint64_t));
     std::vector<std::uint64_t> buffer(elements, 1);
     std::vector<BandwidthResult> results;
     results.push_back(measure_ram_write(buffer, options.iterations));
     results.push_back(measure_ram_read(buffer, options.iterations));
+    if (options.ram_threads > 1) {
+        results.push_back(measure_ram_parallel_read(buffer, options.iterations, options.ram_threads));
+    }
     return results;
 }
 
@@ -335,7 +416,11 @@ void print_human_report(const HardwareReport & report, std::ostream & output) {
     for (const auto & result : report.benchmarks) {
         output << "  " << std::left << std::setw(28) << result.name << std::right;
         if (result.available) {
-            output << std::fixed << std::setprecision(2) << result.gb_per_second << " GB/s\n";
+            output << std::fixed << std::setprecision(2) << result.gb_per_second << " GB/s";
+            if (result.cpu_threads > 0) {
+                output << " (" << result.cpu_threads << " CPU threads)";
+            }
+            output << '\n';
         } else {
             output << "unavailable: " << result.error << '\n';
         }
@@ -399,7 +484,11 @@ void print_json_report(const HardwareReport & report, std::ostream & output) {
                << ", \"memory_kind\": " << quoted(result.memory_kind) << ", \"bytes\": " << result.bytes
                << ", \"iterations\": " << result.iterations << ", \"seconds\": " << result.seconds
                << ", \"gb_per_second\": " << result.gb_per_second << ", \"available\": "
-               << (result.available ? "true" : "false") << ", \"error\": " << quoted(result.error) << '}';
+               << (result.available ? "true" : "false") << ", \"error\": " << quoted(result.error);
+        if (result.cpu_threads > 0) {
+            output << ", \"cpu_threads\": " << result.cpu_threads;
+        }
+        output << '}';
     }
     output << (report.benchmarks.empty() ? "]\n" : "\n  ]\n");
     output << "}\n";

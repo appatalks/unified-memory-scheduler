@@ -1,0 +1,810 @@
+diff --git a/common/common.cpp b/common/common.cpp
+index c5db228..07aae1b 100644
+--- a/common/common.cpp
++++ b/common/common.cpp
+@@ -1415,6 +1415,22 @@ static void common_batch_set_zero_state(common_batch & batch, const llama_model
+ }
+ 
+ common_init_result_ptr common_init_from_params(common_params & params, bool model_only) {
++    if (const char * plan = std::getenv("VRAMBRIDGE_HYBRID_PLAN"); plan && plan[0]) {
++        const char * repack = std::getenv("VRAMBRIDGE_HYBRID_REPACK");
++        const bool allow_repack = repack && std::string(repack) == "1";
++        const char * dflash = std::getenv("VRAMBRIDGE_HYBRID_DFLASH");
++        const bool allow_dflash = dflash && std::string(dflash) == "1" &&
++            std::find(params.speculative.types.begin(), params.speculative.types.end(),
++                      COMMON_SPECULATIVE_TYPE_DRAFT_DFLASH) != params.speculative.types.end() &&
++            std::all_of(params.speculative.types.begin(), params.speculative.types.end(),
++                        [](common_speculative_type type) {
++                            return type == COMMON_SPECULATIVE_TYPE_NONE || type == COMMON_SPECULATIVE_TYPE_DRAFT_DFLASH;
++                        });
++        if (params.fit_params || (!params.no_extra_bufts && !allow_repack) || !params.no_op_offload ||
++            !params.lora_adapters.empty() || (!params.speculative.draft.mparams.path.empty() && !allow_dflash)) {
++            throw std::runtime_error("Frozen hybrid requires --fit off --no-op-offload, no LoRA, and explicit repack/DFlash opt-ins");
++        }
++    }
+     common_init_result_ptr res(new common_init_result(params, model_only));
+ 
+     llama_model * model = res->model();
+diff --git a/ggml/src/ggml-cpu/ggml-cpu.c b/ggml/src/ggml-cpu/ggml-cpu.c
+index ab82e3d..dca4b02 100644
+--- a/ggml/src/ggml-cpu/ggml-cpu.c
++++ b/ggml/src/ggml-cpu/ggml-cpu.c
+@@ -1652,7 +1652,12 @@ static void ggml_compute_forward_mul_mat_id(
+             for (int id = 0; id < n_ids; ++id) {
+                 const int32_t i02 = *(const int32_t *) ((const char *) ids->data + iid1*ids->nb[1] + id*ids->nb[0]);
+ 
+-                assert(i02 >= 0 && i02 < n_as);
++                // Frozen hybrid dispatch uses -1 for experts computed on the other backend.
++                if (i02 == -1) {
++                    memset((char *) dst->data + iid1*dst->nb[2] + id*dst->nb[1], 0, ne0*sizeof(float));
++                    continue;
++                }
++                GGML_ASSERT(i02 >= 0 && i02 < n_as);
+ 
+                 MMID_MATRIX_ROW(i02, matrix_row_counts[i02]) = (struct mmid_row_mapping) {id, iid1};
+                 matrix_row_counts[i02] += 1;
+diff --git a/ggml/src/ggml-cpu/ggml-cpu.cpp b/ggml/src/ggml-cpu/ggml-cpu.cpp
+index 81ff5d7..833a83c 100644
+--- a/ggml/src/ggml-cpu/ggml-cpu.cpp
++++ b/ggml/src/ggml-cpu/ggml-cpu.cpp
+@@ -656,6 +656,9 @@ static ggml_backend_feature * ggml_backend_cpu_get_features(ggml_backend_reg_t r
+ }
+ 
+ static void * ggml_backend_cpu_get_proc_address(ggml_backend_reg_t reg, const char * name) {
++    if (strcmp(name, "vrambridge_export_repacked_expert") == 0) {
++        return (void *)ggml_backend_cpu_repack_export_expert;
++    }
+     if (strcmp(name, "ggml_backend_set_n_threads") == 0) {
+         ggml_backend_set_n_threads_t fct = ggml_backend_cpu_set_n_threads;
+         return (void *)fct;
+diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
+index 2632ae3..a7e4426 100644
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -4855,6 +4855,10 @@ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PAR
+                     const int32_t i02 =
+                         *(const int32_t *) ((const char *) ids->data + iid1 * ids->nb[1] + id * ids->nb[0]);
+ 
++                    if (i02 == -1) {
++                        memset((char *) dst->data + iid1*dst->nb[2] + id*dst->nb[1], 0, ne0*sizeof(float));
++                        continue;
++                    }
+                     GGML_ASSERT(i02 >= 0 && i02 < n_as);
+ 
+                     MMID_MATRIX_ROW(i02, matrix_row_counts[i02]) = { id, iid1 };
+@@ -5165,6 +5169,34 @@ static const char * ggml_backend_cpu_repack_buffer_type_get_name(ggml_backend_bu
+     GGML_UNUSED(buft);
+ }
+ 
++bool ggml_backend_cpu_repack_export_expert(const ggml_tensor * tensor, int64_t expert, void * output, size_t bytes) {
++    if (!tensor || !tensor->buffer || tensor->buffer->buft != ggml_backend_cpu_repack_buffer_type() ||
++        tensor->type != GGML_TYPE_MXFP4 || !ggml_cpu_has_avx2() ||
++        tensor->ne[1] % 8 || tensor->ne[0] % QK_MXFP4 || tensor->ne[3] != 1 ||
++        expert < 0 || expert >= tensor->ne[2] || bytes != tensor->nb[2] || !output || !tensor->data ||
++        tensor->extra != ggml_repack_get_optimal_repack_type(tensor) ||
++        !ggml_is_contiguous(tensor)) {
++        return false;
++    }
++    const int64_t blocks = tensor->ne[0] / QK_MXFP4;
++    const auto * packed = reinterpret_cast<const block_mxfp4x8 *>(
++        static_cast<const char *>(tensor->data) + expert*tensor->nb[2]);
++    auto * raw = static_cast<block_mxfp4 *>(output);
++    for (int64_t row = 0; row < tensor->ne[1]; row += 8) {
++        for (int64_t block = 0; block < blocks; ++block) {
++            const auto & group = packed[(row/8)*blocks + block];
++            for (int r = 0; r < 8; ++r) {
++                auto & result = raw[(row + r)*blocks + block];
++                result.e = group.e[r];
++                for (int chunk = 0; chunk < 2; ++chunk) {
++                    std::memcpy(result.qs + chunk*8, group.qs + (chunk*8 + r)*8, 8);
++                }
++            }
++        }
++    }
++    return true;
++}
++
+ static ggml_backend_buffer_t ggml_backend_cpu_repack_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
+     ggml_backend_buffer_t buffer = ggml_backend_buft_alloc_buffer(ggml_backend_cpu_buffer_type(), size);
+ 
+diff --git a/ggml/src/ggml-cpu/repack.h b/ggml/src/ggml-cpu/repack.h
+index fc6715c..bec0fad 100644
+--- a/ggml/src/ggml-cpu/repack.h
++++ b/ggml/src/ggml-cpu/repack.h
+@@ -9,6 +9,7 @@
+ // GGML internal header
+ 
+ ggml_backend_buffer_type_t ggml_backend_cpu_repack_buffer_type(void);
++bool ggml_backend_cpu_repack_export_expert(const ggml_tensor * tensor, int64_t expert, void * output, size_t bytes);
+ 
+ template <int K> constexpr int QK_0() {
+     if constexpr (K == 1) {
+diff --git a/src/llama-context.cpp b/src/llama-context.cpp
+index 9ee64b5..cd88861 100644
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -550,6 +550,11 @@ llama_context::llama_context(
+ 
+         if (cparams.moe_cache_size > 0) {
+             moe_cache = std::make_unique<llama_moe_cache>(model, backend_ptrs, backend_buft, cparams.moe_cache_size);
++        } else if (const char * plan = std::getenv("VRAMBRIDGE_HYBRID_PLAN"); plan && plan[0]) {
++            const char * draft = std::getenv("VRAMBRIDGE_HYBRID_DFLASH");
++            if (model.arch != LLM_ARCH_DFLASH || !draft || std::string(draft) != "1") {
++                throw std::runtime_error("Frozen hybrid plan requires an explicit --moe-cache-mib budget");
++            }
+         }
+ 
+         sched_reserve();
+diff --git a/src/llama-context.h b/src/llama-context.h
+index 6938fb1..64a86db 100644
+--- a/src/llama-context.h
++++ b/src/llama-context.h
+@@ -307,7 +307,6 @@ private:
+     llama_cross cross; // TODO: tmp for handling cross-attention - need something better probably
+ 
+     llama_memory_ptr memory;
+-    llama_moe_cache_ptr moe_cache;
+ 
+     // decode output (2-dimensional array: [n_outputs][n_vocab])
+     buffer_view<float> logits = {nullptr, 0};
+@@ -394,6 +393,8 @@ private:
+ 
+     ggml_backend_t backend_cpu = nullptr;
+     std::vector<ggml_backend_ptr> backends;
++    // Cache teardown can synchronize these backends; destroy it before them.
++    llama_moe_cache_ptr moe_cache;
+ 
+     // training
+     ggml_opt_context_t opt_ctx = nullptr;
+diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
+index 6cadda9..fbfb646 100644
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -2282,6 +2282,93 @@ ggml_tensor * llm_graph_context::build_moe_ffn(
+     //call early so that topk-moe can be used
+     ggml_build_forward_expand(gf, weights);
+ 
++    if (moe_cache && moe_cache->is_frozen_hybrid() &&
++        n_tokens > 0 && n_tokens <= moe_cache->hybrid_batch_limit()) {
++        if (arch != LLM_ARCH_OPENAI_MOE || type_op != LLM_FFN_SWIGLU_OAI_MOE ||
++            gate_up_exps || !gate_exps || !up_exps || !down_exps ||
++            !gate_exps_b || !up_exps_b || !down_exps_b ||
++            up_exps_s || gate_exps_s || down_exps_s || (loras && !loras->empty()) || hdmd) {
++            throw std::runtime_error("Unsupported frozen hybrid graph layout, adapter, or transform");
++        }
++        ggml_backend_t cpu = nullptr;
++        for (int index = 0; index < ggml_backend_sched_get_n_backends(sched); ++index) {
++            auto candidate = ggml_backend_sched_get_backend(sched, index);
++            if (ggml_backend_dev_type(ggml_backend_get_device(candidate)) == GGML_BACKEND_DEVICE_TYPE_CPU) {
++                cpu = candidate;
++                break;
++            }
++        }
++        if (!cpu) throw std::runtime_error("Frozen hybrid graph requires a CPU backend");
++        auto gpu = moe_cache->backend(il);
++        auto place = [&](ggml_tensor * tensor, ggml_backend_t backend) {
++            if (!ggml_backend_supports_op(backend, tensor)) {
++                throw std::runtime_error("Frozen hybrid graph operation is unsupported on requested backend");
++            }
++            ggml_backend_sched_set_tensor_backend(sched, tensor, backend);
++            return tensor;
++        };
++        auto * map = moe_cache->get_slot_map(il, n_tokens, n_expert_used);
++        if (!map) throw std::runtime_error("Frozen hybrid is missing the layer slot map");
++        ggml_tensor * dispatch_args[] = {selected_experts, map, weights};
++        auto * packed = place(ggml_custom_4d(ctx0, GGML_TYPE_F32, n_expert_used, 3, n_tokens, 1,
++            dispatch_args, 3, llama_moe_cache::hybrid_dispatch, 1, moe_cache->hybrid_dispatch_state(il)), cpu);
++        auto * cpu_ids = place(ggml_cast(ctx0, ggml_view_2d(ctx0, packed,
++            n_expert_used, n_tokens, packed->nb[2], 0), GGML_TYPE_I32), cpu);
++        auto * gpu_ids = place(ggml_cast(ctx0, ggml_view_2d(ctx0, packed,
++            n_expert_used, n_tokens, packed->nb[2], packed->nb[1]), GGML_TYPE_I32), cpu);
++        auto * cold_weights = ggml_view_3d(ctx0, packed, 1, n_expert_used, n_tokens,
++            packed->nb[0], packed->nb[2], 2*packed->nb[1]);
++        ggml_build_forward_expand(gf, cpu_ids);
++        ggml_build_forward_expand(gf, gpu_ids);
++        auto * input = ggml_reshape_3d(ctx0, cur, n_embd, 1, n_tokens);
++        auto branch = [&](bool resident) {
++            auto backend = resident ? gpu : cpu;
++            auto * ids = resident ? gpu_ids : cpu_ids;
++            auto * bias_ids = resident ? gpu_ids : selected_experts;
++            auto tensor = [&](ggml_tensor * original) {
++                auto * result = resident ? moe_cache->get_experts(original) : original;
++                if (!result) throw std::runtime_error("Frozen hybrid expert bank is incomplete");
++                return result;
++            };
++            auto mm = [&](ggml_tensor * original, ggml_tensor * values) {
++                auto * result = ggml_mul_mat_id(ctx0, tensor(original), values, ids);
++                if (prec_policy) prec_policy->apply(result);
++                return place(result, backend);
++            };
++            auto * gate = mm(gate_exps, input);
++            gate = place(ggml_add_id(ctx0, gate, tensor(gate_exps_b), bias_ids), backend);
++            auto * up = mm(up_exps, input);
++            up = place(ggml_add_id(ctx0, up, tensor(up_exps_b), bias_ids), backend);
++            auto * activated = place(ggml_swiglu_oai(ctx0, gate, up, 1.702f, 7.0f), backend);
++            auto * down = mm(down_exps, activated);
++            down = place(ggml_add_id(ctx0, down, tensor(down_exps_b), bias_ids), backend);
++            cb(down, resident ? "hybrid_gpu_down_biased" : "hybrid_cpu_down_biased", il);
++            auto * result = place(ggml_mul(ctx0, down, resident ? weights : cold_weights), backend);
++            cb(result, resident ? "hybrid_gpu_weighted" : "hybrid_cpu_weighted", il);
++            return result;
++        };
++        auto * resident = branch(true);
++        ggml_build_forward_expand(gf, resident);
++        auto * host = branch(false);
++        ggml_build_forward_expand(gf, host);
++        const char * merge_mode = std::getenv("VRAMBRIDGE_HYBRID_MERGE");
++        if (merge_mode && std::string(merge_mode) != "cpu" && std::string(merge_mode) != "gpu") {
++            throw std::runtime_error("Frozen hybrid merge must be cpu or gpu");
++        }
++        auto merge_backend = merge_mode && std::string(merge_mode) == "cpu" ? cpu : gpu;
++        auto * joined = place(ggml_add(ctx0, resident, host), merge_backend);
++        ggml_tensor * output = nullptr;
++        for (uint32_t rank = 0; rank < hparams.n_expert_used(il); ++rank) {
++            auto * row = ggml_view_2d(ctx0, joined, n_embd, n_tokens, joined->nb[2], rank*joined->nb[1]);
++            output = output ? place(ggml_add(ctx0, output, row), merge_backend) : row;
++            ggml_build_forward_expand(gf, output);
++        }
++        // Keep the explicit host boundary of the original CPU-expert graph.
++        auto * boundary = place(ggml_cont(ctx0, output), cpu);
++        cb(boundary, "ffn_moe_out", il);
++        return boundary;
++    }
++
+     // the experts of host-resident layers may be read from the MoE cache
+     ggml_tensor * slots = build_moe_cache_slots(selected_experts, up_exps, gate_exps, down_exps, gate_up_exps, il);
+ 
+diff --git a/src/llama-moe-cache.cpp b/src/llama-moe-cache.cpp
+index f22d986..5d2ffaa 100644
+--- a/src/llama-moe-cache.cpp
++++ b/src/llama-moe-cache.cpp
+@@ -6,9 +6,19 @@
+ #include "ggml-cpp.h"
+ 
+ #include <algorithm>
++#include <cstdlib>
++#include <array>
++#include <deque>
++#include <fstream>
++#include <limits>
++#include <set>
++#include <sstream>
+ #include <stdexcept>
+ #include <unordered_map>
+ #include <vector>
++#if defined(__linux__)
++#include <unistd.h>
++#endif
+ 
+ namespace {
+ 
+@@ -120,16 +130,27 @@ struct moe_cache_lru {
+ };
+ 
+ // gate, up, down or gate_up, down
+-static std::vector<ggml_tensor *> llama_moe_cache_layer_experts(const llama_layer & layer) {
++static std::vector<ggml_tensor *> llama_moe_cache_layer_experts(const llama_layer & layer, bool biases = false) {
+     std::vector<ggml_tensor *> res;
+     for (ggml_tensor * t : { layer.ffn_gate_up_exps, layer.ffn_gate_exps, layer.ffn_up_exps, layer.ffn_down_exps }) {
+         if (t != nullptr) {
+             res.push_back(t);
+         }
+     }
++    if (biases) {
++        for (ggml_tensor * t : {layer.ffn_gate_exps_b, layer.ffn_up_exps_b, layer.ffn_down_exps_b}) {
++            if (t != nullptr) {
++                res.push_back(t);
++            }
++        }
++    }
+     return res;
+ }
+ 
++static size_t expert_stride(const ggml_tensor * t) {
++    return t->ne[2] > 1 ? t->nb[2] : t->nb[1];
++}
++
+ static bool llama_moe_cache_same_layout(const std::vector<ggml_tensor *> & a, const std::vector<ggml_tensor *> & b) {
+     if (a.size() != b.size()) {
+         return false;
+@@ -148,9 +169,130 @@ static bool llama_moe_cache_is_host_weight(const ggml_tensor * t) {
+         ggml_backend_buffer_is_host(t->buffer);
+ }
+ 
++static bool is_cpu_repacked(const ggml_tensor * t) {
++    return t->buffer && std::string(ggml_backend_buft_name(ggml_backend_buffer_get_type(t->buffer))) == "CPU_REPACK";
++}
++
++static void export_expert(const ggml_tensor * source, int expert, void * output, size_t bytes) {
++    if (is_cpu_repacked(source)) {
++        const auto device = ggml_backend_buft_get_device(ggml_backend_buffer_get_type(source->buffer));
++        using export_fn = bool (*)(const ggml_tensor *, int64_t, void *, size_t);
++        const auto export_raw = reinterpret_cast<export_fn>(ggml_backend_reg_get_proc_address(
++            ggml_backend_dev_backend_reg(device), "vrambridge_export_repacked_expert"));
++        if (!export_raw || !export_raw(source, expert, output, bytes)) {
++            throw std::runtime_error("Cannot export original MXFP4 bytes from CPU-repacked expert");
++        }
++    } else {
++        ggml_backend_tensor_get(source, output, expert*bytes, bytes);
++    }
++}
++
++struct source_registration {
++    using register_fn = bool (*)(void *, size_t);
++    using unregister_fn = void (*)(void *);
++    unregister_fn unregister_pages = nullptr;
++    std::vector<std::pair<uintptr_t, uintptr_t>> registered;
++    source_registration() = default;
++    source_registration(const source_registration &) = delete;
++    source_registration & operator=(const source_registration &) = delete;
++
++    ~source_registration() {
++        for (const auto & range : registered) unregister_pages(reinterpret_cast<void *>(range.first));
++    }
++
++    static uint64_t available_ram() {
++        std::ifstream info("/proc/meminfo");
++        std::string name, line;
++        uint64_t value;
++        while (info >> name >> value) {
++            std::getline(info, line);
++            if (name == "MemAvailable:") return value*1024;
++        }
++        throw std::runtime_error("Cannot read MemAvailable for bounded source registration");
++    }
++
++    void pin(ggml_backend_t backend, const std::vector<const ggml_tensor *> & sources) {
++#if defined(__linux__)
++        const char * enabled = std::getenv("GGML_CUDA_REGISTER_HOST");
++        if (!enabled || std::string(enabled) != "1") {
++            throw std::runtime_error("Direct admissions require GGML_CUDA_REGISTER_HOST=1");
++        }
++        const auto reg = ggml_backend_dev_backend_reg(ggml_backend_get_device(backend));
++        const auto register_pages = reinterpret_cast<register_fn>(
++            ggml_backend_reg_get_proc_address(reg, "ggml_backend_register_host_buffer"));
++        unregister_pages = reinterpret_cast<unregister_fn>(
++            ggml_backend_reg_get_proc_address(reg, "ggml_backend_unregister_host_buffer"));
++        if (!register_pages || !unregister_pages) throw std::runtime_error("Read-only CUDA host-registration hooks unavailable");
++        const long page_size = sysconf(_SC_PAGESIZE);
++        if (page_size <= 0) throw std::runtime_error("Cannot determine registration page size");
++        const auto page = static_cast<uintptr_t>(page_size);
++        std::vector<std::pair<uintptr_t, uintptr_t>> ranges;
++        for (const auto * tensor : sources) {
++            if (!llama_moe_cache_is_host_weight(tensor) || is_cpu_repacked(tensor) ||
++                std::string(ggml_backend_buft_name(ggml_backend_buffer_get_type(tensor->buffer))).find("CUDA") != std::string::npos) {
++                throw std::runtime_error("Direct admissions require raw, not already CUDA-pinned host weights");
++            }
++            const auto address = reinterpret_cast<uintptr_t>(tensor->data);
++            const auto bytes = ggml_nbytes(tensor);
++            if (!address || bytes > std::numeric_limits<uintptr_t>::max() - page ||
++                address > std::numeric_limits<uintptr_t>::max() - bytes - page) {
++                throw std::runtime_error("Invalid source-registration range");
++            }
++            ranges.emplace_back(address/page*page, (address + bytes + page - 1)/page*page);
++        }
++        std::sort(ranges.begin(), ranges.end());
++        std::vector<std::pair<uintptr_t, uintptr_t>> merged;
++        for (const auto & range : ranges) {
++            if (merged.empty() || range.first > merged.back().second) merged.push_back(range);
++            else merged.back().second = std::max(merged.back().second, range.second);
++        }
++        constexpr uint64_t cap = uint64_t(64) << 30;
++        constexpr uint64_t headroom = uint64_t(24) << 30;
++        uint64_t total = 0;
++        for (const auto & range : merged) {
++            const uint64_t bytes = range.second - range.first;
++            if (bytes > cap - total) throw std::runtime_error("Source registration exceeds 64 GiB cap");
++            total += bytes;
++        }
++        if (!total || available_ram() < total + headroom) {
++            throw std::runtime_error("Source registration exceeds 64 GiB cap or 24 GiB available-RAM headroom");
++        }
++        registered.reserve(merged.size());
++        for (const auto & range : merged) {
++            if (!register_pages(reinterpret_cast<void *>(range.first), range.second - range.first)) {
++                throw std::runtime_error("Read-only source registration failed; unwinding successful registrations");
++            }
++            registered.push_back(range);
++        }
++        if (available_ram() < headroom) throw std::runtime_error("Insufficient RAM headroom after source registration");
++        LLAMA_LOG_WARN("%s: registered %llu immutable source bytes in %zu ranges; cap 64 GiB, headroom 24 GiB\n",
++                       __func__, static_cast<unsigned long long>(total), registered.size());
++#else
++        (void) backend;
++        (void) sources;
++        throw std::runtime_error("Direct source registration currently requires Linux");
++#endif
++    }
++};
++
+ }
+ 
+ struct llama_moe_cache::impl {
++    bool frozen_hybrid = false;
++    bool adaptive = false;
++    bool async_admissions = false;
++    bool direct_admissions = false;
++    int64_t batch_limit = 1;
++    source_registration source_pins;
++    std::vector<int> recent = std::vector<int>(36 * 128, 0);
++    std::deque<std::array<int, 4>> history;
++    size_t dynamic_upload_bytes = 0;
++    size_t dynamic_admissions = 0;
++    size_t dispatch_calls = 0;
++    size_t cpu_expert_calls = 0;
++    size_t gpu_expert_calls = 0;
++    size_t pre_admission_hits = 0;
++    ggml_backend_buffer_ptr admission_staging;
+     // a GPU with its own budget and banks, it caches the layers assigned to it
+     struct device {
+         ggml_backend_t backend;
+@@ -176,6 +318,8 @@ struct llama_moe_cache::impl {
+     };
+ 
+     struct layer {
++        impl * owner = nullptr;
++        int32_t index = -1;
+         int32_t ig = -1;                    // -1 if the layer is not cached
+         ggml_tensor * slot_map = nullptr;   // I32 [1, n_expert] in host memory
+         std::vector<ggml_tensor *> experts; // host expert tensors, in the order of the banks
+@@ -220,6 +364,39 @@ struct llama_moe_cache::impl {
+ 
+     impl(const llama_model & model, const std::vector<ggml_backend_t> & backends, const std::vector<ggml_backend_buffer_type_t> & bufts, size_t size) :
+             n_expert_used(model.hparams.n_expert_used_max()), layers(model.layers.size()) {
++        const char * plan_path = std::getenv("VRAMBRIDGE_HYBRID_PLAN");
++        frozen_hybrid = plan_path != nullptr && plan_path[0] != '\0';
++        if (frozen_hybrid) {
++            if (const char * batch = std::getenv("VRAMBRIDGE_HYBRID_BATCH")) {
++                size_t consumed = 0;
++                batch_limit = std::stoll(batch, &consumed);
++                if (consumed != std::string(batch).size() || batch_limit < 1 || batch_limit > max_batch) {
++                    throw std::runtime_error("Hybrid batch limit must be an integer from 1 to 32");
++                }
++            }
++        }
++        const char * adapt = std::getenv("VRAMBRIDGE_HYBRID_ADAPT");
++        adaptive = frozen_hybrid && adapt && std::string(adapt) == "1";
++        const char * async = std::getenv("VRAMBRIDGE_HYBRID_ASYNC");
++        async_admissions = adaptive && async && std::string(async) == "1";
++        const char * repack = std::getenv("VRAMBRIDGE_HYBRID_REPACK");
++        const bool allow_repack = frozen_hybrid && repack && std::string(repack) == "1";
++        const char * direct = std::getenv("VRAMBRIDGE_HYBRID_DIRECT");
++        direct_admissions = frozen_hybrid && direct && std::string(direct) == "1";
++        if (direct_admissions && (!async_admissions || allow_repack)) {
++            throw std::runtime_error("Direct admissions require asynchronous raw-layout execution");
++        }
++        for (size_t il = 0; il < layers.size(); ++il) {
++            layers[il].owner = this;
++            layers[il].index = static_cast<int32_t>(il);
++        }
++        if (frozen_hybrid && model.hparams.no_alloc) {
++            throw std::runtime_error("Frozen hybrid does not support allocation-free memory fitting");
++        }
++        if (frozen_hybrid && (model.arch != LLM_ARCH_OPENAI_MOE ||
++                             model.hparams.n_embd != 2880 || model.layers.size() != 36)) {
++            throw std::runtime_error("Frozen hybrid prototype requires the GPT-OSS-120B layout");
++        }
+         for (size_t i = 0; i < backends.size(); ++i) {
+             const auto dev_type = ggml_backend_dev_type(ggml_backend_get_device(backends[i]));
+             if (dev_type == GGML_BACKEND_DEVICE_TYPE_GPU || dev_type == GGML_BACKEND_DEVICE_TYPE_IGPU) {
+@@ -240,8 +417,12 @@ struct llama_moe_cache::impl {
+ 
+         // only cache layers that keep all of their experts in host memory, on the device the layer is assigned to
+         for (size_t il = 0; il < model.layers.size(); ++il) {
+-            auto experts = llama_moe_cache_layer_experts(model.layers[il]);
+-            if (experts.empty() || !std::all_of(experts.begin(), experts.end(), llama_moe_cache_is_host_weight)) {
++            auto experts = llama_moe_cache_layer_experts(model.layers[il], frozen_hybrid);
++            if (experts.empty() || !std::all_of(experts.begin(), experts.end(), [&](const ggml_tensor * t) {
++                    return llama_moe_cache_is_host_weight(t) ||
++                        (allow_repack && is_cpu_repacked(t) &&
++                         ggml_backend_buffer_get_usage(t->buffer) == GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
++                })) {
+                 continue;
+             }
+             const auto it_dev = std::find_if(devices.begin(), devices.end(), [&](const device & d) { return ggml_backend_get_device(d.backend) == model.dev_layer(il); });
+@@ -272,7 +453,7 @@ struct llama_moe_cache::impl {
+             const size_t alignment = ggml_backend_buft_get_alignment(devices[g.id].buft);
+             size_t res = 0;
+             for (const ggml_tensor * t : g.ref) {
+-                res += GGML_PAD(t->nb[2]*(n_slots + 1), alignment);
++                res += GGML_PAD(expert_stride(t)*(n_slots + 1), alignment);
+             }
+             return res;
+         };
+@@ -361,18 +542,22 @@ struct llama_moe_cache::impl {
+             }
+             ggml_context * ctx = devices[g.id].ctx.get();
+             for (const ggml_tensor * t : g.ref) {
+-                ggml_tensor * bank = ggml_new_tensor_3d(ctx, t->type, t->ne[0], t->ne[1], g.n_slots + 1);
+-                GGML_ASSERT(bank->nb[2] == t->nb[2]);
++                ggml_tensor * bank = t->ne[2] > 1
++                    ? ggml_new_tensor_3d(ctx, t->type, t->ne[0], t->ne[1], g.n_slots + 1)
++                    : ggml_new_tensor_2d(ctx, t->type, t->ne[0], g.n_slots + 1);
++                GGML_ASSERT(expert_stride(bank) == expert_stride(t));
+                 ggml_format_name(bank, "moe_cache.%zu.%s", ig, t->name);
+                 g.banks.push_back(bank);
+             }
+             for (int32_t il : g.layers) {
+                 layer & l = layers[il];
+                 l.ig      = (int32_t) ig;
+-                l.experts = llama_moe_cache_layer_experts(model.layers[il]);
++                l.experts = llama_moe_cache_layer_experts(model.layers[il], frozen_hybrid);
+                 for (size_t ip = 0; ip < l.experts.size(); ++ip) {
+                     ggml_tensor * bank   = g.banks[ip];
+-                    ggml_tensor * cached = ggml_view_3d(ctx, bank, bank->ne[0], bank->ne[1], g.n_slots, bank->nb[1], bank->nb[2], 0);
++                    ggml_tensor * cached = bank->ne[2] > 1
++                        ? ggml_view_3d(ctx, bank, bank->ne[0], bank->ne[1], g.n_slots, bank->nb[1], bank->nb[2], 0)
++                        : ggml_view_2d(ctx, bank, bank->ne[0], g.n_slots, bank->nb[1], 0);
+                     ggml_format_name(cached, "moe_cache.%s", l.experts[ip]->name);
+                     bindings[l.experts[ip]] = { il, (int32_t) ip, cached };
+                 }
+@@ -435,6 +620,81 @@ struct llama_moe_cache::impl {
+         }
+         ggml_backend_buffer_set_usage(buf_host.get(), GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
+ 
++        if (frozen_hybrid) {
++            if (devices.size() != 1 || model.hparams.n_expert != 128 ||
++                std::any_of(layers.begin(), layers.end(), [](const layer & l) { return l.ig < 0 || l.experts.size() != 6; })) {
++                throw std::runtime_error("Frozen hybrid requires one GPU and all six expert components in host memory");
++            }
++            std::ifstream plan(plan_path);
++            if (!plan) {
++                throw std::runtime_error("Cannot open the frozen hybrid plan");
++            }
++            std::set<std::pair<int, int>> selected;
++            std::vector<int32_t> next(groups.size(), 1); // slot zero is a permanent zero expert
++            std::string line;
++            while (std::getline(plan, line)) {
++                if (line.empty() || line[0] == '#') continue;
++                std::istringstream row(line);
++                int il, expert;
++                std::string extra;
++                if (!(row >> il >> expert) || row >> extra || il < 0 || il >= (int) layers.size() ||
++                    expert < 0 || expert >= 128 || !selected.insert({il, expert}).second) {
++                    throw std::runtime_error("Invalid or duplicate frozen hybrid plan entry");
++                }
++                auto & l = layers[il];
++                auto & g = groups[l.ig];
++                const int32_t slot = next[l.ig]++;
++                if (slot >= g.n_slots) {
++                    throw std::runtime_error("Frozen hybrid plan exceeds allocated expert slots");
++                }
++                for (size_t ip = 0; ip < l.experts.size(); ++ip) {
++                    const auto * source = l.experts[ip];
++                    const size_t stride = expert_stride(source);
++                    std::vector<uint8_t> bytes(stride);
++                    export_expert(source, expert, bytes.data(), stride);
++                    ggml_backend_tensor_set(g.banks[ip], bytes.data(), slot*stride, stride);
++                }
++                g.lru.slot_map[il][expert] = slot;
++                g.lru.key_of[slot] = il*128 + expert;
++            }
++            if (!plan.eof()) throw std::runtime_error("Failed to read frozen hybrid plan");
++            LLAMA_LOG_WARN("%s: EXPERIMENTAL HYBRID enabled: %zu selected experts; %s\n",
++                           __func__, selected.size(), adaptive ? "adaptive admissions" : "frozen, no decode weight migration");
++            LLAMA_LOG_WARN("%s: hybrid batch limit=%lld; multi-position dispatch freezes residency\n",
++                           __func__, static_cast<long long>(batch_limit));
++            size_t repacked = 0;
++            for (const auto & l : layers) for (const auto * source : l.experts) repacked += is_cpu_repacked(source);
++            LLAMA_LOG_WARN("%s: CPU-repacked expert tensors=%zu; lossless native-layout GPU uploads\n", __func__, repacked);
++            if (adaptive) {
++                if (direct_admissions) {
++                    std::vector<const ggml_tensor *> sources;
++                    for (const auto & l : layers) sources.insert(sources.end(), l.experts.begin(), l.experts.end());
++                    source_pins.pin(devices[0].backend, sources);
++                    LLAMA_LOG_WARN("%s: direct asynchronous admissions; immutable registered sources, no staging copies\n", __func__);
++                } else {
++                size_t maximum_stride = 0;
++                size_t maximum_expert = 0;
++                for (const auto & g : groups) {
++                    size_t expert_bytes = 0;
++                    for (const auto * t : g.ref) {
++                        maximum_stride = std::max(maximum_stride, expert_stride(t));
++                        expert_bytes += expert_stride(t);
++                    }
++                    maximum_expert = std::max(maximum_expert, expert_bytes);
++                }
++                const size_t staging_bytes = async_admissions ? maximum_expert*4 : maximum_stride;
++                const auto pinned = ggml_backend_dev_host_buffer_type(ggml_backend_get_device(devices[0].backend));
++                if (!pinned) throw std::runtime_error("Adaptive prototype requires bounded pinned staging");
++                admission_staging.reset(ggml_backend_buft_alloc_buffer(pinned, staging_bytes));
++                if (!admission_staging || ggml_backend_buffer_get_type(admission_staging.get()) != pinned) {
++                    throw std::runtime_error("Cannot allocate bounded pinned admission staging");
++                }
++                LLAMA_LOG_WARN("%s: adaptive admissions enabled; %zu-byte bounded staging, %s uploads\n",
++                               __func__, staging_bytes, async_admissions ? "asynchronous" : "synchronous");
++                }
++            }
++        }
++
+         for (size_t id = 0; id < devices.size(); ++id) {
+             const device & d = devices[id];
+             if (d.host_bytes == 0) {
+@@ -456,14 +716,131 @@ struct llama_moe_cache::impl {
+     }
+ 
+     ~impl() {
++        if (async_admissions) {
++            for (const auto & device : devices) ggml_backend_synchronize(device.backend);
++        }
++        if (frozen_hybrid) LLAMA_LOG_WARN("%s: hybrid dispatches=%zu CPU experts=%zu GPU experts=%zu prior hits=%zu\n",
++            __func__, dispatch_calls, cpu_expert_calls, gpu_expert_calls, pre_admission_hits);
++        if (adaptive) LLAMA_LOG_WARN("%s: adaptive admissions=%zu, uploaded=%zu bytes\n",
++                                    __func__, dynamic_admissions, dynamic_upload_bytes);
+         log_stats();
+     }
+ 
++    void write_dispatch(ggml_tensor * dst, const layer & l, bool count_prior_hits) {
++        const auto * ids = dst->src[0];
++        const auto * weights = dst->src[2];
++        const auto & g = groups[l.ig];
++        auto * output = static_cast<float *>(dst->data);
++        for (int64_t token = 0; token < ids->ne[1]; ++token) {
++            for (int rank = 0; rank < 4; ++rank) {
++                const int expert = *reinterpret_cast<const int32_t *>(
++                    static_cast<const char *>(ids->data) + token*ids->nb[1] + rank*ids->nb[0]);
++                GGML_ASSERT(expert >= 0 && expert < 128);
++                const int slot = g.lru.slot_map[l.index][expert];
++                if (slot >= 0) ++gpu_expert_calls;
++                else ++cpu_expert_calls;
++                if (count_prior_hits) pre_admission_hits += slot >= 0;
++                const float weight = *reinterpret_cast<const float *>(
++                    static_cast<const char *>(weights->data) + token*weights->nb[2] + rank*weights->nb[1]);
++                output[token*12 + rank] = slot >= 0 ? -1.0f : float(expert);
++                output[token*12 + 4 + rank] = slot >= 0 ? float(slot) : 0.0f;
++                output[token*12 + 8 + rank] = slot >= 0 ? 0.0f : weight;
++            }
++        }
++    }
++
++    void dispatch(ggml_tensor * dst, layer & l) {
++        bool staging_ready = false;
++        size_t staging_used = 0;
++        const auto * ids = dst->src[0];
++        const auto * weights = dst->src[2];
++        GGML_ASSERT(ids->type == GGML_TYPE_I32 && ids->ne[0] == 4 && ids->ne[1] >= 1 &&
++                    ids->ne[1] <= batch_limit && weights->type == GGML_TYPE_F32 &&
++                    weights->ne[2] == ids->ne[1]);
++        if (ids->ne[1] > 1) {
++            ++dispatch_calls;
++            // No slot may be evicted while any position of this block still needs it.
++            write_dispatch(dst, l, true);
++            return;
++        }
++        std::array<int, 4> selected;
++        for (int rank = 0; rank < 4; ++rank) {
++            const int32_t expert = *reinterpret_cast<const int32_t *>(
++                static_cast<const char *>(ids->data) + rank*ids->nb[0]);
++            GGML_ASSERT(expert >= 0 && expert < 128);
++            selected[rank] = l.index*128 + expert;
++        }
++        auto & g = groups[l.ig];
++        ++dispatch_calls;
++        for (int key : selected) pre_admission_hits += g.lru.slot_map[l.index][key % 128] >= 0;
++        if (adaptive) {
++            history.push_back(selected);
++            for (int key : selected) ++recent[key];
++            if (history.size() > 64*36) {
++                for (int key : history.front()) --recent[key];
++                history.pop_front();
++            }
++            for (int key : selected) {
++                const int expert = key % 128;
++                if (g.lru.slot_map[l.index][expert] >= 0 || recent[key] < 4) continue;
++                int32_t victim_slot = -1;
++                int victim_frequency = 0;
++                for (int32_t slot = 1; slot < g.n_slots; ++slot) {
++                    const int victim = g.lru.key_of[slot];
++                    if (victim >= 0 && std::find(selected.begin(), selected.end(), victim) != selected.end()) continue;
++                    const int frequency = victim >= 0 ? recent[victim] : 0;
++                    if (victim_slot < 0 || frequency < victim_frequency) {
++                        victim_slot = slot;
++                        victim_frequency = frequency;
++                        if (victim < 0) break;
++                    }
++                }
++                // A bounded causal payback heuristic: require four more recent reads than the victim.
++                if (victim_slot < 0 || recent[key] < victim_frequency + 4) continue;
++                auto backend = devices[g.id].backend;
++                if (!direct_admissions && (!async_admissions || !staging_ready)) {
++                    // Finish prior bank readers and DMA before reusing the staging pool.
++                    ggml_backend_synchronize(backend);
++                    staging_ready = true;
++                }
++                for (size_t ip = 0; ip < l.experts.size(); ++ip) {
++                    const auto * source = l.experts[ip];
++                    const size_t stride = expert_stride(source);
++                    if (direct_admissions) {
++                        ggml_backend_tensor_set_async(backend, g.banks[ip],
++                            static_cast<const char *>(source->data) + expert*stride, victim_slot*stride, stride);
++                        dynamic_upload_bytes += stride;
++                        continue;
++                    }
++                    auto * bytes = static_cast<char *>(ggml_backend_buffer_get_base(admission_staging.get())) + staging_used;
++                    GGML_ASSERT(staging_used + stride <= ggml_backend_buffer_get_size(admission_staging.get()));
++                    export_expert(source, expert, bytes, stride);
++                    if (async_admissions) {
++                        // Same-backend stream ordering puts uploads before their expert kernels.
++                        ggml_backend_tensor_set_async(backend, g.banks[ip], bytes, victim_slot*stride, stride);
++                        staging_used += stride;
++                    } else {
++                        ggml_backend_tensor_set(g.banks[ip], bytes, victim_slot*stride, stride);
++                    }
++                    dynamic_upload_bytes += stride;
++                }
++                const int victim = g.lru.key_of[victim_slot];
++                if (victim >= 0) g.lru.slot_map[victim / 128][victim % 128] = -1;
++                g.lru.key_of[victim_slot] = key;
++                g.lru.slot_map[l.index][expert] = victim_slot;
++                ++dynamic_admissions;
++            }
++        }
++        write_dispatch(dst, l, false);
++    }
++
+     ggml_tensor * get_slot_map(int32_t il, int64_t n_tokens, int64_t n_expert_used) const {
++        if (frozen_hybrid && std::getenv("VRAMBRIDGE_HYBRID_BYPASS_GRAPH")) return nullptr;
+         if (il < 0 || il >= (int32_t) layers.size() || layers[il].ig < 0) {
+             return nullptr;
+         }
+         const layer & l = layers[il];
++        if (frozen_hybrid && n_tokens > batch_limit) return nullptr;
+ 
+         // large batches use most experts of a layer, so they gain little from the cache and would evict the experts used in generation
+         if (n_tokens == 0 || n_tokens > max_batch || std::min(n_tokens*n_expert_used, l.slot_map->ne[1]) > groups[l.ig].n_slots) {
+@@ -478,6 +855,7 @@ struct llama_moe_cache::impl {
+     }
+ 
+     int64_t copy_experts(ggml_backend_t backend, const ggml_tensor * w, ggml_tensor * dst, int64_t e, int64_t last) {
++        if (frozen_hybrid) return 0;
+         const auto it = bindings.find(w);
+         if (it == bindings.end()) {
+             return 0;
+@@ -513,6 +891,7 @@ struct llama_moe_cache::impl {
+     }
+ 
+     bool copy(ggml_backend_t backend, const ggml_tensor * src, ggml_tensor * dst, ggml_cgraph * graph) {
++        if (frozen_hybrid) return false;
+         const auto it = layer_of.find(src);
+         if (it == layer_of.end()) {
+             return false;
+@@ -617,6 +996,24 @@ ggml_tensor * llama_moe_cache::get_experts(const ggml_tensor * w) const {
+     return pimpl->get_experts(w);
+ }
+ 
++bool llama_moe_cache::is_frozen_hybrid() const {
++    return pimpl->frozen_hybrid && !std::getenv("VRAMBRIDGE_HYBRID_BYPASS_GRAPH");
++}
++
++int64_t llama_moe_cache::hybrid_batch_limit() const {
++    return pimpl->batch_limit;
++}
++
++void * llama_moe_cache::hybrid_dispatch_state(int32_t il) const {
++    if (il < 0 || il >= (int32_t) pimpl->layers.size()) throw std::runtime_error("Invalid dispatch layer");
++    return &pimpl->layers[il];
++}
++
++void llama_moe_cache::hybrid_dispatch(ggml_tensor * dst, int ith, int, void * userdata) {
++    if (ith != 0) return;
++    auto * state = static_cast<impl::layer *>(userdata);
++    state->owner->dispatch(dst, *state);
++}
+ bool llama_moe_cache::copy(ggml_backend_t backend, const ggml_tensor * src, ggml_tensor * dst, ggml_cgraph * graph) {
+     return pimpl->copy(backend, src, dst, graph);
+ }
+diff --git a/src/llama-moe-cache.h b/src/llama-moe-cache.h
+index 3b6726b..7669d3f 100644
+--- a/src/llama-moe-cache.h
++++ b/src/llama-moe-cache.h
+@@ -24,6 +24,10 @@ public:
+ 
+     // the experts of w in the cache, nullptr if w is not cached
+     ggml_tensor * get_experts(const ggml_tensor * w) const;
++    bool is_frozen_hybrid() const;
++    int64_t hybrid_batch_limit() const;
++    void * hybrid_dispatch_state(int32_t il) const;
++    static void hybrid_dispatch(ggml_tensor * dst, int ith, int nth, void * userdata);
+ 
+     // ggml_backend_sched copy callback, returns false if src is not a slot map
+     bool copy(ggml_backend_t backend, const ggml_tensor * src, ggml_tensor * dst, ggml_cgraph * graph);

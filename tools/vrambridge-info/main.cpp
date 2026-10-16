@@ -1,6 +1,7 @@
 #include "vrambridge/info.hpp"
 
 #include <chrono>
+#include <charconv>
 #include <ctime>
 #include <exception>
 #include <filesystem>
@@ -31,7 +32,7 @@ std::size_t parse_size_mib(const std::string & value) {
 
 void print_usage(std::ostream & output) {
     output << "Usage: vrambridge-info [--json] [--output FILE] [--no-bench] "
-              "[--size-mib N] [--iterations N] [--device N]\n";
+              "[--size-mib N] [--iterations N] [--device N] [--ram-threads N]\n";
 }
 
 } // namespace
@@ -57,6 +58,12 @@ int main(int argc, char ** argv) {
                 options.iterations = std::stoi(argv[++index]);
             } else if (argument == "--device" && index + 1 < argc) {
                 options.cuda_device = std::stoi(argv[++index]);
+            } else if (argument == "--ram-threads" && index + 1 < argc) {
+                const std::string value = argv[++index];
+                const auto parsed = std::from_chars(value.data(), value.data() + value.size(), options.ram_threads);
+                if (parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size() || options.ram_threads < 1) {
+                    throw std::invalid_argument("RAM threads must be a positive integer");
+                }
             } else if (argument == "--help" || argument == "-h") {
                 print_usage(std::cout);
                 return 0;

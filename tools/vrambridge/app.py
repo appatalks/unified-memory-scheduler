@@ -1,0 +1,916 @@
+#!/usr/bin/env python3
+"""Launch the Linux-first VRAMBridge local browser app."""
+
+from __future__ import annotations
+
+import argparse
+from collections import deque
+import hashlib
+import http.client
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
+import logging
+import os
+from pathlib import Path
+import secrets
+import select
+import shutil
+import signal
+import socket
+import struct
+import subprocess
+import threading
+import time
+from urllib.parse import urlsplit
+import webbrowser
+
+
+LOG = logging.getLogger("vrambridge")
+WEB_ROOT = Path(__file__).with_name("web")
+BODY_LIMIT = 1024 * 1024
+RESPONSE_LIMIT = 8 * 1024 * 1024
+PINNED_LLAMA_COMMIT = "620d2225cc436ab0b001e3200e590e3b286ef9ab"
+HYBRID_WARNING = (
+    "Experimental GPT-OSS-120B direct DMA: short screens reached 39-40 tok/s, not a guarantee. "
+    "Strict model diagnostics and an answer check remain failed. About 57 GiB of RAM stays pinned "
+    "until unload; the backend enforces a 64 GiB cap and 24 GiB available-RAM headroom. "
+    "Unload to release memory. Speculation is disabled."
+)
+
+
+def available_cpus() -> set[int]:
+    return set(os.sched_getaffinity(0))
+
+
+def default_cpu_threads() -> int:
+    cpus = available_cpus()
+    try:
+        physical = set()
+        for cpu in cpus:
+            root = Path("/sys/devices/system/cpu") / f"cpu{cpu}" / "topology"
+            physical.add(((root / "physical_package_id").read_text().strip(),
+                          (root / "core_id").read_text().strip()))
+        return max(1, len(physical))
+    except OSError as exc:
+        LOG.warning("Physical CPU topology unavailable; using affinity-based thread count: %s", exc)
+        return max(1, len(cpus) - 2)
+
+
+class AppError(Exception):
+    def __init__(self, status: int, message: str):
+        super().__init__(message)
+        self.status = status
+
+
+def readable_gguf(value: object, label: str) -> Path:
+    if not isinstance(value, str) or not value.strip():
+        raise AppError(400, f"Enter the path to a local GGUF {label.lower()}.")
+    try:
+        path = Path(value).expanduser().resolve()
+        if not path.is_file() or path.suffix.lower() != ".gguf":
+            raise AppError(400, f"{label} must be an existing, readable .gguf file.")
+        with path.open("rb") as source:
+            if source.read(4) != b"GGUF":
+                raise AppError(400, f"{label} does not have a GGUF header.")
+        return path
+    except (OSError, ValueError) as exc:
+        raise AppError(400, f"Cannot read {label.lower()}: {exc}") from exc
+
+
+def validate_hybrid_plan(path: Path) -> int:
+    if path.stat().st_size > 1024 * 1024:
+        raise ValueError("Hybrid plan exceeds 1 MiB.")
+    selected = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line or line.startswith("#"):
+            continue
+        fields = line.split()
+        if len(fields) != 2:
+            raise ValueError("Hybrid plan rows must contain layer and expert integers.")
+        layer, expert = map(int, fields)
+        if not 0 <= layer < 36 or not 0 <= expert < 128 or (layer, expert) in selected:
+            raise ValueError("Hybrid plan contains an invalid or duplicate expert.")
+        selected.add((layer, expert))
+    if not 1 <= len(selected) <= 800:
+        raise ValueError("This experimental app profile requires 1-800 resident expert groups.")
+    return len(selected)
+
+
+def model_metadata(path: Path) -> dict:
+    """Read bounded GGUF metadata without mapping weights or allocating vocabulary arrays."""
+    limit = min(path.stat().st_size, 64 * 1024 * 1024)
+    result = {}
+    scalar = {0: "B", 1: "b", 2: "H", 3: "h", 4: "I", 5: "i",
+              6: "f", 7: "?", 10: "Q", 11: "q", 12: "d"}
+    wanted = {"general.architecture", "general.file_type", "general.name",
+              "gpt-oss.block_count", "gpt-oss.embedding_length",
+              "gpt-oss.feed_forward_length", "gpt-oss.expert_count",
+              "gpt-oss.expert_used_count"}
+    with path.open("rb") as source:
+        def read(count):
+            if count < 0 or source.tell() + count > limit:
+                raise ValueError("GGUF metadata exceeds the file or 64 MiB read limit.")
+            data = source.read(count)
+            if len(data) != count:
+                raise ValueError("GGUF metadata is truncated.")
+            return data
+
+        def number(fmt):
+            return struct.unpack("<" + fmt, read(struct.calcsize("<" + fmt)))[0]
+
+        def skip(count):
+            if count < 0 or source.tell() + count > limit:
+                raise ValueError("GGUF metadata exceeds the file or 64 MiB read limit.")
+            source.seek(count, 1)
+
+        def string(keep):
+            count = number("Q")
+            if keep:
+                if count > 65536:
+                    raise ValueError("GGUF metadata string exceeds 64 KiB.")
+                return read(count).decode("utf-8")
+            skip(count)
+            return None
+
+        def value(kind, keep, depth=0):
+            if kind in scalar:
+                item = number(scalar[kind])
+                return item if keep else None
+            if kind == 8:
+                return string(keep)
+            if kind == 9 and depth < 2 and not keep:
+                element, count = number("I"), number("Q")
+                if count > 1000000:
+                    raise ValueError("GGUF metadata array exceeds one million entries.")
+                if element in scalar:
+                    skip(count * struct.calcsize("<" + scalar[element]))
+                else:
+                    for _ in range(count):
+                        value(element, False, depth + 1)
+                return None
+            raise ValueError("Unsupported GGUF metadata value type.")
+
+        if read(4) != b"GGUF" or number("I") not in (2, 3):
+            raise ValueError("Expected a little-endian GGUF v2/v3 file.")
+        number("Q")  # tensor count
+        count = number("Q")
+        if count > 100000:
+            raise ValueError("GGUF metadata has too many keys.")
+        seen = set()
+        for _ in range(count):
+            key = string(True)
+            if key in seen:
+                raise ValueError("Duplicate GGUF metadata key.")
+            seen.add(key)
+            item = value(number("I"), key in wanted)
+            if key in wanted:
+                result[key] = item
+    if not isinstance(result.get("general.architecture"), str):
+        raise ValueError("Select the first GGUF shard with architecture metadata.")
+    return result
+
+
+def supports_hybrid(metadata: dict) -> bool:
+    return all(type(metadata.get(key)) is type(value) and metadata[key] == value for key, value in {
+        "general.architecture": "gpt-oss", "gpt-oss.block_count": 36,
+        "gpt-oss.embedding_length": 2880, "gpt-oss.feed_forward_length": 2880,
+        "gpt-oss.expert_count": 128, "gpt-oss.expert_used_count": 4,
+        "general.file_type": 38,
+    }.items())
+
+
+def read_hybrid_profile(path: Path) -> dict:
+    if path.stat().st_size > 65536:
+        raise ValueError("Hybrid installation profile exceeds 64 KiB.")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if (not isinstance(data, dict) or set(data) !=
+            {"schema_version", "backend_commit", "executable", "plan", "cuda_plugin"} or
+            type(data["schema_version"]) is not int or data["schema_version"] != 1 or
+            data["backend_commit"] != PINNED_LLAMA_COMMIT or
+            any(not isinstance(data[key], str) or not Path(data[key]).is_absolute()
+                for key in ("executable", "plan", "cuda_plugin"))):
+        raise ValueError("Invalid pinned hybrid installation profile.")
+    return {"hybrid_executable": data["executable"], "hybrid_plan": Path(data["plan"]),
+            "hybrid_cuda_plugin": Path(data["cuda_plugin"])}
+
+
+class Runtime:
+    def __init__(self, executable: str, load_timeout: float = 600,
+                 backend_kind: str = "llama.cpp", enable_speculation: bool = False,
+                 hybrid_plan: Path | None = None, hybrid_cuda_plugin: Path | None = None,
+                 hybrid_executable: str | None = None, execution_mode: str | None = None):
+        if backend_kind not in ("llama.cpp", "ik_llama.cpp"):
+            raise ValueError("Unsupported backend kind.")
+        if (hybrid_plan is None) != (hybrid_cuda_plugin is None):
+            raise ValueError("Hybrid execution requires both a plan and the matching CUDA plugin.")
+        self.default_execution_mode = execution_mode or ("hybrid" if hybrid_plan is not None else "standard")
+        if self.default_execution_mode not in ("auto", "standard", "hybrid"):
+            raise ValueError("Execution mode must be auto, standard, or hybrid.")
+        if self.default_execution_mode == "hybrid" and hybrid_plan is None:
+            raise ValueError("Hybrid mode requires an installed or explicit plan/plugin profile.")
+        self.execution_mode = self.default_execution_mode
+        self.hybrid_active = hybrid_plan is not None and self.execution_mode == "hybrid"
+        self.selection_reason = ("Hybrid direct DMA explicitly selected." if self.hybrid_active else
+                                 "Automatic mode selects a profile from GGUF metadata when a model is loaded."
+                                 if self.execution_mode == "auto" and hybrid_plan is not None else
+                                 "Standard execution; no compatible hybrid installation selected.")
+        self.hybrid_plan = hybrid_plan.resolve(strict=True) if hybrid_plan is not None else None
+        self.hybrid_cuda_plugin = hybrid_cuda_plugin.resolve(strict=True) if hybrid_cuda_plugin is not None else None
+        self.hybrid_experts = 0
+        self.hybrid_plan_sha256 = None
+        if self.hybrid_plan is not None:
+            if backend_kind != "llama.cpp" or enable_speculation:
+                raise ValueError("Hybrid execution requires the patched official backend without speculation.")
+            self.hybrid_experts = validate_hybrid_plan(self.hybrid_plan)
+            self.hybrid_plan_sha256 = hashlib.sha256(self.hybrid_plan.read_bytes()).hexdigest()
+            if not self.hybrid_cuda_plugin.is_file():
+                raise ValueError("Hybrid CUDA plugin must be a matching shared-library file.")
+            with self.hybrid_cuda_plugin.open("rb") as plugin:
+                if not plugin.read(1):
+                    raise ValueError("Hybrid CUDA plugin is empty.")
+        self.hybrid_markers: set[str] = set()
+        self.backend_kind = backend_kind
+        self.enable_speculation = enable_speculation
+        self.executable = shutil.which(executable)
+        self.requested_executable = executable
+        self.standard_executable = self.executable
+        self.hybrid_executable = shutil.which(hybrid_executable or executable) if hybrid_plan is not None else None
+        if hybrid_plan is not None and not self.hybrid_executable:
+            raise ValueError("The configured patched hybrid executable was not found.")
+        if self.hybrid_active:
+            self.executable = self.hybrid_executable
+        self.load_timeout = load_timeout
+        self.lock = threading.RLock()
+        self.chat_lock = threading.Lock()
+        self.process: subprocess.Popen[str] | None = None
+        self.state = "stopped"
+        self.model: str | None = None
+        self.error: str | None = None
+        self.logs: deque[str] = deque(maxlen=80)
+        self.port = 0
+        self.key = ""
+        self.context = 4096
+        self.placement = "auto"
+        self.cpu_threads = default_cpu_threads()
+        self.batch_threads = self.cpu_threads
+        self.load_mode = "auto"
+        self.expert_cache_mib = 0
+        self.fit_target_mib = 1024
+        self.host_op_offload = True
+        self.cpu_poll = 50
+        self.op_offload_min_batch = 32
+        self.draft_model: str | None = None
+        self.draft_tokens = 9
+        self.resources: dict | None = None
+        self.resource_error: str | None = None
+        self.cpu_sample: tuple[float, float] | None = None
+        self.closed = False
+        if self.hybrid_active:
+            self.context = 16384
+            self.cpu_threads = min(8, len(available_cpus()))
+            self.batch_threads = min(16, len(available_cpus()))
+            self.expert_cache_mib = 10240
+            self.host_op_offload = False
+
+    def status(self) -> dict:
+        with self.lock:
+            return {
+                "api_version": 1,
+                "state": self.state,
+                "model": self.model,
+                "error": self.error,
+                "logs": list(self.logs),
+                "backend_available": self.executable is not None or self.hybrid_executable is not None,
+                "backend": self.executable or self.requested_executable,
+                "backend_kind": self.backend_kind,
+                "speculation_enabled": self.enable_speculation,
+                "execution_mode": self.execution_mode,
+                "hybrid_available": self.hybrid_plan is not None,
+                "hybrid_plan_sha256": self.hybrid_plan_sha256,
+                "selection_reason": self.selection_reason,
+                "execution_profile": "experimental-hybrid-direct" if self.hybrid_active else "standard",
+                "execution_warning": HYBRID_WARNING if self.hybrid_active else None,
+                "hybrid_verified": self.hybrid_markers == {"hybrid", "direct", "registered", "context"},
+                "fit_enabled": not self.hybrid_active and self.placement == "auto",
+                "context": self.context,
+                "placement": self.placement,
+                "cpu_threads": self.cpu_threads,
+                "batch_threads": self.batch_threads,
+                "load_mode": self.load_mode,
+                "expert_cache_mib": self.expert_cache_mib,
+                "fit_target_mib": self.fit_target_mib,
+                "host_op_offload": self.host_op_offload,
+                "cpu_poll": self.cpu_poll,
+                "op_offload_min_batch": self.op_offload_min_batch,
+                "draft_model": self.draft_model,
+                "draft_tokens": self.draft_tokens,
+                "logical_cpus": len(available_cpus()),
+                "resources": self.resources,
+                "resource_error": self.resource_error,
+                "chat_busy": self.chat_lock.locked(),
+            }
+
+    def load(self, data: dict) -> None:
+        model_value = data.get("model")
+        model = readable_gguf(model_value, "Model")
+        mode = data.get("execution_mode", self.default_execution_mode)
+        if mode not in ("auto", "standard", "hybrid"):
+            raise AppError(400, "Execution mode must be auto, standard, or hybrid.")
+        hybrid = mode == "hybrid"
+        reason = "Standard execution explicitly selected."
+        if mode != "standard" and self.hybrid_plan is not None:
+            try:
+                metadata = model_metadata(model)
+            except (OSError, ValueError) as exc:
+                raise AppError(400, f"Cannot select an execution profile: {exc}") from exc
+            hybrid = supports_hybrid(metadata)
+            reason = ("GPT-OSS-120B MXFP4 layout matched; adaptive direct DMA selected." if hybrid else
+                      f"{metadata['general.architecture']} is not supported by the hybrid dispatcher; "
+                      "standard execution selected, not a hybrid speedup.")
+        if mode == "hybrid" and (not hybrid or self.hybrid_plan is None):
+            raise AppError(400, "Hybrid mode requires an installed profile and the supported GPT-OSS-120B MXFP4 layout.")
+        if mode == "auto" and self.hybrid_plan is None:
+            reason = "No hybrid installation profile found; standard execution selected."
+        selected_executable = (self.hybrid_executable if hybrid else
+                               self.standard_executable if self.hybrid_plan is not None else self.executable)
+        context = data.get("context", 16384 if hybrid else 4096)
+        placement = data.get("placement", "auto")
+        cpu_threads = data.get("cpu_threads", min(8, len(available_cpus())) if hybrid else default_cpu_threads())
+        batch_threads = data.get("batch_threads", min(16, len(available_cpus())) if hybrid else cpu_threads)
+        load_mode = data.get("load_mode", "auto")
+        expert_cache_mib = data.get("expert_cache_mib", 10240 if hybrid else 0)
+        fit_target_mib = data.get("fit_target_mib", 1024)
+        host_op_offload = data.get("host_op_offload", not hybrid)
+        cpu_poll = data.get("cpu_poll", 50)
+        op_offload_min_batch = data.get("op_offload_min_batch", 32)
+        draft_value = data.get("draft_model")
+        draft_tokens = data.get("draft_tokens", 9)
+        if type(context) is not int or not 512 <= context <= 65536:
+            raise AppError(400, "Context must be an integer between 512 and 65536.")
+        if placement not in ("auto", "cpu"):
+            raise AppError(400, "Placement must be 'auto' or 'cpu'.")
+        for name, value in (("CPU threads", cpu_threads), ("Batch threads", batch_threads)):
+            if type(value) is not int or not 1 <= value <= len(available_cpus()):
+                raise AppError(400, f"{name} must be an integer between 1 and {len(available_cpus())}.")
+        if load_mode not in ("auto", "none"):
+            raise AppError(400, "Load mode must be 'auto' or 'none'.")
+        if type(expert_cache_mib) is not int or not 0 <= expert_cache_mib <= 65536:
+            raise AppError(400, "Expert cache must be an integer between 0 and 65536 MiB.")
+        if expert_cache_mib and placement != "auto":
+            raise AppError(400, "The experimental GPU expert cache requires automatic placement.")
+        if self.backend_kind == "ik_llama.cpp" and (placement != "auto" or expert_cache_mib):
+            raise AppError(400, "The experimental ik_llama.cpp adapter currently supports "
+                           "automatic placement without an explicit expert cache.")
+        if type(fit_target_mib) is not int or not 128 <= fit_target_mib <= 65536:
+            raise AppError(400, "VRAM reserve must be an integer between 128 and 65536 MiB.")
+        if type(host_op_offload) is not bool:
+            raise AppError(400, "Host operation offload must be a boolean.")
+        if type(cpu_poll) is not int or not 0 <= cpu_poll <= 100:
+            raise AppError(400, "CPU polling must be an integer between 0 and 100.")
+        if type(op_offload_min_batch) is not int or not 1 <= op_offload_min_batch <= 8192:
+            raise AppError(400, "Operation offload minimum batch must be an integer between 1 and 8192.")
+        if hybrid:
+            if (placement != "auto" or context != 16384 or load_mode != "auto" or
+                    expert_cache_mib != 10240 or host_op_offload or draft_value not in (None, "") or
+                    fit_target_mib != 1024 or op_offload_min_batch != 32):
+                raise AppError(400, "The experimental hybrid profile requires automatic CPU/GPU execution, "
+                               "16384 context, default loading, 10240 MiB residency, host-op offload off, "
+                               "1024 MiB reserve placeholder (fitting is off), batch threshold 32, and no draft.")
+            try:
+                self.hybrid_experts = validate_hybrid_plan(self.hybrid_plan)
+                self.hybrid_plan_sha256 = hashlib.sha256(self.hybrid_plan.read_bytes()).hexdigest()
+            except (OSError, ValueError) as exc:
+                raise AppError(400, f"Cannot use hybrid plan: {exc}") from exc
+        if self.backend_kind != "llama.cpp" and (
+            not host_op_offload or cpu_poll != 50 or op_offload_min_batch != 32
+        ):
+            raise AppError(400, "Explicit host-operation and polling tuning requires the official llama.cpp backend.")
+        if type(draft_tokens) is not int or not 1 <= draft_tokens <= 32:
+            raise AppError(400, "Draft tokens must be an integer between 1 and 32.")
+        draft = None
+        if draft_value not in (None, ""):
+            if not self.enable_speculation:
+                raise AppError(400, "DFlash is disabled. It requires --experimental-speculation "
+                               "and a compatible backend and target-trained draft.")
+            if placement != "auto" or expert_cache_mib:
+                raise AppError(400, "DFlash requires automatic placement without an explicit expert cache.")
+            draft = readable_gguf(draft_value, "Draft model")
+            if draft == model:
+                raise AppError(400, "The draft must be a separate, target-trained DFlash model.")
+        with self.lock:
+            if self.closed:
+                raise AppError(503, "The application is shutting down.")
+            if self.state == "stopping" or (self.process is not None and self.process.poll() is None):
+                raise AppError(409, "Unload the current model before loading another.")
+            if not selected_executable:
+                raise AppError(503, "llama-server was not found. Install llama.cpp and restart "
+                               "with --llama-server /path/to/llama-server.")
+            if self.chat_lock.locked():
+                raise AppError(409, "Wait for the previous chat request to finish.")
+            with socket.socket() as reservation:
+                reservation.bind(("127.0.0.1", 0))
+                self.port = reservation.getsockname()[1]
+            self.key = secrets.token_hex(32)
+            command = [
+                selected_executable, "--model", str(model), "--alias", "local-model",
+                "--host", "127.0.0.1", "--port", str(self.port),
+                "--api-key", self.key, "--ctx-size", str(context), "--parallel", "1",
+                "--threads", str(cpu_threads), "--threads-batch", str(batch_threads),
+            ]
+            if hybrid:
+                command += ["--n-gpu-layers", "all", "--cpu-moe", "--fit", "off",
+                            "--no-repack", "--no-host", "--moe-cache-mib", str(expert_cache_mib)]
+            elif self.backend_kind == "ik_llama.cpp":
+                command += ["--n-gpu-layers", "999", "--fit", "--fit-margin", str(fit_target_mib)]
+                if load_mode == "none":
+                    command += ["--no-mmap"]
+            elif placement == "auto":
+                command += ["--n-gpu-layers", "all" if expert_cache_mib else "auto",
+                            "--fit", "on", "--fit-target", str(fit_target_mib)]
+                if expert_cache_mib:
+                    command += ["--cpu-moe", "--moe-cache-mib", str(expert_cache_mib)]
+            else:
+                command += ["--n-gpu-layers", "0", "--device", "none"]
+            if load_mode != "auto" and self.backend_kind == "llama.cpp":
+                command += ["--load-mode", load_mode]
+            if self.backend_kind == "llama.cpp":
+                command += ["--poll", str(cpu_poll)]
+                if not host_op_offload:
+                    command += ["--no-op-offload"]
+            if draft is not None:
+                command += ["--model-draft", str(draft), "--flash-attn", "on"]
+                if self.backend_kind == "llama.cpp":
+                    command += ["--spec-type", "draft-dflash", "--spec-draft-n-max", str(draft_tokens),
+                                "--gpu-layers-draft", "all", "--jinja"]
+                else:
+                    command += ["--spec-type", f"dflash:n_max={draft_tokens},p_min=0.0",
+                                "--gpu-layers-draft", "999"]
+            # Do not inherit placement overrides or credentials from a developer's shell.
+            environment = {
+                key: value for key, value in os.environ.items()
+                if not key.startswith(("LLAMA_ARG_", "GGML_CUDA_ENABLE_UNIFIED_MEMORY", "VRAMBRIDGE_HYBRID_"))
+                and key not in ("GGML_OP_OFFLOAD_MIN_BATCH", "GGML_CUDA_REGISTER_HOST")
+            }
+            if hybrid:
+                environment.update(
+                    GGML_BACKEND_PATH=str(self.hybrid_cuda_plugin),
+                    VRAMBRIDGE_HYBRID_PLAN=str(self.hybrid_plan),
+                    VRAMBRIDGE_HYBRID_ADAPT="1", VRAMBRIDGE_HYBRID_ASYNC="1",
+                    VRAMBRIDGE_HYBRID_DIRECT="1", GGML_CUDA_REGISTER_HOST="1",
+                )
+            if self.backend_kind == "llama.cpp":
+                environment["GGML_OP_OFFLOAD_MIN_BATCH"] = str(op_offload_min_batch)
+            self.logs.clear()
+            self.hybrid_markers.clear()
+            self.executable = selected_executable
+            self.hybrid_active = hybrid
+            self.execution_mode = mode
+            self.selection_reason = reason
+            self.error = None
+            self.model = str(model)
+            self.context = context
+            self.placement = placement
+            self.cpu_threads = cpu_threads
+            self.batch_threads = batch_threads
+            self.load_mode = load_mode
+            self.expert_cache_mib = expert_cache_mib
+            self.fit_target_mib = fit_target_mib
+            self.host_op_offload = host_op_offload
+            self.cpu_poll = cpu_poll
+            self.op_offload_min_batch = op_offload_min_batch
+            self.draft_model = str(draft) if draft is not None else None
+            self.draft_tokens = draft_tokens
+            self.resources = None
+            self.resource_error = None
+            self.cpu_sample = None
+            try:
+                process = subprocess.Popen(
+                    command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
+                    env=environment,
+                )
+            except OSError as exc:
+                self.state = "error"
+                self.error = f"Could not start llama-server: {exc}"
+                LOG.error("%s", self.error)
+                raise AppError(503, self.error) from exc
+            self.process = process
+            self.state = "loading"
+            threading.Thread(target=self._read_logs, args=(process, self.key), daemon=True).start()
+            threading.Thread(target=self._watch, args=(process,), daemon=True).start()
+
+    def _read_logs(self, process: subprocess.Popen[str], key: str) -> None:
+        assert process.stdout is not None
+        try:
+            for line in process.stdout:
+                gpu_failed = False
+                with self.lock:
+                    if self.process is process:
+                        self.logs.append(line.rstrip().replace(key, "[redacted]")[:2000])
+                        if self.hybrid_active:
+                            if f"EXPERIMENTAL HYBRID enabled: {self.hybrid_experts} selected experts; adaptive admissions" in line:
+                                self.hybrid_markers.add("hybrid")
+                            if "direct asynchronous admissions; immutable registered sources, no staging copies" in line:
+                                self.hybrid_markers.add("direct")
+                            if "immutable source bytes" in line and "cap 64 GiB, headroom 24 GiB" in line:
+                                self.hybrid_markers.add("registered")
+                            if "n_ctx_slot = 16384," in line:
+                                self.hybrid_markers.add("context")
+                        if self.placement == "auto" and "ggml_cuda_init: failed to initialize CUDA:" in line:
+                            self.state = "error"
+                            self.error = ("CUDA initialization failed. Automatic GPU placement was stopped "
+                                          "instead of silently running CPU-only. Recover the GPU driver "
+                                          "or explicitly select CPU-only mode. See backend output.")
+                            LOG.error("%s", self.error)
+                            gpu_failed = True
+                if gpu_failed:
+                    self._terminate(process)
+                    return
+        finally:
+            process.stdout.close()
+
+    def _watch(self, process: subprocess.Popen[str]) -> None:
+        deadline = time.monotonic() + self.load_timeout
+        while True:
+            with self.lock:
+                if self.process is not process or self.state in ("stopping", "error"):
+                    return
+                code = process.poll()
+                if code is not None:
+                    self.state = "error"
+                    self.error = f"llama-server exited with code {code}. See backend output below."
+                    LOG.error("%s", self.error)
+                    return
+                loading = self.state == "loading"
+                port, key = self.port, self.key
+            self._sample_resources(process)
+            if loading:
+                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=1)
+                try:
+                    connection.request("GET", "/v1/models", headers={"Authorization": f"Bearer {key}"})
+                    response = connection.getresponse()
+                    if response.status == 200:
+                        with self.lock:
+                            if (self.process is process and self.state == "loading" and
+                                    (not self.hybrid_active or
+                                     self.hybrid_markers == {"hybrid", "direct", "registered", "context"})):
+                                self.state = "ready"
+                except (OSError, http.client.HTTPException):
+                    # A backend that is still starting need not have opened its socket yet.
+                    pass
+                finally:
+                    connection.close()
+                with self.lock:
+                    if (self.process is process and self.state == "loading"
+                            and time.monotonic() >= deadline):
+                        self._terminate(process)
+                        self.state = "error"
+                        self.error = ("Experimental hybrid readiness timed out: direct DMA, registration, "
+                                      "adaptive residency and actual 16K context must all be confirmed. "
+                                      "Check the patched backend, plan and matching CUDA plugin."
+                                      if self.hybrid_active else
+                                      "Model loading timed out. See backend output; try a smaller model or CPU mode.")
+                        LOG.error("%s", self.error)
+                        return
+            time.sleep(0.2)
+
+    def _sample_resources(self, process: subprocess.Popen[str]) -> None:
+        root = Path("/proc") / str(process.pid)
+        try:
+            fields = (root / "stat").read_text().rsplit(")", 1)[1].split()
+            cpu_seconds = (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK")
+            memory = {}
+            for line in (root / "status").read_text().splitlines():
+                name, _, value = line.partition(":")
+                if name in ("VmRSS", "RssAnon", "RssFile"):
+                    memory[name] = int(value.split()[0]) * 1024
+            available = next(int(line.split()[1]) * 1024
+                             for line in Path("/proc/meminfo").read_text().splitlines()
+                             if line.startswith("MemAvailable:"))
+            now = time.monotonic()
+            with self.lock:
+                if self.process is not process:
+                    return
+                cores = None
+                if self.cpu_sample is not None:
+                    previous_time, previous_cpu = self.cpu_sample
+                    if now > previous_time:
+                        cores = max(0.0, (cpu_seconds - previous_cpu) / (now - previous_time))
+                self.cpu_sample = now, cpu_seconds
+                self.resources = {
+                    "cpu_logical_cores": cores,
+                    "rss_bytes": memory["VmRSS"],
+                    "anonymous_bytes": memory["RssAnon"],
+                    "file_backed_bytes": memory["RssFile"],
+                    "system_available_ram_bytes": available,
+                }
+                self.resource_error = None
+        except FileNotFoundError:
+            # The exit monitor handles a process that ended during sampling.
+            return
+        except (OSError, ValueError, IndexError, KeyError, StopIteration) as exc:
+            message = f"Process telemetry unavailable: {exc}"
+            with self.lock:
+                if self.process is process:
+                    if self.resource_error != message:
+                        LOG.warning("%s", message)
+                    self.resource_error = message
+                    self.resources = None
+
+    @staticmethod
+    def _terminate(process: subprocess.Popen[str]) -> None:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+
+    def stop(self, closing: bool = False) -> None:
+        with self.lock:
+            self.closed = self.closed or closing
+            self.state = "stopping"
+            process = self.process
+        if process is not None:
+            self._terminate(process)
+        with self.lock:
+            if self.process is process:
+                self.process = None
+                self.state = "stopped"
+                self.error = None
+                self.model = None
+                self.resources = None
+                self.resource_error = None
+                self.cpu_sample = None
+                self.hybrid_markers.clear()
+
+    def connection(self) -> tuple[http.client.HTTPConnection, str]:
+        with self.lock:
+            if self.state != "ready" or self.process is None or self.process.poll() is not None:
+                raise AppError(503, "No model is ready. Load a model and check its status first.")
+            return http.client.HTTPConnection("127.0.0.1", self.port, timeout=120), self.key
+
+
+class AppServer(ThreadingHTTPServer):
+    daemon_threads = True
+    block_on_close = False
+
+    def __init__(self, address: tuple[str, int], runtime: Runtime):
+        self.runtime = runtime
+        super().__init__(address, Handler)
+
+
+class Handler(BaseHTTPRequestHandler):
+    server: AppServer
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, format: str, *args: object) -> None:
+        LOG.info("%s %s", self.client_address[0], format % args)
+
+    def _guard(self) -> None:
+        port = self.server.server_address[1]
+        hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        if self.headers.get("Host") not in hosts:
+            raise AppError(403, "Only the local application host is allowed.")
+        origin = self.headers.get("Origin")
+        if origin is not None and origin not in {f"http://{host}" for host in hosts}:
+            raise AppError(403, "Cross-origin requests are not allowed.")
+        if self.headers.get("Sec-Fetch-Site") == "cross-site":
+            raise AppError(403, "Cross-site requests are not allowed.")
+
+    def _send(self, status: int, body: bytes, content_type: str) -> None:
+        self.send_response(status)
+        self._headers(content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _headers(self, content_type: str) -> None:
+        self.send_header("Content-Type", content_type)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Content-Security-Policy",
+                         "default-src 'self'; connect-src 'self'; script-src 'self'; "
+                         "style-src 'self'; img-src 'self'; frame-ancestors 'none'; "
+                         "base-uri 'none'; form-action 'none'")
+
+    def _json(self, status: int, data: dict) -> None:
+        self._send(status, json.dumps(data).encode(), "application/json; charset=utf-8")
+
+    def _body(self) -> dict:
+        if self.headers.get("Transfer-Encoding"):
+            raise AppError(400, "Chunked request bodies are not supported.")
+        if self.headers.get_content_type() != "application/json":
+            raise AppError(415, "Content-Type must be application/json.")
+        lengths = self.headers.get_all("Content-Length", [])
+        if len(lengths) != 1:
+            raise AppError(411, "Exactly one Content-Length header is required.")
+        try:
+            length = int(lengths[0])
+        except ValueError as exc:
+            raise AppError(400, "Invalid Content-Length.") from exc
+        if not 0 < length <= BODY_LIMIT:
+            raise AppError(413, "Request body must be between 1 byte and 1 MiB.")
+        self.connection.settimeout(15)
+        raw = self.rfile.read(length)
+        if len(raw) != length:
+            raise AppError(400, "Incomplete request body.")
+        try:
+            value = json.loads(raw)
+        except (ValueError, UnicodeDecodeError) as exc:
+            raise AppError(400, "Request body must be valid JSON.") from exc
+        if not isinstance(value, dict):
+            raise AppError(400, "Request body must be a JSON object.")
+        return value
+
+    def do_GET(self) -> None:
+        self._dispatch("GET")
+
+    def do_POST(self) -> None:
+        self._dispatch("POST")
+
+    def _dispatch(self, method: str) -> None:
+        try:
+            self._guard()
+            path = urlsplit(self.path).path
+            if method == "GET" and path == "/api/v1/status":
+                self._json(200, self.server.runtime.status())
+            elif method == "POST" and path == "/api/v1/model/load":
+                self.server.runtime.load(self._body())
+                self._json(202, self.server.runtime.status())
+            elif method == "POST" and path == "/api/v1/model/unload":
+                self._body()
+                self.server.runtime.stop()
+                self._json(200, self.server.runtime.status())
+            elif path == "/v1/models" and method == "GET":
+                self._proxy(method, path, None)
+            elif path == "/v1/chat/completions" and method == "POST":
+                data = self._body()
+                messages = data.get("messages")
+                if not isinstance(messages, list) or not messages:
+                    raise AppError(400, "messages must be a non-empty array.")
+                if "stream" in data and not isinstance(data["stream"], bool):
+                    raise AppError(400, "stream must be a boolean.")
+                self._proxy(method, path, data)
+            elif method == "GET" and path in ("/", "/app.js", "/chat-stream.mjs", "/style.css"):
+                name, mime = {
+                    "/": ("index.html", "text/html; charset=utf-8"),
+                    "/app.js": ("app.js", "text/javascript; charset=utf-8"),
+                    "/chat-stream.mjs": ("chat-stream.mjs", "text/javascript; charset=utf-8"),
+                    "/style.css": ("style.css", "text/css; charset=utf-8"),
+                }[path]
+                self._send(200, (WEB_ROOT / name).read_bytes(), mime)
+            else:
+                raise AppError(404, "Endpoint not found.")
+        except AppError as exc:
+            self.close_connection = True
+            self._json(exc.status, {"error": {"message": str(exc), "type": "vrambridge_error"}})
+        except (BrokenPipeError, ConnectionResetError):
+            LOG.info("Local client disconnected.")
+        except (OSError, http.client.HTTPException) as exc:
+            LOG.error("Request failed: %s", exc)
+            self.close_connection = True
+            self._json(502, {"error": {"message": f"Local service request failed: {exc}",
+                                     "type": "vrambridge_error"}})
+
+    def _proxy(self, method: str, path: str, data: dict | None) -> None:
+        runtime = self.server.runtime
+        chat = path == "/v1/chat/completions"
+        if chat and not runtime.chat_lock.acquire(blocking=False):
+            raise AppError(409, "Another chat is running. Stop it or wait before sending.")
+        connection: http.client.HTTPConnection | None = None
+        streaming_started = False
+        finished = threading.Event()
+        disconnected = threading.Event()
+        try:
+            connection, key = runtime.connection()
+            if data is not None:
+                data["model"] = "local-model"
+            connection.request(method, path, body=json.dumps(data) if data is not None else None,
+                               headers={"Content-Type": "application/json",
+                                        "Authorization": f"Bearer {key}"})
+            upstream_socket = connection.sock
+            assert upstream_socket is not None
+
+            def watch_client() -> None:
+                while not finished.wait(0.1):
+                    try:
+                        readable, _, _ = select.select([self.connection], [], [], 0)
+                        if readable and not self.connection.recv(1, socket.MSG_PEEK):
+                            disconnected.set()
+                            upstream_socket.shutdown(socket.SHUT_RDWR)
+                            return
+                    except OSError:
+                        if not finished.is_set():
+                            disconnected.set()
+                        return
+
+            if chat:
+                threading.Thread(target=watch_client, daemon=True).start()
+            response = connection.getresponse()
+            streaming = data is not None and data.get("stream") is True and response.status == 200
+            if not streaming:
+                body = response.read(RESPONSE_LIMIT + 1)
+                if len(body) > RESPONSE_LIMIT:
+                    raise AppError(502, "Backend response exceeded the 8 MiB limit.")
+                self._send(response.status, body, "application/json; charset=utf-8")
+                return
+            self.send_response(200)
+            self._headers("text/event-stream; charset=utf-8")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.close_connection = True
+            streaming_started = True
+            while True:
+                line = response.readline(1024 * 1024)
+                if not line:
+                    break
+                self.wfile.write(line)
+                self.wfile.flush()
+            if not disconnected.is_set():
+                LOG.info("Chat stream completed.")
+        except (OSError, http.client.HTTPException) as exc:
+            if disconnected.is_set():
+                LOG.info("Chat cancelled by local client.")
+                return
+            if not streaming_started:
+                raise
+            LOG.error("Chat stream interrupted: %s", exc)
+            if not isinstance(exc, (BrokenPipeError, ConnectionResetError)):
+                event = json.dumps({"error": {"message": "Backend stream interrupted. Check model status."}})
+                self.wfile.write(f"data: {event}\n\ndata: [DONE]\n\n".encode())
+                self.wfile.flush()
+        finally:
+            finished.set()
+            if connection is not None:
+                connection.close()
+            if chat:
+                runtime.chat_lock.release()
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--llama-server", default=os.environ.get("LLAMA_SERVER", "llama-server"),
+                        help="llama-server executable or path (also LLAMA_SERVER)")
+    parser.add_argument("--backend-kind", choices=("llama.cpp", "ik_llama.cpp"), default="llama.cpp",
+                        help="explicit backend flag adapter; ik_llama.cpp is experimental")
+    parser.add_argument("--experimental-speculation", action="store_true",
+                        help="allow opt-in DFlash draft models; requires a compatible backend")
+    parser.add_argument("--experimental-hybrid-plan", type=Path,
+                        help="enable the experimental GPT-OSS-120B direct-DMA profile with a training-only plan")
+    parser.add_argument("--hybrid-cuda-plugin", type=Path,
+                        help="matching pinned CUDA shared-library file; required with --experimental-hybrid-plan")
+    parser.add_argument("--execution-mode", choices=("auto", "standard", "hybrid"), default="auto",
+                        help="default model selection policy; auto uses an installed hybrid profile only for matching models")
+    parser.add_argument("--hybrid-profile", type=Path,
+                        help="pinned installation JSON; default: ~/.local/share/vrambridge/hybrid-profile.json if installed")
+    parser.add_argument("--port", type=int, default=8080, help="local app port; 0 chooses a free port")
+    parser.add_argument("--no-browser", action="store_true", help="do not open a browser")
+    args = parser.parse_args()
+    if not 0 <= args.port <= 65535:
+        parser.error("--port must be between 0 and 65535")
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    try:
+        profile = {}
+        explicit = args.experimental_hybrid_plan is not None or args.hybrid_cuda_plugin is not None
+        if explicit:
+            profile = {"hybrid_plan": args.experimental_hybrid_plan, "hybrid_cuda_plugin": args.hybrid_cuda_plugin}
+        elif args.execution_mode != "standard":
+            path = args.hybrid_profile or Path.home() / ".local/share/vrambridge/hybrid-profile.json"
+            if args.hybrid_profile is not None or path.exists():
+                profile = read_hybrid_profile(path)
+        mode = "hybrid" if explicit and args.execution_mode == "auto" else args.execution_mode
+        runtime = Runtime(args.llama_server, backend_kind=args.backend_kind,
+                          enable_speculation=args.experimental_speculation,
+                          execution_mode=mode, **profile)
+    except (OSError, ValueError) as exc:
+        parser.error(str(exc))
+    if runtime.hybrid_plan is not None:
+        LOG.warning("%s", HYBRID_WARNING)
+    try:
+        server = AppServer(("127.0.0.1", args.port), runtime)
+    except OSError as exc:
+        parser.exit(1, f"Cannot start local app: {exc}\n")
+    url = f"http://127.0.0.1:{server.server_address[1]}"
+
+    def shutdown(signum: int, frame: object) -> None:
+        threading.Thread(target=server.shutdown, daemon=True).start()
+
+    signal.signal(signal.SIGTERM, shutdown)
+    signal.signal(signal.SIGINT, shutdown)
+    print(f"VRAMBridge: {url}", flush=True)
+    if not runtime.executable:
+        LOG.warning("llama-server not found. The UI will show backend setup instructions.")
+    if not args.no_browser and not webbrowser.open(url):
+        LOG.warning("Could not open a browser. Open %s manually.", url)
+    try:
+        server.serve_forever(poll_interval=0.2)
+    finally:
+        runtime.stop(closing=True)
+        server.server_close()
+
+
+if __name__ == "__main__":
+    main()

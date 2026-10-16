@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vrambridge.dev/schema/routing-trace-v1.json",
+  "title": "VRAMBridge decode routing trace JSONL record",
+  "description": "Per-record schema. The analyzer additionally validates sequence completeness, domains, ordering, and counts.",
+  "$defs": {
+    "layer": {
+      "type": "object",
+      "required": ["id", "experts", "active", "bytes_per_expert", "static_host_bytes_per_expert"],
+      "properties": {
+        "id": {"type": "integer", "minimum": 0},
+        "experts": {"type": "integer", "minimum": 1},
+        "active": {"type": "integer", "minimum": 1},
+        "bytes_per_expert": {"type": "integer", "minimum": 1},
+        "static_host_bytes_per_expert": {"type": "integer", "minimum": 0},
+        "tensor_types": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["type", "schema_version", "instrumented", "capture_scope", "backend_commit", "architecture", "context_tokens", "static_device_expert_bytes", "layers"],
+      "properties": {
+        "type": {"const": "metadata"},
+        "schema_version": {"const": 1},
+        "instrumented": {"const": true},
+        "capture_scope": {"const": "decode_only"},
+        "backend_commit": {"type": "string", "minLength": 1},
+        "collector_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "architecture": {"type": "string", "minLength": 1},
+        "model": {"type": "string"},
+        "context_tokens": {"type": "integer", "minimum": 1},
+        "static_device_expert_bytes": {"type": "integer", "minimum": 0},
+        "layers": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/layer"}}
+      }
+    },
+    {
+      "type": "object",
+      "required": ["type", "id", "split", "category", "prompt_tokens", "max_tokens"],
+      "properties": {
+        "type": {"const": "request_start"},
+        "id": {"type": "string", "minLength": 1},
+        "split": {"enum": ["train", "test"]},
+        "category": {"type": "string", "minLength": 1},
+        "prompt_tokens": {"type": "integer", "minimum": 1},
+        "max_tokens": {"type": "integer", "minimum": 1}
+      }
+    },
+    {
+      "type": "object",
+      "required": ["type", "request", "phase", "token", "layer", "experts"],
+      "properties": {
+        "type": {"const": "route"},
+        "request": {"type": "string", "minLength": 1},
+        "phase": {"const": "decode"},
+        "token": {"type": "integer", "minimum": 0},
+        "layer": {"type": "integer", "minimum": 0},
+        "experts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "integer", "minimum": 0}}
+      }
+    },
+    {
+      "type": "object",
+      "required": ["type", "id", "decode_tokens", "stop_reason"],
+      "properties": {
+        "type": {"const": "request_end"},
+        "id": {"type": "string", "minLength": 1},
+        "decode_tokens": {"type": "integer", "minimum": 0},
+        "stop_reason": {"enum": ["limit", "eos"]},
+        "token_sequence_equivalent": {"const": true}
+      }
+    },
+    {
+      "type": "object",
+      "required": ["type", "requests", "complete"],
+      "properties": {
+        "type": {"const": "trace_end"},
+        "requests": {"type": "integer", "minimum": 1},
+        "complete": {"const": true}
+      }
+    }
+  ]
+}

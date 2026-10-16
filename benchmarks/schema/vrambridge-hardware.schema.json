@@ -19,7 +19,10 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "direction", "memory_kind", "bytes", "iterations", "seconds", "gb_per_second", "available"]
+        "required": ["name", "direction", "memory_kind", "bytes", "iterations", "seconds", "gb_per_second", "available"],
+        "properties": {
+          "cpu_threads": {"type": "integer", "minimum": 1}
+        }
       }
     }
   }

@@ -60,6 +60,91 @@ uses a prompt half as long as its fit context and generates 32 tokens.
 | [initial dense matrix](results/20260822T153837Z-calme-3_2-instruct-78b-Q4_0.json) | Its nominal CPU run was not strict CPU because CUDA operation/KV offload remained active. Its Unified Memory command used invalid `-ngl all` syntax. Valid manual and auto-fit runs remain comparable. |
 | [Qwen3.6 context attempt](results/20260823T150213Z-Qwen3_6-35B-A3B-Q8_0.json) | Pinned `llama-bench` does not accept a general `-c` context override. The corrected context series uses `--fit-ctx` and Q8_0 K/V cache types. |
 
+## October 16: Model-Aware Defaults And Downloaded-Model Matrix
+
+This series uses pinned llama.cpp commit
+`620d2225cc436ab0b001e3200e590e3b286ef9ab`, **actual 16,384-token context,
+8 generation / 16 prompt threads, and three exact 512-output-token runs**
+per model/profile. It is not comparable to the earlier 512-prompt/32-generation
+tables without accounting for the changed workload/backend.
+
+The [complete matrix](results/20261016-downloaded-model-matrix.json) contains
+all 30 throughput samples, 20 small answer checks, source/patch/plan hashes,
+model architecture/type metadata, selected execution profiles, and successful
+restoration of the original GPT-OSS-120B app.
+
+| Existing model | Standard median tok/s | Automatic median tok/s | Automatic execution | Arithmetic / AST-only code checks (both profiles) |
+| --- | ---: | ---: | --- | --- |
+| GPT-OSS-120B MXFP4 | 25.69 | 39.46 | Custom hybrid direct DMA | Pass / pass |
+| Gemma 3 12B Q4_K_M | 80.94 | 80.50 | Standard | Exact-integer check failed / pass |
+| DeepSeek-R1-0528-Qwen3 8B Q4_K_M | 130.08 | 128.50 | Standard | Arithmetic completion hit 1,024-token limit / pass |
+| Qwen3.5 local Q8_0 (`claude-oss-q8_0.gguf`) | 79.48 | 80.26 | Standard | Pass / pass |
+| LFM2 1.2B Q8_0 | 485.67 | 486.55 | Standard | Exact-integer check failed / strict AST check failed |
+
+The Qwen3.5 row is identified by actual GGUF architecture `qwen35`; its local
+filename is not evidence of an official Anthropic model. The CLIP projector
+was excluded because it is not a standalone language model. No models were
+downloaded. Only GPT-OSS-120B exceeds this GPU's VRAM among the current five;
+this series cannot demonstrate hybrid benefits on a second larger-than-VRAM
+architecture.
+
+GPT-OSS-120B's paired median gain is about **53.6%**. Standard mode uses upstream
+auto-fit; automatic mode uses the patched resident bank, CPU cold-expert
+execution, adaptive admissions, and direct registered-source DMA. Context,
+threads, prompt, output count, seed, and sampling settings are matched;
+placement/offload are intentionally different and recorded. Loading and source
+registration are outside decode timing; end-to-end generation and load
+durations are recorded separately. The initial trained bank resets on each
+profile load; adaptive residency persists between its repetitions and answer
+checks.
+
+All four unsupported architectures selected standard execution as intended.
+Their repeated output hashes matched across standard/automatic profiles;
+small timing differences are not evidence of an optimization gain. The
+standard GPT-OSS repetitions matched one another, but adaptive GPT-OSS hashes
+did **not** all match each other or the standard control. Passing the two small
+answer checks is not general model/logit equivalence. Strict CPU-reference
+diagnostics and the earlier quantitative JSON failure remain unresolved.
+
+Answer checks deliberately require the exact integer and a specific AST with
+no extra content. Failures can include formatting or token-budget issues;
+answer text is not stored in this matrix, so these booleans must not be
+reinterpreted as a broad factual-quality score. The runner retains failed
+checks and exits nonzero even when the throughput runs and restoration succeed.
+The 512-token throughput prompt is forced past EOS if necessary, not a guarantee
+of 512 natural-answer tokens. This is a repeated one-prompt screen, **not**
+sustained coding/reasoning/prose qualification. GPT-OSS-120B's 60 tok/s target
+is still unmet; the smaller models' higher rates do not satisfy that goal.
+
+### Published Hybrid Research Evidence
+
+| Artifact | Interpretation |
+| --- | --- |
+| [Direct-source pair](results/20261016-gpt120-direct-source-screen.json) | First paired 35.73 -> 38.96 tok/s result; six output hashes match between copy paths, but the original quantitative JSON check remains failed. |
+| [Direct-DMA thread screen](results/20261016-gpt120-direct-thread-screen.json) | Four/six/eight-thread one-prompt samples 38.81/39.63/39.99 tok/s; not three-repeat per-thread qualification. |
+| [CPU dual-layout screen](results/20261016-gpt120-dual-layout-screen.json) | Real CPU-repacked storage with lossless GPU exports; adaptive 33.80 tok/s did not beat the raw-layout screen. |
+| [Asynchronous staged-copy screen](results/20261016-gpt120-async-copy-screen.json) | Synchronous 35.65 versus async 34.67 tok/s; identical sampled logits, no timing gain, failed quantitative check retained. |
+| [Small-block DFlash screen](results/20261016-gpt120-hybrid-block-dflash-screen.json) | 22.81/22.12/24.47 accepted tok/s versus 29.28 control with a smaller bank; includes draft/rejection overhead, not a successful optimization. |
+| [Full-vocabulary diagnostic metrics](results/20261016-gpt120-logit-diagnostics.json) | CPU repeat is exact; stock placement and hybrid fail the unchanged strict CPU-reference gates. Direct-DMA versus synchronous hybrid is exact at 96 sampled positions. Block4 remains a failed strict diagnostic. No token IDs/full logits/activations are published. |
+| [Training-only initial plan](results/gpt120-trained-hot800.txt) | 800 expert groups from the public routing corpus's training half only; SHA-256 `1198ae0ea67a9b94f1f51f0913f7ade3378bb5ba01e3ac93ace7eccaa77e98e6`. |
+
+Published copies replace private paths with `/models`, `/opt/vrambridge`,
+`/workspace/unified-memory-scheduler`, `/session`, and `/home/benchmark-user`.
+Raw synthetic answer strings from old screens are replaced with SHA-256 hashes;
+measurements, failed checks, diagnostics, and original run status are retained.
+Large routing traces, binary references, activation dumps, and raw process logs
+remain ignored. Older screen source hashes describe their own prototype state,
+not necessarily the final patch. The current matrix identifies the final patch
+with SHA-256
+`a0f61f4e86aa6468d9b76ed4c9ee801dbee30ff2ec034566e8f86cf25be472a1`.
+
+The app's new default is **automatic model-specific selection**, not a claim of
+universal hybrid support. A pinned local installation selects direct DMA only
+for the supported GPT-OSS-120B MXFP4 layout; unsupported models select standard
+execution with an explicit reason. `--execution-mode standard` bypasses the
+installation profile for rollback. Experimental warnings and readiness/resource
+checks remain enabled.
+
 ## Pending Candidates
 
 These are not benchmark results and must not be compared with the rows above.

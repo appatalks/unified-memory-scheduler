@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vrambridge.dev/schema/routing-corpus-v1.json",
+  "title": "VRAMBridge routing corpus JSONL record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "split", "category", "prompt", "max_tokens"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,100}$"},
+    "split": {"enum": ["train", "test"]},
+    "category": {"type": "string", "minLength": 1, "maxLength": 100},
+    "prompt": {"type": "string", "minLength": 1, "maxLength": 1048576},
+    "max_tokens": {"type": "integer", "minimum": 1, "maximum": 8192}
+  }
+}
