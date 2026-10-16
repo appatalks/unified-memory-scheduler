@@ -63,22 +63,29 @@ function controls() {
 function renderStatus() {
   const labels = { stopped: "Stopped", loading: "Loading model", ready: "Ready", stopping: "Unloading", error: "Backend error" };
   const experimental = status.backend_kind === "ik_llama.cpp";
-  const hybrid = status.execution_profile === "experimental-hybrid-direct";
+  const hybrid = (status.execution_profile || "standard").startsWith("experimental-hybrid-");
+  const transfer = status.hybrid_transfer === "staged" ? "bounded staging" : "direct DMA";
+  const hybridContext = status.hybrid_context ?? status.context;
+  const hybridBudget = status.hybrid_cache_mib ?? status.expert_cache_mib;
+  const pipeline = status.hybrid_decode_pipeline
+    ? ` · Decode pipeline: overlap ${status.hybrid_overlap_verified ? "confirmed" : "awaiting eligible decode"}; gate/up fusion ${status.hybrid_gate_up_verified ? "confirmed" : "not yet observed"}`
+    : "";
   el("execution-mode").querySelector('option[value="hybrid"]').disabled = !status.hybrid_available;
   el("selection-reason").textContent = status.selection_reason || "";
-  el("profile-note").textContent = status.hybrid_available
-    ? "Automatic uses direct DMA for matching GPT-OSS-120B MXFP4 models and standard execution for other architectures. Automatic uses profile defaults; select Standard for manual settings. No cross-model hybrid speedup is implied."
+  el("profile-note").textContent = status.hybrid_generic
+    ? "Automatic detects routed-MoE dimensions, validates plan bindings, and prefers native fitting for small weight files. Unbound MoE layouts can use a generic causal plan with bounded staging. Backend operations and coverage must verify before Ready; speedups are not universal."
+    : status.hybrid_available ? "This installation uses a model-bound or explicitly supplied plan. A version-2 installation enables generic automatic fallback; other models use native execution."
     : "No hybrid installation profile is configured. Automatic uses the standard backend. Select Standard for manual settings.";
   el("execution-warning").hidden = !status.execution_warning;
   el("execution-warning").textContent = status.execution_warning || "";
   el("execution-footer").textContent = hybrid
-    ? "Local experiment - Hybrid CPU/GPU expert dispatch - Adaptive direct DMA - Not quality-qualified"
+    ? `Local experiment - Hybrid CPU/GPU expert dispatch - Adaptive ${transfer}${pipeline} - Not quality-qualified`
     : `Local preview - ${experimental ? "Experimental ik_llama.cpp" : "Standard llama.cpp"} execution - Hybrid scheduling is not enabled`;
   el("placement-note").textContent = hybrid
-    ? "Experimental GPT-OSS-120B profile: fixed 16K context and 10,240 MiB resident expert bank. Automatic fitting, repacking, and host-op offload are disabled. Unload releases pinned RAM."
+    ? `Experimental MoE profile: ${hybridContext.toLocaleString()} context and ${hybridBudget.toLocaleString()} MiB resident expert bank from the installation policy. Fitting, repacking, and host-op offload are disabled. Unload releases resources.`
     : "Automatic uses llama.cpp fitting with the selected VRAM margin. It is not a RAM-fit guarantee. Larger contexts need more memory.";
   el("cache-note").textContent = hybrid
-    ? "Resident experts are spread across all 36 layers. Cold experts execute on CPU; causal admissions upload directly from registered RAM. Model weights and router probabilities are unchanged. New chat clears conversation, not learned residency; unload/reload resets it."
+    ? `Residency is derived from routed expert tensors, not a model-name allowlist. Cold experts execute on CPU; causal admissions use ${transfer}. Original weights, biases, activations and router probabilities are retained. New chat does not reset residency; unload/reload does.`
     : "Fewer threads can be faster. RAM loading can increase memory pressure. The upstream experimental expert cache uses VRAM and may be slower. Zero disables it.";
   el("speculation-note").textContent = status.speculation_enabled
     ? "Experimental speculation is enabled. A compatible target-trained draft and backend are required; speed is not guaranteed."
@@ -87,12 +94,12 @@ function renderStatus() {
   el("batch-threads").max = status.logical_cpus;
   el("placement").querySelector('option[value="cpu"]').disabled = experimental || hybrid;
   el("placement").querySelector('option[value="auto"]').textContent = hybrid
-    ? "Experimental hybrid CPU / GPU (direct DMA)" : "Automatic CPU / GPU placement";
+    ? `Experimental hybrid CPU / GPU (${transfer})` : "Automatic CPU / GPU placement";
   el("expert-cache").max = experimental ? "0" : "65536";
   el("state").textContent = labels[status.state] || status.state;
   el("model-status").textContent = status.model || "No model loaded.";
   el("run-status").textContent = status.model
-    ? `${status.backend_kind}${experimental || hybrid ? " (experimental)" : ""} · ${hybrid ? `Hybrid direct DMA${status.hybrid_verified ? " (activation verified)" : " (verifying activation)"}` : status.placement === "cpu" ? "CPU only" : "Automatic placement"} · ${status.context.toLocaleString()} context · ${status.cpu_threads} generation / ${status.batch_threads} prompt threads · ${status.load_mode} loading · ${status.expert_cache_mib} MiB ${hybrid ? "resident expert bank · fitting off" : `expert cache · ${status.fit_target_mib} MiB reserve`} · polling ${status.cpu_poll} · host-op offload ${status.host_op_offload ? "on" : "off"} (min batch ${status.op_offload_min_batch})${status.draft_model ? ` · DFlash (${status.draft_tokens} draft tokens)` : ""}`
+    ? `${status.backend_kind}${experimental || hybrid ? " (experimental)" : ""} · ${hybrid ? `Hybrid ${transfer}${status.hybrid_verified ? " (activation verified)" : " (verifying activation)"}` : status.placement === "cpu" ? "CPU only" : "Automatic placement"} · ${status.context.toLocaleString()} context · ${status.cpu_threads} generation / ${status.batch_threads} prompt threads · ${status.load_mode} loading · ${status.expert_cache_mib} MiB ${hybrid ? "resident expert bank · fitting off" : `expert cache · ${status.fit_target_mib} MiB reserve`} · polling ${status.cpu_poll} · host-op offload ${status.host_op_offload ? "on" : "off"} (min batch ${status.op_offload_min_batch})${status.draft_model ? ` · DFlash (${status.draft_tokens} draft tokens)` : ""}`
     : "Load an existing GGUF to begin.";
   el("logs").textContent = status.logs.join("\n") || "No output yet.";
   const resources = status.resources;
@@ -134,6 +141,7 @@ function renderStatus() {
   el("backend-help").hidden = status.backend_available;
   el("backend-help").textContent = "Backend missing. Install llama.cpp, then restart with: python3 tools/vrambridge/app.py --llama-server /path/to/llama-server";
   if (status.error) notice(status.error);
+  else if (status.context_warning) notice(status.context_warning);
   contextNote();
   controls();
 }
@@ -148,12 +156,12 @@ el("max-output").addEventListener("input", contextNote);
 el("execution-mode").addEventListener("change", () => {
   if (el("execution-mode").value !== "auto") {
     const hybrid = el("execution-mode").value === "hybrid";
-    el("context").value = hybrid ? "16384" : "4096";
+    el("context").value = hybrid ? String(status.hybrid_context) : "4096";
     el("placement").value = "auto";
     el("cpu-threads").value = Math.min(8, status.logical_cpus);
     el("batch-threads").value = Math.min(16, status.logical_cpus);
     el("host-op-offload").value = String(!hybrid);
-    el("expert-cache").value = hybrid ? "10240" : "0";
+    el("expert-cache").value = hybrid ? String(status.hybrid_cache_mib) : "0";
     el("fit-target").value = "1024";
     el("op-offload-min-batch").value = "32";
     el("load-mode").value = "auto";
@@ -166,8 +174,9 @@ async function poll() {
   try {
     const next = await request("/api/v1/status");
     const recovered = !status;
+    const recoveredRuntime = (status?.error || status?.context_warning) && !next.error && !next.context_warning;
     status = next;
-    if (recovered) notice();
+    if (recovered || recoveredRuntime) notice();
     renderStatus();
   } catch (error) {
     status = null;
@@ -212,8 +221,11 @@ el("load-form").addEventListener("submit", async (event) => {
       draft_model: status?.speculation_enabled ? el("draft-model").value.trim() || null : null,
       draft_tokens: Number(el("draft-tokens").value),
     };
-    status = await request("/api/v1/model/load", settings.execution_mode === "auto"
-      ? { model: settings.model, execution_mode: "auto" } : settings);
+    const payload = settings.execution_mode === "auto" ? { model: settings.model, execution_mode: "auto" }
+      : settings.execution_mode === "hybrid" ? { model: settings.model, execution_mode: "hybrid",
+        cpu_threads: settings.cpu_threads, batch_threads: settings.batch_threads, cpu_poll: settings.cpu_poll }
+      : settings;
+    status = await request("/api/v1/model/load", payload);
     clearChat();
     renderStatus();
   } catch (error) {

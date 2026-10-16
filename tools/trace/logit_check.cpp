@@ -27,6 +27,7 @@ using File = std::unique_ptr<FILE, CloseFile>;
 struct Diagnostic {
     bool armed = false;
     bool sync_hybrid_gpu = false;
+    int last_layer = -1;
     json values = json::array();
     std::string error;
 };
@@ -39,18 +40,19 @@ static bool diagnostic_callback(ggml_tensor * tensor, bool ask, void * data) noe
     }
     const auto dash = name.rfind('-');
     const std::string prefix = name.substr(0, dash);
-    const bool wanted = diagnostic.armed && dash != std::string::npos &&
-        (name.substr(dash + 1) == "0" || name.substr(dash + 1) == "35") &&
-        (prefix == "attn_post_norm" || prefix == "ffn_moe_topk" ||
+    const bool wanted = diagnostic.armed && ((name == "result_norm" || name == "result_output") ||
+        (dash != std::string::npos &&
+        (name.substr(dash + 1) == "0" || name.substr(dash + 1) == std::to_string(diagnostic.last_layer)) &&
+        (prefix == "attn_post_norm" || prefix == "ffn_norm" || prefix == "ffn_moe_topk" ||
          prefix == "ffn_moe_weights_softmax" || prefix == "ffn_moe_down_biased" ||
          prefix == "ffn_moe_weighted" || prefix == "hybrid_cpu_down_biased" ||
          prefix == "hybrid_cpu_weighted" || prefix == "hybrid_gpu_weighted" ||
-         prefix == "ffn_moe_out");
+         prefix == "ffn_moe_out")));
     if (ask) return wanted;
     if (!wanted) return true;
     try {
         const size_t count = ggml_nelements(tensor);
-        if (!ggml_is_contiguous(tensor) || count > 100000) {
+        if (!ggml_is_contiguous(tensor) || count > 1000000) {
             throw std::runtime_error("Diagnostic tensor layout is unsupported");
         }
         json entry = {{"name", name}, {"shape", {tensor->ne[0], tensor->ne[1], tensor->ne[2]}}};
@@ -253,6 +255,7 @@ static int run(int argc, char ** argv) {
     require(decode_group <= static_cast<int>(llama_n_batch(ctx)) &&
             decode_group <= static_cast<int>(llama_n_ubatch(ctx)), "Checker block exceeds actual batch capacity");
     const auto * model = initialized->model();
+    diagnostic.last_layer = llama_model_n_layer(model) - 1;
     const auto * vocab = llama_model_get_vocab(model);
     const int count = llama_vocab_n_tokens(vocab);
     require(count > 0 && count <= 1000000, "Invalid vocabulary");

@@ -158,6 +158,7 @@ class LocalAppTests(unittest.TestCase):
         self.plugin = self.root / "libggml-cuda.so"
         self.plugin.write_bytes(b"test-plugin")
         write_metadata(self.model, HYBRID_METADATA)
+        extra.setdefault("hybrid_layout", app.moe_layout(HYBRID_METADATA))
         self.runtime = app.Runtime(str(self.backend), hybrid_plan=self.plan,
                                    hybrid_cuda_plugin=self.plugin, **extra)
         self.server.runtime = self.runtime
@@ -170,6 +171,8 @@ class LocalAppTests(unittest.TestCase):
                                          "VRAMBRIDGE_HYBRID_REPACK": "1",
                                          "VRAMBRIDGE_HYBRID_PLAN": "/unexpected/plan",
                                          "GGML_BACKEND_PATH": "/unexpected/plugin",
+                                         "VRAMBRIDGE_HYBRID_OVERLAP": "1",
+                                         "VRAMBRIDGE_HYBRID_FUSE_GATE_UP": "1",
                                          "GGML_CUDA_REGISTER_HOST": "0"}):
             status = self.load()
         flags = json.loads(status["logs"][0])
@@ -193,6 +196,8 @@ class LocalAppTests(unittest.TestCase):
             self.assertEqual(flags[field], "1")
         self.assertIsNone(flags["hybrid_batch"])
         self.assertIsNone(flags["hybrid_repack"])
+        self.assertIsNone(flags["hybrid_overlap"])
+        self.assertIsNone(flags["hybrid_fuse_gate_up"])
         self.assertIsNone(flags["draft_model"])
         process = self.runtime.process
         self.runtime.stop()
@@ -202,15 +207,54 @@ class LocalAppTests(unittest.TestCase):
 
     def test_hybrid_cannot_report_ready_without_verified_execution(self):
         self.hybrid_runtime(load_timeout=0.4)
-        for name in ("hybrid-no-markers", "hybrid-wrong-context"):
+        for name in ("hybrid-no-markers", "hybrid-wrong-context", "hybrid-partial-coverage"):
             model = self.root / f"{name}.gguf"
             write_metadata(model, HYBRID_METADATA)
             code, _, _ = self.request("POST", "/api/v1/model/load", {"model": str(model)})
             self.assertEqual(code, 202)
             status = self.wait_state("error")
-            self.assertIn("hybrid readiness timed out", status["error"])
+            self.assertIn("Backend context" if name == "hybrid-wrong-context" else "hybrid readiness timed out",
+                          status["error"])
             self.assertFalse(status["hybrid_verified"])
             self.assertIsNotNone(self.runtime.process.poll())
+
+    def test_decode_pipeline_flags_activation_and_standard_rollback(self):
+        self.hybrid_runtime(hybrid_decode_pipeline=True)
+        status = self.load()
+        flags = json.loads(status["logs"][0])
+        self.assertTrue(status["hybrid_decode_pipeline"])
+        self.assertTrue(status["hybrid_overlap_verified"])
+        self.assertTrue(status["hybrid_gate_up_verified"])
+        self.assertTrue(status["hybrid_verified"])
+        for field in ("hybrid_stage_input", "hybrid_overlap", "hybrid_fuse_gate_up"):
+            self.assertEqual(flags[field], "1")
+        self.assertEqual(flags["hybrid_boundary"], "gpu")
+        self.runtime.stop()
+        status = self.load(execution_mode="standard")
+        flags = json.loads(status["logs"][0])
+        for field in ("hybrid_stage_input", "hybrid_overlap", "hybrid_boundary", "hybrid_fuse_gate_up"):
+            self.assertIsNone(flags[field])
+        for field in ("hybrid_decode_pipeline", "hybrid_overlap_verified", "hybrid_gate_up_verified"):
+            self.assertFalse(status[field])
+
+    def test_decode_pipeline_requires_backend_acknowledgement(self):
+        self.hybrid_runtime(hybrid_decode_pipeline=True, load_timeout=0.4)
+        model = self.root / "hybrid-no-pipeline.gguf"
+        write_metadata(model, HYBRID_METADATA)
+        self.request("POST", "/api/v1/model/load", {"model": str(model)})
+        status = self.wait_state("error")
+        self.assertIn("hybrid readiness timed out", status["error"])
+        self.assertFalse(status["hybrid_verified"])
+
+    def test_decode_pipeline_does_not_claim_overlap_from_configuration_alone(self):
+        self.hybrid_runtime(hybrid_decode_pipeline=True)
+        model = self.root / "hybrid-pipeline-pending.gguf"
+        write_metadata(model, HYBRID_METADATA)
+        status = self.load(model=str(model))
+        self.assertTrue(status["hybrid_verified"])
+        self.assertTrue(status["hybrid_decode_pipeline"])
+        self.assertFalse(status["hybrid_overlap_verified"])
+        self.assertFalse(status["hybrid_gate_up_verified"])
 
     def test_hybrid_rejects_conflicting_settings_before_spawning(self):
         self.hybrid_runtime()
@@ -261,7 +305,7 @@ class LocalAppTests(unittest.TestCase):
                 self.runtime.stop()
                 self.assertEqual(self.load()["execution_profile"], "experimental-hybrid-direct")
 
-    def test_unsupported_quantization_and_layout_are_not_treated_as_hybrid(self):
+    def test_a_different_quantization_or_layout_does_not_reuse_a_bound_training_plan(self):
                 self.hybrid_runtime(execution_mode="auto")
                 for field, value in (("general.file_type", 7), ("gpt-oss.block_count", 24),
                                      ("gpt-oss.expert_used_count", 8), ("gpt-oss.feed_forward_length", 5760)):
@@ -317,11 +361,112 @@ class LocalAppTests(unittest.TestCase):
                 path.write_text(json.dumps(profile))
                 options = app.read_hybrid_profile(path)
                 self.assertEqual(options["hybrid_plan"], self.plan)
+                self.assertFalse(options["hybrid_decode_pipeline"])
+                path.write_text(json.dumps({**profile, "decode_pipeline": True}))
+                self.assertTrue(app.read_hybrid_profile(path)["hybrid_decode_pipeline"])
                 for changes in ({"schema_version": True}, {"backend_commit": "wrong"},
-                                {"executable": "relative"}, {"plan": None}, {"unexpected": 1}):
+                                {"executable": "relative"}, {"plan": None}, {"unexpected": 1},
+                                {"decode_pipeline": "true"}, {"decode_pipeline": 1}):
                     path.write_text(json.dumps({**profile, **changes}))
                     with self.assertRaises(ValueError):
                         app.read_hybrid_profile(path)
+
+    def test_generic_layout_detection_does_not_require_a_model_name_or_quantization(self):
+        for architecture, experts, active, width, ff in (
+                        ("llama", 8, 2, 4096, 14336), ("qwen2moe", 60, 4, 2048, 1408),
+                        ("qwen3moe", 128, 8, 2048, 768), ("cohere2moe", 64, 4, 1536, 512),
+                        ("future-moe", 7, 3, 96, 192)):
+                    metadata = {"general.architecture": architecture, "general.file_type": 15,
+                                f"{architecture}.block_count": 48, f"{architecture}.embedding_length": width,
+                                f"{architecture}.feed_forward_length": ff, f"{architecture}.expert_count": experts,
+                                f"{architecture}.expert_used_count": active}
+                    with self.subTest(architecture=architecture):
+                        self.assertTrue(app.supports_hybrid(metadata))
+                        self.assertEqual(app.moe_layout(metadata)["expert_count"], experts)
+        metadata = {"general.architecture": "future-moe", "future-moe.block_count": 3,
+                            "future-moe.embedding_length": 96, "future-moe.expert_count": 7,
+                            "future-moe.expert_used_count": [1, 2, 3], "future-moe.expert_feed_forward_length": [64, 96, 128]}
+        self.assertTrue(app.supports_hybrid(metadata))
+        for changes in ({"future-moe.expert_used_count": [1, 2]},
+                                {"future-moe.expert_used_count": [1, 2, 8]},
+                                {"future-moe.expert_used_count": True}):
+                    self.assertFalse(app.supports_hybrid({**metadata, **changes}))
+
+    def test_generic_plan_does_not_reuse_a_different_models_trained_experts(self):
+        self.hybrid_runtime(hybrid_generic=True, hybrid_context=2048, hybrid_cache_mib=64)
+        other = {"general.architecture": "qwen2moe", "general.file_type": 7,
+                         "qwen2moe.block_count": 3, "qwen2moe.embedding_length": 96,
+                         "qwen2moe.feed_forward_length": 192, "qwen2moe.expert_count": 7, "qwen2moe.expert_used_count": 3,
+                         "qwen2moe.context_length": 1024}
+        write_metadata(self.model, other)
+        status = self.load(execution_mode="hybrid")
+        self.assertEqual(status["execution_profile"], "experimental-hybrid-staged")
+        self.assertTrue(status["hybrid_verified"])
+        self.assertEqual(status["context"], 1024)
+        self.assertEqual(status["hybrid_context"], 1024)
+        self.assertEqual(status["hybrid_context_budget"], 2048)
+        self.assertEqual(status["expert_cache_mib"], 64)
+        self.assertIsNone(status["hybrid_plan_sha256"])
+        flags = json.loads(status["logs"][0])
+        self.assertEqual(flags["hybrid_plan"], "auto")
+        self.assertIsNone(flags["hybrid_direct"])
+        self.assertIsNone(flags["register_host"])
+        self.runtime.stop()
+        status = self.load(execution_mode="auto")
+        self.assertEqual(status["execution_profile"], "standard")
+        self.assertIn("native fitting is preferred", status["selection_reason"])
+        self.runtime.stop()
+        with self.model.open("r+b") as model:
+                    model.truncate(64*1024*1024 + 1)
+        status = self.load(execution_mode="auto")
+        self.assertEqual(status["execution_profile"], "experimental-hybrid-staged")
+        self.assertTrue(status["hybrid_verified"])
+
+    def test_rejected_concurrent_model_load_does_not_poison_active_plan_markers(self):
+        self.hybrid_runtime(hybrid_generic=True)
+        slow = self.root / "slow.gguf"
+        write_metadata(slow, HYBRID_METADATA)
+        code, _, _ = self.request("POST", "/api/v1/model/load", {"model": str(slow), "execution_mode": "hybrid"})
+        self.assertEqual(code, 202)
+        before = self.runtime.status()
+        expected_experts = self.runtime.hybrid_experts
+        write_metadata(self.model, {"general.architecture": "qwen2moe", "general.file_type": 7,
+                                   "qwen2moe.block_count": 3, "qwen2moe.embedding_length": 96,
+                                   "qwen2moe.feed_forward_length": 192, "qwen2moe.expert_count": 7,
+                                   "qwen2moe.expert_used_count": 3})
+        code, _, _ = self.request("POST", "/api/v1/model/load", {"model": str(self.model), "execution_mode": "hybrid"})
+        self.assertEqual(code, 409)
+        self.assertEqual(self.runtime.hybrid_experts, expected_experts)
+        self.assertEqual(self.runtime.status()["hybrid_plan_sha256"], before["hybrid_plan_sha256"])
+        self.assertEqual(self.runtime.status()["model"], str(slow))
+
+    def test_generic_installation_profile_accepts_causal_initialization_and_binds_trained_plans(self):
+        self.hybrid_runtime()
+        path = self.root / "generic-profile.json"
+        profile = {"schema_version": 2, "backend_commit": app.PINNED_LLAMA_COMMIT,
+                           "executable": str(self.backend), "plan": "auto", "cuda_plugin": str(self.plugin),
+                           "context": 2048, "cache_mib": 64, "transfer": "staged"}
+        path.write_text(json.dumps(profile))
+        options = app.read_hybrid_profile(path)
+        self.assertEqual(options["hybrid_plan"], "auto")
+        self.assertTrue(options["hybrid_generic"])
+        runtime = app.Runtime(str(self.backend), execution_mode="auto", **options)
+        self.assertEqual(runtime.hybrid_cache_mib, 64)
+        self.assertIsNone(runtime.hybrid_plan_sha256)
+        path.write_text(json.dumps({**profile, "plan": str(self.plan)}))
+        with self.assertRaisesRegex(ValueError, "requires model_layout"):
+                    app.read_hybrid_profile(path)
+        path.write_text(json.dumps({**profile, "plan": str(self.plan), "model_layout": app.moe_layout(HYBRID_METADATA)}))
+        self.assertEqual(app.read_hybrid_profile(path)["hybrid_layout"], app.moe_layout(HYBRID_METADATA))
+
+    def test_native_backend_context_adjustment_is_visible_and_reports_actual_size(self):
+        model = self.root / "context-cap.gguf"
+        model.write_bytes(b"GGUF")
+        status = self.load(model=model, context=4096)
+        self.assertEqual(status["requested_context"], 4096)
+        self.assertEqual(status["context"], 2048)
+        self.assertIn("adjusted", status["context_warning"])
+        self.assertEqual(status["state"], "ready")
 
     def test_hybrid_validates_launch_paths_and_plan(self):
         self.hybrid_runtime()
@@ -333,11 +478,11 @@ class LocalAppTests(unittest.TestCase):
             with self.subTest(extra=extra):
                 with self.assertRaises(ValueError):
                     app.Runtime(str(self.backend), **extra)
-        for content in ("", "0 7\n0 7\n", "36 0\n", "0 128\n", "not a plan\n",
-                        "".join(f"{i // 128} {i % 128}\n" for i in range(801))):
+        for content in ("", "0 7\n0 7\n", "36 0\n", "0 128\n", "not a plan\n", "#"*(1024*1024 + 1)):
             self.plan.write_text(content)
             with self.assertRaises(ValueError):
-                app.Runtime(str(self.backend), hybrid_plan=self.plan, hybrid_cuda_plugin=self.plugin)
+                app.Runtime(str(self.backend), hybrid_plan=self.plan, hybrid_cuda_plugin=self.plugin,
+                            hybrid_layout=app.moe_layout(HYBRID_METADATA))
         code, _, body = self.request("POST", "/api/v1/model/load", {"model": str(self.model)})
         self.assertEqual(code, 400, body)
         self.assertIsNone(self.runtime.process)

@@ -224,9 +224,11 @@ screens near 39-40 tok/s with direct expert DMA. It can now be deliberately
 enabled in this app for manual testing, using the launch profile below.
 Its strict model diagnostics and an answer-quality screen remain failed;
 it is not quality-qualified, and the 60 tok/s target is still unmet.
-Automatic model-specific selection is now the default. With a local hybrid
-installation profile, matching GPT-OSS-120B MXFP4 models use direct DMA.
-Other architectures use the standard backend, explicitly labeled as such.
+Automatic model-specific selection is now the default. Version-2 profiles
+bind trained plans to their actual model descriptors; matching models can use
+direct DMA. Other routed-MoE descriptors can use causal cold-start admission
+with bounded staging, without borrowing another model's hot experts.
+Small weight files prefer native fitting; dense models use the standard backend.
 Without an installation profile, the app remains standard-only; no backend is
 silently downloaded or substituted.
 
@@ -248,12 +250,52 @@ python3 tools/vrambridge/app.py
 ```
 
 **Automatic model-specific defaults** chooses from bounded GGUF metadata, never
-from a model filename. The supported hybrid layout is `gpt-oss`, 36 blocks,
-width 2,880, FFN width 2,880, 128 experts with four selected, and MXFP4 file
-type 38. Select the first shard. This does not establish support for other
-MoE families or generalize the measured gains to them. A malformed GGUF,
+from a filename or architecture allowlist. It reads architecture-prefixed
+layer/width/expert/top-k fields, including bounded per-layer integer arrays.
+The backend then validates the actual tensors, operations, and complete
+routed-layer coverage. Select the first shard. Metadata eligibility alone
+does not establish trained-model quality or a speedup. A malformed GGUF,
 unsupported metadata type, or missing first-shard architecture is an error,
 not a silently successful standard fallback.
+
+The example uses a version-2 `model_layout` binding for the measured 120B plan.
+This binding is data, not a requirement that every model have those dimensions.
+For a different MoE descriptor, initialization is causal (`plan: "auto"`) and
+uses staged uploads. A wholly generic installation can set `plan` to `"auto"`,
+omit `model_layout`, and choose `"transfer": "staged"`. `context` and `cache_mib`
+are installation budgets, not hard-coded model dimensions. Direct transfer can
+also be selected explicitly, subject to registration/headroom constraints.
+Version-1 installations preserve their original GPT-specific binding for
+compatibility; upgrade the file to version 2 to enable generic selection.
+
+The optional boolean `decode_pipeline` enables early CPU-input preparation,
+guarded CPU/GPU expert overlap, GPU reconciliation and resident gate/up fusion.
+Omitting it preserves the previous pipeline. The updated experimental example
+selects the tested hot880 plan and 11,264 MiB bank; these are machine-specific
+trial settings, not a quality qualification or VRAM-fit guarantee.
+Ready requires the backend to acknowledge the pipeline configuration.
+The footer separately reports whether actual guarded overlap and the fused
+projection graph have been observed; configuration alone is not execution proof.
+Ineligible operations still retain ordinary synchronization. Standard mode
+does not inherit any pipeline flags. Set `decode_pipeline` to `false` and
+restart to disable only these optimizations, or select Standard for stock
+execution. Keep the previous installation JSON for full budget/plan rollback.
+
+Automatic mode prefers native fitting for an unsharded cold-start weight file
+that fits the configured residency budget, avoiding unnecessary split-execution
+overhead. This is a placement preference, not a full-VRAM-fit guarantee: KV,
+compute workspaces, and desktop usage still matter. Require-hybrid mode can
+exercise the generic path explicitly. Unsupported backend operations or
+incomplete cache coverage are errors, not silently successful optimization.
+
+Hybrid context is planned as the smaller of the installation budget and the
+model's advertised context limit. Readiness still requires the backend's
+actual slot size to match that plan; a further unexpected cap fails explicitly
+instead of waiting indefinitely or labeling a 2K model as 16K. Standard-mode
+backend adjustments update the displayed actual context and surface a warning.
+The status API distinguishes `requested_context`, `context`, and the hybrid
+installation's `hybrid_context_budget`. Disabled per-model context/bank values
+are not sent back by the browser when switching required-hybrid models.
 
 In Automatic mode, the browser sends only the selected model and policy so
 settings from a previous model cannot leak into the next model's configuration.
@@ -282,12 +324,13 @@ python3 tools/vrambridge/app.py \
 ```
 
 The launch profile persists for this app process, including unload/reload.
-Select the original GPT-OSS-120B MXFP4 first shard; other layouts are rejected
-before launch in required-hybrid mode. Launch paths and plan entries are validated; no weights,
+Select a routed-MoE first shard with a complete descriptor and the corresponding
+model-bound plan, or use `--experimental-hybrid-plan auto` for causal
+initialization. Launch paths and plan entries are validated; no weights,
 executables, or plugins are downloaded. The normal executable/symlink is not
 replaced. Restart using the same arguments to resume experimental mode.
 
-This profile fixes context at **16,384**, residency at **10,240 MiB**, raw
+The updated manual installation fixes context at **16,384**, residency at **11,264 MiB**, raw
 default host loading, no repacking, no host-op offload, and **fitting off**.
 The reserve field is disabled and does not promise spare VRAM. Generation and
 prompt threads default to **8/16** (bounded by CPU affinity) and can be changed
@@ -315,7 +358,9 @@ For a useful manual comparison, start a new chat with a detailed technical,
 coding, or reasoning prompt and let it generate at least 512 tokens. Read the
 final backend generation rate, not the first few streaming updates. The
 displayed rate includes reasoning tokens but excludes prompt processing; short
-answers and longer conversations need not match the 39-40 tok/s screen.
+answers and longer conversations need not match the measured 43-61 tok/s
+workload-dependent range. Exact quantitative and broader numerical diagnostics
+still fail; use wrong answers as experimental evidence, not trusted results.
 Report the prompt, output-token count, rate, elapsed time, and any wrong answer
 or backend error. No claim of sustained 60 tok/s follows from this trial.
 

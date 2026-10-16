@@ -64,3 +64,5 @@ htmlcov/
 !/benchmarks/results/20261016-gpt120-logit-diagnostics.json
 !/benchmarks/results/20261016-downloaded-model-matrix.json
 !/benchmarks/results/gpt120-trained-hot800.txt
+!/benchmarks/results/gpt120-trained-hot880.txt
+!/benchmarks/results/gpt120-decode-optimization-summary.json

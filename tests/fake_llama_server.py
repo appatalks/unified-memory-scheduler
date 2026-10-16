@@ -71,19 +71,36 @@ print(json.dumps({
     "hybrid_direct": os.getenv("VRAMBRIDGE_HYBRID_DIRECT"),
     "hybrid_batch": os.getenv("VRAMBRIDGE_HYBRID_BATCH"),
     "hybrid_repack": os.getenv("VRAMBRIDGE_HYBRID_REPACK"),
+    "hybrid_stage_input": os.getenv("VRAMBRIDGE_HYBRID_STAGE_INPUT"),
+    "hybrid_overlap": os.getenv("VRAMBRIDGE_HYBRID_OVERLAP"),
+    "hybrid_boundary": os.getenv("VRAMBRIDGE_HYBRID_BOUNDARY"),
+    "hybrid_fuse_gate_up": os.getenv("VRAMBRIDGE_HYBRID_FUSE_GATE_UP"),
     "register_host": os.getenv("GGML_CUDA_REGISTER_HOST"),
     "cuda_plugin": os.getenv("GGML_BACKEND_PATH"),
     "no_repack": args.no_repack,
     "no_host": args.no_host,
 }), flush=True)
 if os.getenv("VRAMBRIDGE_HYBRID_PLAN") and Path(args.model).stem != "hybrid-no-markers":
-    selected = sum(bool(line) and not line.startswith("#")
-                   for line in Path(os.environ["VRAMBRIDGE_HYBRID_PLAN"]).read_text().splitlines())
+    plan = os.environ["VRAMBRIDGE_HYBRID_PLAN"]
+    selected = 0 if plan == "auto" else sum(bool(line) and not line.startswith("#")
+                                          for line in Path(plan).read_text().splitlines())
     print(f"impl: EXPERIMENTAL HYBRID enabled: {selected} selected experts; adaptive admissions", flush=True)
-    print("pin: registered 61073604608 immutable source bytes in 73 ranges; cap 64 GiB, headroom 24 GiB", flush=True)
-    print("impl: direct asynchronous admissions; immutable registered sources, no staging copies", flush=True)
+    if os.getenv("VRAMBRIDGE_HYBRID_DIRECT") == "1":
+        print("pin: registered 61073604608 immutable source bytes in 73 ranges; cap 64 GiB, headroom 24 GiB", flush=True)
+        print("impl: direct asynchronous admissions; immutable registered sources, no staging copies", flush=True)
+    else:
+        print("impl: adaptive admissions enabled; 1024-byte bounded staging, asynchronous uploads", flush=True)
+    coverage = "1/2" if Path(args.model).stem == "hybrid-partial-coverage" else "2/2"
+    print(f"impl: tensor-derived hybrid coverage={coverage} routed layers; other layers remain native", flush=True)
+    if os.getenv("VRAMBRIDGE_HYBRID_OVERLAP") == "1" and Path(args.model).stem != "hybrid-no-pipeline":
+        print("VRAMBridge decode pipeline configured: staged input, guarded overlap, GPU boundary, gate/up fusion", flush=True)
+        if Path(args.model).stem != "hybrid-pipeline-pending":
+            print("VRAMBridge guarded expert overlap active", flush=True)
+            print("VRAMBridge resident gate/up projection fusion active", flush=True)
     context = "8192" if Path(args.model).stem == "hybrid-wrong-context" else args.ctx_size
     print(f"srv: initializing, n_slots = 1, n_ctx_slot = {context}, kv_unified = 'false'", flush=True)
+elif Path(args.model).stem == "context-cap":
+    print("srv: initializing, n_slots = 1, n_ctx_slot = 2048, kv_unified = 'false'", flush=True)
 
 
 class Handler(BaseHTTPRequestHandler):

@@ -2,6 +2,7 @@
 
 import argparse
 import importlib.util
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -19,6 +20,17 @@ spec.loader.exec_module(matrix)
 
 
 class ModelMatrixTests(unittest.TestCase):
+    def test_authenticated_quality_sample_does_not_publish_credentials(self):
+        response = {"choices": [{"message": {"content": "323"}, "finish_reason": "stop"}],
+                    "usage": {"completion_tokens": 42}}
+        with mock.patch.object(matrix.urllib.request, "urlopen",
+                               return_value=io.BytesIO(json.dumps(response).encode())) as send:
+            result = matrix.quality_sample("http://127.0.0.1:12345", "arithmetic", "public prompt",
+                                           headers={"Authorization": "Bearer unit-test-placeholder"})
+        self.assertTrue(result["check_passed"])
+        self.assertEqual(send.call_args.args[0].get_header("Authorization"), "Bearer unit-test-placeholder")
+        self.assertNotIn("unit-test-placeholder", json.dumps(result))
+
     def test_cli_requires_consent_loopback_and_valid_lengths(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "report.json"
@@ -60,6 +72,7 @@ class ModelMatrixTests(unittest.TestCase):
                 sweep.load_profile = mock.Mock(side_effect=lambda base, values: {
                     "execution_profile": "standard" if values["execution_mode"] == "standard" else "experimental-hybrid-direct",
                     "hybrid_verified": values["execution_mode"] == "auto",
+                    "hybrid_decode_pipeline": values["execution_mode"] == "auto",
                     "selection_reason": "test selection", "backend": "/opt/llama-server"})
                 sweep.sample = mock.Mock(return_value={"wall_decode_tok_s": 40.0,
                                                       "generated_text_sha256": "a" * 64})
@@ -70,7 +83,8 @@ class ModelMatrixTests(unittest.TestCase):
                 sweep.summarize = lambda samples, control: {"median_wall_decode_tok_s": 40.0}
                 app = types.SimpleNamespace(PINNED_LLAMA_COMMIT="test",
                                             model_metadata=lambda path: {"general.architecture": "gpt-oss"},
-                                            supports_hybrid=lambda metadata: True)
+                                            supports_hybrid=lambda metadata: True,
+                                            select_hybrid_policy=lambda *args, **kwargs: {"hybrid": True})
                 with mock.patch.object(matrix, "load_module", side_effect=[sweep, app]), \
                         mock.patch.object(matrix, "quality_sample", return_value={"check_passed": outcome != "bad-answer"}):
                     if outcome == "interrupt":
@@ -84,6 +98,8 @@ class ModelMatrixTests(unittest.TestCase):
                 report = json.loads(args.output.read_text())
                 self.assertEqual(report["restore"]["status"], "ready")
                 self.assertFalse(report["performance_target_met"])
+                if outcome == "ok":
+                    self.assertEqual([run["hybrid_decode_pipeline"] for run in report["runs"]], [False, True])
                 if outcome == "bad-answer":
                     self.assertTrue(all(run["status"] == "answer_check_failed" for run in report["runs"]))
 

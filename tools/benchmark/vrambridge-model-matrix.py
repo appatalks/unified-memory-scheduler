@@ -39,12 +39,12 @@ def answer_check(name: str, answer: str) -> bool:
         return False
 
 
-def quality_sample(base: str, name: str, prompt: str) -> dict:
+def quality_sample(base: str, name: str, prompt: str, headers: dict[str, str] | None = None) -> dict:
     payload = {"model": "local-model", "messages": [{"role": "user", "content": prompt}],
                "max_tokens": 1024, "temperature": 0, "seed": 42, "reasoning_effort": "low",
                "cache_prompt": False, "stream": False}
     request = urllib.request.Request(base + "/v1/chat/completions", json.dumps(payload).encode(),
-                                     {"Content-Type": "application/json"})
+                                     {"Content-Type": "application/json", **(headers or {})})
     started = time.monotonic()
     with urllib.request.urlopen(request, timeout=120) as response:
         event = json.load(response)
@@ -106,11 +106,17 @@ def execute(args) -> int:
         for path, metadata, supported in models:
             control_hash = None
             for mode in ("standard", "auto"):
-                expect_hybrid = mode == "auto" and supported and initial.get("hybrid_available", False)
+                policy = app.select_hybrid_policy(
+                    metadata, path.stat().st_size, mode=mode,
+                    bound_layout=initial.get("hybrid_model_layout"),
+                    generic=initial.get("hybrid_generic", False),
+                    automatic_plan=initial.get("hybrid_initialization") == "auto",
+                    cache_mib=initial.get("hybrid_cache_mib", 10240))
+                expect_hybrid = mode == "auto" and policy["hybrid"] and initial.get("hybrid_available", False)
                 settings = {"model": str(path), "execution_mode": mode, "context": args.context,
                             "cpu_threads": args.threads, "batch_threads": args.batch_threads,
                             "placement": "auto", "load_mode": "auto", "fit_target_mib": 1024,
-                            "expert_cache_mib": 10240 if expect_hybrid else 0,
+                            "expert_cache_mib": initial.get("hybrid_cache_mib", 10240) if expect_hybrid else 0,
                             "host_op_offload": not expect_hybrid, "cpu_poll": 50,
                             "op_offload_min_batch": 32}
                 run = {"model": path.name, "first_shard_size_bytes": path.stat().st_size,
@@ -124,10 +130,11 @@ def execute(args) -> int:
                     run.update(load_seconds=time.monotonic() - started,
                                execution_profile=state["execution_profile"],
                                hybrid_verified=state["hybrid_verified"],
+                               hybrid_decode_pipeline=state.get("hybrid_decode_pipeline", False),
                                selection_reason=state["selection_reason"],
                                backend=Path(state["backend"]).name,
                                settings={key: value for key, value in settings.items() if key != "model"})
-                    if (state["execution_profile"] == "experimental-hybrid-direct") != expect_hybrid:
+                    if state["execution_profile"].startswith("experimental-hybrid-") != expect_hybrid:
                         raise RuntimeError("Selected execution profile differs from metadata-based expectation.")
                     if expect_hybrid and not state["hybrid_verified"]:
                         raise RuntimeError("Hybrid execution not verified.")

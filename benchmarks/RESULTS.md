@@ -24,6 +24,36 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## Decode Overlap And Projection Fusion Screen
+
+The [reviewed summary](results/gpt120-decode-optimization-summary.json) records
+GPT-OSS-120B MXFP4 on the 9950X/5070 Ti with unchanged target weights,
+actual 16K context, one request, 8 generation/16 prompt threads, and 512 output
+tokens per sample. These conditions supersede the older defaults below for
+this section only. The final technical three-repeat median is **46.94 tok/s**.
+
+Separate natural-style prompts disabled forced EOS suppression and retained
+the exact 512-token cap/count gate. With an 11,264 MiB resident cache:
+
+| Workload | Three samples, tok/s | Median tok/s |
+| --- | --- | ---: |
+| Coding | 43.18, 43.25, 42.51 | 43.18 |
+| Reasoning | 43.74, 46.10, 47.03 | 46.10 |
+| Prose | 58.60, 60.54, 61.94 | 60.54 |
+
+The prose median is not the overall 60 tok/s milestone. These capped segments
+do not establish full-answer quality. Exact quantitative answers still failed;
+two-key retrieval at 12,852 prompt tokens passed. During these screens the new pipeline options were off in the installed
+default, and the previous app configuration was restored. The subsequent
+experimental manual trial opts into the bundle with installation
+`decode_pipeline: true`; this does not remove the failed quality gates.
+
+Q8-drafter speculation was slower. QKV aliasing failed an isolated synthetic
+regression and was removed. All seven final fixtures passed comparisons with
+the prior hybrid path; 14 broader strict/native-reference failures remain
+visible. Read the [investigation](../docs/research/frontier-moe-feasibility.md#guarded-overlap-and-resident-projection-fusion)
+before interpreting these measurements as deployment evidence.
+
 ## Reviewed Results
 
 | Model | Placement | Prompt tok/s | Generation tok/s | Evidence |

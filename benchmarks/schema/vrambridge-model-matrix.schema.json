@@ -25,8 +25,9 @@
         "required": ["model", "metadata", "hybrid_layout_supported", "requested_mode", "status", "samples", "answer_checks"],
         "properties": {
           "requested_mode": {"enum": ["standard", "auto"]},
-          "execution_profile": {"enum": ["standard", "experimental-hybrid-direct"]},
+          "execution_profile": {"enum": ["standard", "experimental-hybrid-direct", "experimental-hybrid-staged"]},
           "hybrid_verified": {"type": "boolean"},
+          "hybrid_decode_pipeline": {"type": "boolean"},
           "status": {"enum": ["running", "ok", "answer_check_failed", "failed"]},
           "samples": {"type": "array", "items": {"type": "object", "required": ["wall_decode_tok_s", "end_to_end_tok_s", "timings", "usage", "generated_text_sha256"]}},
           "answer_checks": {

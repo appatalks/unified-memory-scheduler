@@ -12,6 +12,7 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 import secrets
 import select
 import shutil
@@ -31,10 +32,11 @@ BODY_LIMIT = 1024 * 1024
 RESPONSE_LIMIT = 8 * 1024 * 1024
 PINNED_LLAMA_COMMIT = "620d2225cc436ab0b001e3200e590e3b286ef9ab"
 HYBRID_WARNING = (
-    "Experimental GPT-OSS-120B direct DMA: short screens reached 39-40 tok/s, not a guarantee. "
+    "Experimental tensor-derived MoE dispatch. Measured speedups currently cover GPT-OSS-120B only, not every model. "
     "Strict model diagnostics and an answer check remain failed. About 57 GiB of RAM stays pinned "
-    "until unload; the backend enforces a 64 GiB cap and 24 GiB available-RAM headroom. "
-    "Unload to release memory. Speculation is disabled."
+    "during the measured 120B direct-DMA profile; other layouts and staged transfers differ. "
+    "Direct registration enforces a 64 GiB cap and 24 GiB available-RAM headroom. "
+    "Unload releases resources. Speculation is disabled."
 )
 
 
@@ -77,7 +79,7 @@ def readable_gguf(value: object, label: str) -> Path:
         raise AppError(400, f"Cannot read {label.lower()}: {exc}") from exc
 
 
-def validate_hybrid_plan(path: Path) -> int:
+def validate_hybrid_plan(path: Path, layout: dict | None = None) -> int:
     if path.stat().st_size > 1024 * 1024:
         raise ValueError("Hybrid plan exceeds 1 MiB.")
     selected = set()
@@ -88,11 +90,13 @@ def validate_hybrid_plan(path: Path) -> int:
         if len(fields) != 2:
             raise ValueError("Hybrid plan rows must contain layer and expert integers.")
         layer, expert = map(int, fields)
-        if not 0 <= layer < 36 or not 0 <= expert < 128 or (layer, expert) in selected:
+        layers = layout["block_count"] if layout else 32768
+        experts = layout["expert_count"] if layout else 1048576
+        if not 0 <= layer < layers or not 0 <= expert < experts or (layer, expert) in selected:
             raise ValueError("Hybrid plan contains an invalid or duplicate expert.")
         selected.add((layer, expert))
-    if not 1 <= len(selected) <= 800:
-        raise ValueError("This experimental app profile requires 1-800 resident expert groups.")
+    if not selected:
+        raise ValueError("A trained plan must contain experts; use the auto plan for causal cold-start admission.")
     return len(selected)
 
 
@@ -102,10 +106,9 @@ def model_metadata(path: Path) -> dict:
     result = {}
     scalar = {0: "B", 1: "b", 2: "H", 3: "h", 4: "I", 5: "i",
               6: "f", 7: "?", 10: "Q", 11: "q", 12: "d"}
-    wanted = {"general.architecture", "general.file_type", "general.name",
-              "gpt-oss.block_count", "gpt-oss.embedding_length",
-              "gpt-oss.feed_forward_length", "gpt-oss.expert_count",
-              "gpt-oss.expert_used_count"}
+    wanted = {"general.architecture", "general.file_type", "general.name", "split.count"}
+    dimensions = {"block_count", "embedding_length", "feed_forward_length",
+                  "expert_feed_forward_length", "expert_count", "expert_used_count", "context_length"}
     with path.open("rb") as source:
         def read(count):
             if count < 0 or source.tell() + count > limit:
@@ -138,10 +141,14 @@ def model_metadata(path: Path) -> dict:
                 return item if keep else None
             if kind == 8:
                 return string(keep)
-            if kind == 9 and depth < 2 and not keep:
+            if kind == 9 and depth < 2:
                 element, count = number("I"), number("Q")
                 if count > 1000000:
                     raise ValueError("GGUF metadata array exceeds one million entries.")
+                if keep:
+                    if element not in (4, 5, 10, 11) or count > 32768:
+                        raise ValueError("Model dimension arrays must be bounded integer arrays.")
+                    return [number(scalar[element]) for _ in range(count)]
                 if element in scalar:
                     skip(count * struct.calcsize("<" + scalar[element]))
                 else:
@@ -162,43 +169,109 @@ def model_metadata(path: Path) -> dict:
             if key in seen:
                 raise ValueError("Duplicate GGUF metadata key.")
             seen.add(key)
-            item = value(number("I"), key in wanted)
-            if key in wanted:
+            keep = key in wanted or key.rsplit(".", 1)[-1] in dimensions
+            item = value(number("I"), keep)
+            if keep:
                 result[key] = item
     if not isinstance(result.get("general.architecture"), str):
         raise ValueError("Select the first GGUF shard with architecture metadata.")
     return result
 
 
+def moe_layout(metadata: dict) -> dict | None:
+    architecture = metadata.get("general.architecture")
+    if not isinstance(architecture, str):
+        return None
+    if metadata.get("general.file_type") is not None and type(metadata["general.file_type"]) is not int:
+        return None
+    prefix = architecture + "."
+    layout = {name: metadata.get(prefix + name) for name in
+              ("block_count", "embedding_length", "expert_count", "expert_used_count")}
+    layout["expert_feed_forward_length"] = metadata.get(
+        prefix + "expert_feed_forward_length", metadata.get(prefix + "feed_forward_length"))
+    for name, maximum in (("block_count", 32768), ("embedding_length", 16777216), ("expert_count", 1048576)):
+        if type(layout[name]) is not int or not 1 <= layout[name] <= maximum:
+            return None
+    if layout["expert_count"] < 2:
+        return None
+    for name, maximum in (("expert_used_count", layout["expert_count"]),
+                          ("expert_feed_forward_length", 16777216)):
+        values = layout[name] if isinstance(layout[name], list) else [layout[name]]
+        if (not values or (isinstance(layout[name], list) and len(values) != layout["block_count"]) or
+                any(type(value) is not int or not 1 <= value <= maximum for value in values)):
+            return None
+    return {"architecture": architecture, "file_type": metadata.get("general.file_type"), **layout}
+
+
 def supports_hybrid(metadata: dict) -> bool:
-    return all(type(metadata.get(key)) is type(value) and metadata[key] == value for key, value in {
-        "general.architecture": "gpt-oss", "gpt-oss.block_count": 36,
-        "gpt-oss.embedding_length": 2880, "gpt-oss.feed_forward_length": 2880,
-        "gpt-oss.expert_count": 128, "gpt-oss.expert_used_count": 4,
-        "general.file_type": 38,
-    }.items())
+    return moe_layout(metadata) is not None
+
+
+def select_hybrid_policy(metadata: dict, model_bytes: int, *, mode: str, bound_layout: dict | None,
+                         generic: bool, automatic_plan: bool, cache_mib: int) -> dict:
+    if mode not in ("auto", "hybrid", "standard"):
+        raise ValueError("Unknown hybrid selection policy.")
+    if mode == "standard":
+        return {"hybrid": False, "automatic_plan": False, "reason": "standard"}
+    layout = moe_layout(metadata)
+    matched = bound_layout is None or layout == bound_layout
+    if layout is None or (not matched and not generic):
+        return {"hybrid": False, "automatic_plan": False, "reason": "descriptor_or_plan_mismatch"}
+    cold_start = automatic_plan or not matched
+    if (mode == "auto" and generic and cold_start and metadata.get("split.count", 1) == 1 and
+            model_bytes <= cache_mib*1024*1024):
+        return {"hybrid": False, "automatic_plan": True, "reason": "native_budget"}
+    return {"hybrid": True, "automatic_plan": cold_start, "reason": "hybrid"}
 
 
 def read_hybrid_profile(path: Path) -> dict:
     if path.stat().st_size > 65536:
         raise ValueError("Hybrid installation profile exceeds 64 KiB.")
     data = json.loads(path.read_text(encoding="utf-8"))
-    if (not isinstance(data, dict) or set(data) !=
-            {"schema_version", "backend_commit", "executable", "plan", "cuda_plugin"} or
-            type(data["schema_version"]) is not int or data["schema_version"] != 1 or
+    required = {"schema_version", "backend_commit", "executable", "plan", "cuda_plugin"}
+    optional = {"model_layout", "context", "cache_mib", "transfer", "decode_pipeline"}
+    if (not isinstance(data, dict) or not required <= set(data) or set(data) - required - optional or
+            type(data["schema_version"]) is not int or data["schema_version"] not in (1, 2) or
             data["backend_commit"] != PINNED_LLAMA_COMMIT or
+            type(data.get("decode_pipeline", False)) is not bool or
             any(not isinstance(data[key], str) or not Path(data[key]).is_absolute()
-                for key in ("executable", "plan", "cuda_plugin"))):
+                for key in ("executable", "cuda_plugin")) or not isinstance(data["plan"], str) or
+            (data["plan"] != "auto" and not Path(data["plan"]).is_absolute())):
         raise ValueError("Invalid pinned hybrid installation profile.")
-    return {"hybrid_executable": data["executable"], "hybrid_plan": Path(data["plan"]),
-            "hybrid_cuda_plugin": Path(data["cuda_plugin"])}
+    layout = data.get("model_layout")
+    if data["schema_version"] == 1:
+        # Preserve the old model-bound installation, not an engine-wide architecture allowlist.
+        layout = {"architecture": "gpt-oss", "file_type": 38, "block_count": 36,
+                  "embedding_length": 2880, "expert_feed_forward_length": 2880,
+                  "expert_count": 128, "expert_used_count": 4}
+    elif data["plan"] != "auto" and layout is None:
+        raise ValueError("A version-2 trained plan requires model_layout; use auto for an untrained causal plan.")
+    if layout is not None:
+        if not isinstance(layout, dict) or not isinstance(layout.get("architecture"), str):
+            raise ValueError("Invalid trained-plan model layout.")
+        normalized = moe_layout({"general.architecture": layout["architecture"],
+                                 "general.file_type": layout.get("file_type"),
+                                 **{layout["architecture"] + "." + key: value for key, value in layout.items()
+                                    if key not in ("architecture", "file_type")}})
+        if normalized != layout:
+            raise ValueError("Invalid trained-plan model layout.")
+    return {"hybrid_executable": data["executable"],
+            "hybrid_plan": "auto" if data["plan"] == "auto" else Path(data["plan"]),
+            "hybrid_cuda_plugin": Path(data["cuda_plugin"]), "hybrid_layout": layout,
+            "hybrid_generic": data["schema_version"] == 2,
+            "hybrid_context": data.get("context", 16384), "hybrid_cache_mib": data.get("cache_mib", 10240),
+            "hybrid_transfer": data.get("transfer", "direct" if data["schema_version"] == 1 else "staged"),
+            "hybrid_decode_pipeline": data.get("decode_pipeline", False)}
 
 
 class Runtime:
     def __init__(self, executable: str, load_timeout: float = 600,
                  backend_kind: str = "llama.cpp", enable_speculation: bool = False,
-                 hybrid_plan: Path | None = None, hybrid_cuda_plugin: Path | None = None,
-                 hybrid_executable: str | None = None, execution_mode: str | None = None):
+                 hybrid_plan: Path | str | None = None, hybrid_cuda_plugin: Path | None = None,
+                 hybrid_executable: str | None = None, execution_mode: str | None = None,
+                 hybrid_layout: dict | None = None, hybrid_generic: bool = False,
+                 hybrid_context: int = 16384, hybrid_cache_mib: int = 10240, hybrid_transfer: str = "direct",
+                 hybrid_decode_pipeline: bool = False):
         if backend_kind not in ("llama.cpp", "ik_llama.cpp"):
             raise ValueError("Unsupported backend kind.")
         if (hybrid_plan is None) != (hybrid_cuda_plugin is None):
@@ -214,15 +287,29 @@ class Runtime:
                                  "Automatic mode selects a profile from GGUF metadata when a model is loaded."
                                  if self.execution_mode == "auto" and hybrid_plan is not None else
                                  "Standard execution; no compatible hybrid installation selected.")
-        self.hybrid_plan = hybrid_plan.resolve(strict=True) if hybrid_plan is not None else None
+        if (type(hybrid_context) is not int or not 512 <= hybrid_context <= 65536 or
+                type(hybrid_cache_mib) is not int or not 1 <= hybrid_cache_mib <= 65536 or
+                hybrid_transfer not in ("direct", "staged") or type(hybrid_generic) is not bool or
+                type(hybrid_decode_pipeline) is not bool):
+            raise ValueError("Invalid generic hybrid context, residency budget, or transfer policy.")
+        self.hybrid_plan = "auto" if hybrid_plan == "auto" else Path(hybrid_plan).resolve(strict=True) if hybrid_plan is not None else None
+        self.hybrid_layout = hybrid_layout
+        self.hybrid_generic = hybrid_generic
+        self.hybrid_context = hybrid_context
+        self.hybrid_cache_mib = hybrid_cache_mib
+        self.hybrid_transfer = hybrid_transfer
+        self.hybrid_decode_pipeline = hybrid_decode_pipeline
+        self.active_hybrid_transfer = hybrid_transfer
+        self.required_hybrid_markers = {"hybrid", "context", "coverage", "direct", "registered"} if hybrid_transfer == "direct" else {"hybrid", "context", "coverage", "staged"}
         self.hybrid_cuda_plugin = hybrid_cuda_plugin.resolve(strict=True) if hybrid_cuda_plugin is not None else None
         self.hybrid_experts = 0
         self.hybrid_plan_sha256 = None
         if self.hybrid_plan is not None:
             if backend_kind != "llama.cpp" or enable_speculation:
                 raise ValueError("Hybrid execution requires the patched official backend without speculation.")
-            self.hybrid_experts = validate_hybrid_plan(self.hybrid_plan)
-            self.hybrid_plan_sha256 = hashlib.sha256(self.hybrid_plan.read_bytes()).hexdigest()
+            if self.hybrid_plan != "auto":
+                self.hybrid_experts = validate_hybrid_plan(self.hybrid_plan, self.hybrid_layout)
+                self.hybrid_plan_sha256 = hashlib.sha256(self.hybrid_plan.read_bytes()).hexdigest()
             if not self.hybrid_cuda_plugin.is_file():
                 raise ValueError("Hybrid CUDA plugin must be a matching shared-library file.")
             with self.hybrid_cuda_plugin.open("rb") as plugin:
@@ -266,11 +353,13 @@ class Runtime:
         self.cpu_sample: tuple[float, float] | None = None
         self.closed = False
         if self.hybrid_active:
-            self.context = 16384
+            self.context = self.hybrid_context
             self.cpu_threads = min(8, len(available_cpus()))
             self.batch_threads = min(16, len(available_cpus()))
-            self.expert_cache_mib = 10240
+            self.expert_cache_mib = self.hybrid_cache_mib
             self.host_op_offload = False
+        self.requested_context = self.context
+        self.context_warning: str | None = None
 
     def status(self) -> dict:
         with self.lock:
@@ -287,12 +376,24 @@ class Runtime:
                 "execution_mode": self.execution_mode,
                 "hybrid_available": self.hybrid_plan is not None,
                 "hybrid_plan_sha256": self.hybrid_plan_sha256,
+                "hybrid_model_layout": self.hybrid_layout,
+                "hybrid_generic": self.hybrid_generic,
+                "hybrid_initialization": "auto" if self.hybrid_plan == "auto" else "trained",
                 "selection_reason": self.selection_reason,
-                "execution_profile": "experimental-hybrid-direct" if self.hybrid_active else "standard",
+                "execution_profile": f"experimental-hybrid-{self.active_hybrid_transfer}" if self.hybrid_active else "standard",
+                "hybrid_transfer": self.active_hybrid_transfer if self.hybrid_active else None,
+                "hybrid_decode_pipeline": self.hybrid_active and self.hybrid_decode_pipeline,
+                "hybrid_overlap_verified": self.hybrid_active and "overlap" in self.hybrid_markers,
+                "hybrid_gate_up_verified": self.hybrid_active and "gate-up" in self.hybrid_markers,
+                "hybrid_context": self.context if self.hybrid_active else self.hybrid_context,
+                "hybrid_context_budget": self.hybrid_context,
+                "hybrid_cache_mib": self.hybrid_cache_mib,
                 "execution_warning": HYBRID_WARNING if self.hybrid_active else None,
-                "hybrid_verified": self.hybrid_markers == {"hybrid", "direct", "registered", "context"},
+                "hybrid_verified": self.hybrid_active and self.required_hybrid_markers <= self.hybrid_markers,
                 "fit_enabled": not self.hybrid_active and self.placement == "auto",
                 "context": self.context,
+                "requested_context": self.requested_context,
+                "context_warning": self.context_warning,
                 "placement": self.placement,
                 "cpu_threads": self.cpu_threads,
                 "batch_threads": self.batch_threads,
@@ -317,28 +418,53 @@ class Runtime:
         if mode not in ("auto", "standard", "hybrid"):
             raise AppError(400, "Execution mode must be auto, standard, or hybrid.")
         hybrid = mode == "hybrid"
+        selected_plan = self.hybrid_plan
+        transfer = self.hybrid_transfer
+        selected_experts = 0
+        selected_plan_sha256 = None
+        context_limit = None
         reason = "Standard execution explicitly selected."
         if mode != "standard" and self.hybrid_plan is not None:
             try:
                 metadata = model_metadata(model)
             except (OSError, ValueError) as exc:
                 raise AppError(400, f"Cannot select an execution profile: {exc}") from exc
-            hybrid = supports_hybrid(metadata)
-            reason = ("GPT-OSS-120B MXFP4 layout matched; adaptive direct DMA selected." if hybrid else
-                      f"{metadata['general.architecture']} is not supported by the hybrid dispatcher; "
-                      "standard execution selected, not a hybrid speedup.")
+            layout = moe_layout(metadata)
+            context_limit = metadata.get(metadata["general.architecture"] + ".context_length")
+            if context_limit is not None and (type(context_limit) is not int or context_limit < 512):
+                raise AppError(400, "The model context limit is invalid or below the application's 512-token minimum.")
+            policy = select_hybrid_policy(metadata, model.stat().st_size, mode=mode,
+                                          bound_layout=self.hybrid_layout, generic=self.hybrid_generic,
+                                          automatic_plan=self.hybrid_plan == "auto", cache_mib=self.hybrid_cache_mib)
+            hybrid = policy["hybrid"]
+            if hybrid and policy["automatic_plan"]:
+                selected_plan = "auto"
+                if self.hybrid_plan != "auto":
+                    transfer = "staged"
+            if policy["reason"] == "native_budget":
+                reason = ("MoE weight file fits the configured residency budget; native fitting is preferred "
+                          "to avoid hybrid scheduling overhead. This is not a fit or speed guarantee.")
+            elif hybrid:
+                reason = (f"Tensor-derived {metadata['general.architecture']} MoE descriptor selected; "
+                          f"{'bound training plan' if selected_plan != 'auto' else 'causal cold-start plan'}, "
+                          f"{transfer} transfers. Runtime operation/coverage validation is required.")
+            else:
+                reason = (f"{metadata['general.architecture']} is not supported by this installed residency plan "
+                          "or has no complete routed-MoE descriptor; standard execution selected, not a hybrid speedup.")
         if mode == "hybrid" and (not hybrid or self.hybrid_plan is None):
-            raise AppError(400, "Hybrid mode requires an installed profile and the supported GPT-OSS-120B MXFP4 layout.")
+            raise AppError(400, "Hybrid mode requires an installed plan policy and a compatible routed-MoE descriptor.")
         if mode == "auto" and self.hybrid_plan is None:
             reason = "No hybrid installation profile found; standard execution selected."
         selected_executable = (self.hybrid_executable if hybrid else
                                self.standard_executable if self.hybrid_plan is not None else self.executable)
-        context = data.get("context", 16384 if hybrid else 4096)
+        planned_context = min(self.hybrid_context if hybrid else 4096, context_limit) if context_limit else (
+            self.hybrid_context if hybrid else 4096)
+        context = data.get("context", planned_context)
         placement = data.get("placement", "auto")
         cpu_threads = data.get("cpu_threads", min(8, len(available_cpus())) if hybrid else default_cpu_threads())
         batch_threads = data.get("batch_threads", min(16, len(available_cpus())) if hybrid else cpu_threads)
         load_mode = data.get("load_mode", "auto")
-        expert_cache_mib = data.get("expert_cache_mib", 10240 if hybrid else 0)
+        expert_cache_mib = data.get("expert_cache_mib", self.hybrid_cache_mib if hybrid else 0)
         fit_target_mib = data.get("fit_target_mib", 1024)
         host_op_offload = data.get("host_op_offload", not hybrid)
         cpu_poll = data.get("cpu_poll", 50)
@@ -370,15 +496,15 @@ class Runtime:
         if type(op_offload_min_batch) is not int or not 1 <= op_offload_min_batch <= 8192:
             raise AppError(400, "Operation offload minimum batch must be an integer between 1 and 8192.")
         if hybrid:
-            if (placement != "auto" or context != 16384 or load_mode != "auto" or
-                    expert_cache_mib != 10240 or host_op_offload or draft_value not in (None, "") or
+            if (placement != "auto" or context != planned_context or load_mode != "auto" or
+                    expert_cache_mib != self.hybrid_cache_mib or host_op_offload or draft_value not in (None, "") or
                     fit_target_mib != 1024 or op_offload_min_batch != 32):
                 raise AppError(400, "The experimental hybrid profile requires automatic CPU/GPU execution, "
-                               "16384 context, default loading, 10240 MiB residency, host-op offload off, "
+                               f"{planned_context} context, default loading, {self.hybrid_cache_mib} MiB residency, host-op offload off, "
                                "1024 MiB reserve placeholder (fitting is off), batch threshold 32, and no draft.")
             try:
-                self.hybrid_experts = validate_hybrid_plan(self.hybrid_plan)
-                self.hybrid_plan_sha256 = hashlib.sha256(self.hybrid_plan.read_bytes()).hexdigest()
+                selected_experts = validate_hybrid_plan(selected_plan, layout) if selected_plan != "auto" else 0
+                selected_plan_sha256 = hashlib.sha256(selected_plan.read_bytes()).hexdigest() if selected_plan != "auto" else None
             except (OSError, ValueError) as exc:
                 raise AppError(400, f"Cannot use hybrid plan: {exc}") from exc
         if self.backend_kind != "llama.cpp" and (
@@ -454,21 +580,35 @@ class Runtime:
             if hybrid:
                 environment.update(
                     GGML_BACKEND_PATH=str(self.hybrid_cuda_plugin),
-                    VRAMBRIDGE_HYBRID_PLAN=str(self.hybrid_plan),
+                    VRAMBRIDGE_HYBRID_PLAN=str(selected_plan),
                     VRAMBRIDGE_HYBRID_ADAPT="1", VRAMBRIDGE_HYBRID_ASYNC="1",
-                    VRAMBRIDGE_HYBRID_DIRECT="1", GGML_CUDA_REGISTER_HOST="1",
                 )
+                if transfer == "direct":
+                    environment.update(VRAMBRIDGE_HYBRID_DIRECT="1", GGML_CUDA_REGISTER_HOST="1")
+                if self.hybrid_decode_pipeline:
+                    environment.update(
+                        VRAMBRIDGE_HYBRID_STAGE_INPUT="1", VRAMBRIDGE_HYBRID_OVERLAP="1",
+                        VRAMBRIDGE_HYBRID_BOUNDARY="gpu", VRAMBRIDGE_HYBRID_FUSE_GATE_UP="1")
             if self.backend_kind == "llama.cpp":
                 environment["GGML_OP_OFFLOAD_MIN_BATCH"] = str(op_offload_min_batch)
             self.logs.clear()
             self.hybrid_markers.clear()
             self.executable = selected_executable
             self.hybrid_active = hybrid
+            self.hybrid_experts = selected_experts
+            self.hybrid_plan_sha256 = selected_plan_sha256
+            self.active_hybrid_transfer = transfer
+            self.required_hybrid_markers = ({"hybrid", "context", "coverage", "direct", "registered"}
+                                            if transfer == "direct" else {"hybrid", "context", "coverage", "staged"})
+            if hybrid and self.hybrid_decode_pipeline:
+                self.required_hybrid_markers.add("pipeline")
             self.execution_mode = mode
             self.selection_reason = reason
             self.error = None
             self.model = str(model)
             self.context = context
+            self.requested_context = context
+            self.context_warning = None
             self.placement = placement
             self.cpu_threads = cpu_threads
             self.batch_threads = batch_threads
@@ -503,7 +643,7 @@ class Runtime:
         assert process.stdout is not None
         try:
             for line in process.stdout:
-                gpu_failed = False
+                backend_failed = False
                 with self.lock:
                     if self.process is process:
                         self.logs.append(line.rstrip().replace(key, "[redacted]")[:2000])
@@ -514,16 +654,44 @@ class Runtime:
                                 self.hybrid_markers.add("direct")
                             if "immutable source bytes" in line and "cap 64 GiB, headroom 24 GiB" in line:
                                 self.hybrid_markers.add("registered")
-                            if "n_ctx_slot = 16384," in line:
-                                self.hybrid_markers.add("context")
+                            if "adaptive admissions enabled;" in line and "bounded staging, asynchronous uploads" in line:
+                                self.hybrid_markers.add("staged")
+                            coverage = re.search(r"tensor-derived hybrid coverage=(\d+)/(\d+) routed layers", line)
+                            if coverage and int(coverage[1]) > 0 and coverage[1] == coverage[2]:
+                                self.hybrid_markers.add("coverage")
+                            if self.hybrid_decode_pipeline:
+                                if "VRAMBridge decode pipeline configured: staged input, guarded overlap, GPU boundary, gate/up fusion" in line:
+                                    self.hybrid_markers.add("pipeline")
+                                if "VRAMBridge guarded expert overlap active" in line:
+                                    self.hybrid_markers.add("overlap")
+                                if "VRAMBridge resident gate/up projection fusion active" in line:
+                                    self.hybrid_markers.add("gate-up")
+                        reported_context = re.search(r"n_ctx_slot\s*=\s*'?(\d+)", line)
+                        if reported_context:
+                            actual = int(reported_context[1])
+                            if actual != self.requested_context and self.hybrid_active:
+                                self.state = "error"
+                                self.error = (f"Backend context {actual} does not match planned hybrid context "
+                                              f"{self.requested_context}. Check the model limit and installation policy.")
+                                LOG.error("%s", self.error)
+                                backend_failed = True
+                            elif actual > 0:
+                                self.context = actual
+                                self.context_warning = None
+                                if self.hybrid_active:
+                                    self.hybrid_markers.add("context")
+                                elif actual != self.requested_context:
+                                    self.context_warning = (f"Backend adjusted the requested {self.requested_context} context "
+                                                            f"to {actual}. The displayed context is the actual slot size.")
+                                    LOG.warning("%s", self.context_warning)
                         if self.placement == "auto" and "ggml_cuda_init: failed to initialize CUDA:" in line:
                             self.state = "error"
                             self.error = ("CUDA initialization failed. Automatic GPU placement was stopped "
                                           "instead of silently running CPU-only. Recover the GPU driver "
                                           "or explicitly select CPU-only mode. See backend output.")
                             LOG.error("%s", self.error)
-                            gpu_failed = True
-                if gpu_failed:
+                            backend_failed = True
+                if backend_failed:
                     self._terminate(process)
                     return
         finally:
@@ -553,7 +721,7 @@ class Runtime:
                         with self.lock:
                             if (self.process is process and self.state == "loading" and
                                     (not self.hybrid_active or
-                                     self.hybrid_markers == {"hybrid", "direct", "registered", "context"})):
+                                     self.required_hybrid_markers <= self.hybrid_markers)):
                                 self.state = "ready"
                 except (OSError, http.client.HTTPException):
                     # A backend that is still starting need not have opened its socket yet.
@@ -565,8 +733,8 @@ class Runtime:
                             and time.monotonic() >= deadline):
                         self._terminate(process)
                         self.state = "error"
-                        self.error = ("Experimental hybrid readiness timed out: direct DMA, registration, "
-                                      "adaptive residency and actual 16K context must all be confirmed. "
+                        self.error = ("Experimental hybrid readiness timed out: selected transfers, full routed-layer coverage, "
+                                      "adaptive residency and actual context must all be confirmed. "
                                       "Check the patched backend, plan and matching CUDA plugin."
                                       if self.hybrid_active else
                                       "Model loading timed out. See backend output; try a smaller model or CPU mode.")
@@ -858,8 +1026,8 @@ def main() -> None:
                         help="explicit backend flag adapter; ik_llama.cpp is experimental")
     parser.add_argument("--experimental-speculation", action="store_true",
                         help="allow opt-in DFlash draft models; requires a compatible backend")
-    parser.add_argument("--experimental-hybrid-plan", type=Path,
-                        help="enable the experimental GPT-OSS-120B direct-DMA profile with a training-only plan")
+    parser.add_argument("--experimental-hybrid-plan",
+                        help="require experimental routed-MoE execution with a model-specific plan file, or auto for causal cold start")
     parser.add_argument("--hybrid-cuda-plugin", type=Path,
                         help="matching pinned CUDA shared-library file; required with --experimental-hybrid-plan")
     parser.add_argument("--execution-mode", choices=("auto", "standard", "hybrid"), default="auto",

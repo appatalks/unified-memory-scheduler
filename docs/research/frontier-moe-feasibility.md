@@ -678,6 +678,206 @@ as well as AST-only clamp-code validation and a keyword-only prose smoke check.
 The original failed question remains failed; these small additional checks do
 not establish general quality or resolve its interpretation.
 
+## Tensor-Derived Cross-Model Dispatcher
+
+The next revision replaces the first prototype's GPT-specific scheduling
+assumptions. Counts, active experts, layer/key ranges, cache groups, component
+sets, and staging/history sizes derive from tensors. Native and hybrid
+branches now share the backend's expert-math builder, preserving activation,
+bias, scaling/normalization order, shared experts, and weighting-before-FFN
+semantics where supported. Scaled expert tensors, LoRA/Hadamard transforms,
+and multiple hybrid GPUs still fail explicitly.
+
+Complete deterministic synthetic graphs cover seven families and seven
+storage types. The [compatibility workflow](../../benchmarks/README.md#generic-moe-graph-compatibility)
+records all 56 executions and the unchanged strict diagnostic outcome:
+28 comparisons passed, 14 failed, with 14 separate reference creations.
+Llama/Mixtral-style, Qwen2-MoE-style, Llama4-style, and Cohere-MoE-style
+fixtures passed all strict comparisons; GPT-style mixed paths passed.
+Quantized Qwen3/Grok and some native-GPU placement comparisons still fail
+relative-L2 gates. This is not a claim of trained-model quality or speed.
+
+Cross-layout tests exposed invalid placement of views and duplicate zero
+expert IDs on float CUDA kernels. Views now keep their source storage, and
+each active GPU miss receives a distinct reserved zero ID. Raw staged
+admissions are capped at 64 MiB, chunked when necessary, and synchronized
+before pool reuse. Failed startup/fixture trials were retained rather than
+reclassified as valid measurements.
+
+The real GPT-OSS-120B frozen path matched the previous hybrid reference
+**exactly** for all 201,088 logits at each of 96 teacher-forced positions
+(32 coding, 32 reasoning, 32 prose). This is a regression test against the
+previous hybrid, not a pass of the earlier CPU-reference gate.
+
+A subsequent matched 8/16-thread, actual-16K, three-by-512-token screen
+measured a standard median of **25.84 tok/s** and generic adaptive direct-DMA
+median of **37.81 tok/s**, with hybrid samples **39.71, 37.33, 37.81**.
+Both small arithmetic and AST-only code checks passed. This retains a roughly
+46% paired gain, but is below the earlier 39.46 median and does not establish
+no performance regression; history, additional reserved slots, and scheduling
+overhead need further isolation. Do not substitute the best sample for the
+median. The app was restored after the test. The 60 tok/s target remains unmet.
+
+Version-2 app profiles now bind trained plans to model descriptors rather than
+embedding a GPT-only whitelist in dispatch. Other routed layouts can cold-start
+with bounded staging; small unsharded weight files prefer native fitting to
+avoid unnecessary split overhead. None of the other downloaded trained models
+is another larger-than-VRAM MoE, so real cross-family throughput is still an
+open validation gate, not an accomplished result.
+
+## Guarded Overlap And Resident Projection Fusion
+
+The [reviewed decode summary](../../benchmarks/results/gpt120-decode-optimization-summary.json)
+retains the separate profiling, policy, projection, speculation, natural-workload,
+and final-source screens. All use the original GPT-OSS-120B MXFP4 target weights.
+During these screens the new switches were research options, not changes to
+the installed app default. The subsequent user-requested experimental manual
+trial enables the tested bundle with installation `decode_pipeline: true`,
+hot880/11,264 MiB residency and 16K context. The UI distinguishes backend
+configuration acknowledgement from observed guarded overlap and fused
+projection graphs. Failed quality gates remain failed.
+
+The critical-path investigation found that the CPU hidden-input copy waited
+behind resident GPU expert work. Preparing the exact 3D input view earlier
+lets the scheduler reuse its existing CPU copy. Guarded overlap then permits
+only independent, device-only CUDA expert computation and host-only CPU expert
+computation to run concurrently. Unsupported operations, new CPU inputs,
+multi-copy schedules, and evaluation callbacks retain barriers. Pending
+asynchronous host-source reads are fenced before scratch reuse; synchronous
+copies need no extra fence. Existing reconciliation dependencies remain.
+
+Initial profiling was invalid: querying CUDA device properties per submission
+reduced throughput to about 9.65 tok/s. Caching backend classification removed
+that observer effect: corrected control/profiled measurements were 38.62/38.34.
+Host GPU-submit intervals are not CUDA execution times. Copy intervals include
+dependency waits, not just PCIe transfer time.
+
+Interleaved resident gate/up banks reuse native fused projection math, original
+weights and separate biases. Actual logical GPU expert projections decreased
+from 108 to 72 per complete 36-layer decode graph. Ranked admission and shorter
+history were also screened; CPU CCD affinity was slower. Removing redundant
+post-copy fences did not establish an additional throughput gain.
+
+The final-source technical screen, with actual 16K context, 8/16 threads,
+11,264 MiB cache and a training-only 880-group plan, generated three exact
+512-token samples: **49.03, 44.73, 46.94 tok/s**, median **46.94**.
+An earlier two-repeat screen peaked at 50.25; that peak is not a sustained result.
+
+Natural-style prompts were separately screened with `ignore_eos=false` and a
+512-token output cap, three repetitions per category:
+
+| Resident cache | Coding median | Reasoning median | Prose median |
+| --- | ---: | ---: | ---: |
+| 10,240 MiB / hot800 | 42.32 | 43.92 | 57.58 |
+| 11,264 MiB / hot880 | 43.18 | 46.10 | 60.54 |
+
+The larger-cache prose samples were **58.60, 60.54, 61.94**. This crosses 60 on
+one workload's median, not the overall sustained milestone: the first prose
+sample and all coding/reasoning samples remained below 60. These are capped
+generation segments, not complete long answers or semantic code validation.
+Cache history persists across requests; repeated requests are not fresh seeds.
+Both configurations correctly retrieved two keys from an actual 12,852-token
+prompt without an allocation failure.
+
+Small arithmetic and AST-only clamp checks passed, but a new quantitative
+question still failed exact rounding: expected `37.33` ms and `26.79` tok/s,
+with reported rates `26.75`/`26.78`. The first test implementation allowed 0.02
+error, too loose for its requested rounded answer. The reviewed summary
+recomputes exact numeric equality and retains that original loose-gate result.
+Neither configuration is quality-qualified. This does not isolate placement
+as the cause; the earlier CPU-reference and quantitative failures remain open.
+
+### Cross-Layout Regression And Rejected Candidates
+
+An attempted immutable QKV alias did not activate on the target model:
+its Q8_0 projections have 256-byte inter-tensor padding. On the synthetic
+Qwen3 fixture it did activate and introduced a strict regression
+(`relativeL2 = 0.0015963`). Isolation showed zero error for overlap alone,
+gate/up alone, and their combination, while QKV alone reproduced the failure.
+The QKV candidate and its coupled attention change were removed; requesting
+its former switch now fails explicitly. Unchanged weight bytes alone do not
+guarantee numerically equivalent projection execution.
+
+After removal, all seven layouts passed optimized-versus-prior-hybrid
+comparisons. The full screen retained **72 executions: 21 reference creations,
+37 passing comparisons and 14 failing comparisons**. The remaining failures
+include native controls and the previously documented quantized diagnostics;
+they are not waived. Callback-enabled and no-input-staging controls passed
+with zero overlap, while optimized controls recorded actual overlap.
+The real GPT frozen optimization screens retained zero full-logit error over
+96 teacher-forced positions each. Synthetic results are not trained-model
+quality or cross-family throughput evidence.
+
+Top-16 F32 stress again passed strict logits while admitting 32 experts and
+uploading **192 MiB through a 64 MiB bounded staging pool**. All 16 configured
+test targets passed, with one retained oversized-HTTP-body `BrokenPipeError`
+flake in the local-app target passing on a single unchanged rerun.
+
+A derived Q8_0 DFlash drafter was also tested without modifying the target:
+one/three-token draft limits measured **33.94/29.91 accepted tok/s** against a
+matched **43.44** control. Actual proposed/accepted counters were verified;
+rejected proposals and draft overhead were not counted as useful output.
+This candidate was rejected. No new large model was downloaded.
+
+The final patch is independently checked against the pinned source index and
+the separate DFlash-bias patch, with reverse applicability checked against the
+built tree. Natural timings precede removal of the unused QKV experiment;
+those profiles did not enable it. Final-source performance and logit checks
+are recorded separately with the exported patch hash. The app was restored
+to its previous 16K default after the private tests.
+
+### Next Optimization Queue: Measure Before Removing Waits
+
+The user reported approximately **52 tok/s** during the updated manual trial.
+This is useful operational feedback, not a matched benchmark or a replacement
+for the repeated workload results above. At 52 tok/s, mean token latency is
+19.23 ms; 60 tok/s requires 16.67 ms, a reduction of approximately **2.56 ms**
+or 15.4% more throughput. No individual mechanism below has demonstrated that
+additional gain yet.
+
+The archived final technical profiler recorded roughly 12.5 ms of synchronous
+CPU submission and 7.7 ms of copy/wait intervals per filtered graph. These
+are not timings of the manual 52 tok/s request, isolated kernel times, or
+independent bandwidth ceilings.
+
+Proceed in this order:
+
+1. **Separate synchronization from transfers.** Time existing event/backend
+   waits separately from synchronous copy calls, asynchronous enqueue calls,
+   and copy callbacks. Classify directions using cached backend/buffer data.
+   A synchronous copy interval can still contain driver/internal waits; do not
+   relabel it pure DMA time. Compare profiling off/on before using results.
+2. **Prototype a combined routing packet if the measurements justify it.**
+   The current dispatcher receives selected IDs, probabilities, and the exact
+   hidden-input view separately. A single GPU-to-CPU packet could reduce
+   transfer/dependency overhead. Preserve expert-ID exactness, original
+   probabilities, strides, CPU bias IDs, weighting-before-FFN semantics,
+   and the hidden-input lifetime. Packing itself adds work and must be timed.
+   Any asynchronous return of GPU slot IDs needs bounded storage and explicit
+   completion-before-reuse protection, not blanket barrier removal.
+3. **Share CPU preparation and eliminate genuinely empty cold work.**
+   Gate/up CPU matmuls can prepare the same activation independently. Reusing
+   the native conversion once is distinct from the already enabled resident
+   GPU fusion. An all-resident selection already skips CPU dot products, but
+   may still incur conversion, bookkeeping and branch operations. Any empty
+   path must clear the correct output, preserve numerical/nonfinite behavior,
+   and leave shared experts and residual work untouched.
+4. **Price admissions in time, not frequency alone.** Current causal history
+   already includes a bounded payback margin and optional seed/recency ties.
+   Compare those controls with measured saved CPU time, upload/eviction cost
+   and bytes. Do not assume more migrations or higher hit rate improves the
+   critical path. Derive costs/eligibility from tensor descriptors, not names.
+
+Require unchanged target weights and selected experts, existing strict logit
+thresholds, cross-layout regression controls, actual optimization counters,
+and at least three matched 512-token repetitions. Retain prior diagnostic
+failures and report answer checks separately. Restore the installed manual
+profile after private experiments, including failed tests.
+
+Do not prioritize disk streaming while the target fits RAM, repeat the rejected
+QKV alias, or retry the same slower DFlash setup without a new causal reason.
+Avoid new dependencies, global machine tuning, and approximate expert pruning.
+
 ## Next Experiments
 
 The subsequent [downloaded-model matrix](../../benchmarks/RESULTS.md#october-16-model-aware-defaults-and-downloaded-model-matrix)
@@ -690,7 +890,7 @@ are not superseded by the two small passing answer checks. The app now selects
 the supported hybrid profile by default when installed, with warnings intact.
 
 1. Broaden paired numerical, AST-only coding, prose-smoke, and long-retrieval checks without discarding failed questions.
-2. Repeat the direct-DMA gain across representative longer workloads and measure registration/resource cost separately; it is not enabled by default.
+2. Investigate reducing small cross-backend routing/input transfers and CPU projection overhead, measuring synchronization separately from transfer time; do not infer a win from fewer calls alone.
 3. If single-position execution remains below target, investigate exact multi-token verification rather than counting aggregate batching or approximate expert pruning as success.
 4. Qualify any candidate across held-out coding, reasoning, and prose with at least three repeated 512-token runs, actual 16K context, and all synchronization/migration overhead included.
 

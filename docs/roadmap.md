@@ -44,6 +44,21 @@ work to identify the critical path rather than treating utilization as success.
 
 ## Milestone 4: Cross-Model MoE Scheduling Experiment
 
+**Primary architectural goal: a MoE model-agnostic engine.** GPT-OSS-120B is
+the first difficult workload, not the engine's identity. Routing widths,
+projection layouts, dimensions, dtypes, resident plans, and memory budgets
+must come from descriptors and measured resource costs, not checkpoint names.
+Backend-owned model semantics must be shared with native execution. Fully
+resident and dense models should not be forced into slower offload paths just
+to claim that a new scheduler ran.
+
+Cross-model acceptance requires more than successful fallback: multiple
+trained MoE families, including a second larger-than-VRAM model, must pass
+matched correctness/answer checks and repeated end-to-end throughput tests.
+Synthetic graph/layout tests are a prerequisite, not a replacement. Different
+models may need different placement policies; universal speedup is not a
+credible invariant.
+
 First instrument per-token/per-layer expert selection and collect held-out coding,
 reasoning, and prose traces. Measure expert sizes, frequency, reuse distance,
 temporal locality, and the actual cache capacity left at the intended context.
@@ -106,6 +121,24 @@ generation and small arithmetic/AST-only checks. This separates compatibility
 from optimization coverage: successful standard inference on Gemma, Qwen,
 or LFM does not demonstrate cross-architecture hybrid expert dispatch.
 
+The model-agnostic refactor removes fixed 36-layer/128-expert/top-4
+assumptions from the cache/dispatcher and reuses the original expert-math
+builder for native and hybrid branches. Complete synthetic Llama, Qwen2,
+Qwen3, GPT, Llama4, Cohere, and Grok graphs now execute with variable layouts,
+seven storage types, shared experts, fused projections, optional biases, and
+mixed dense/MoE layers. Cross-device view placement and duplicate float-CUDA
+dummy-ID defects were found and fixed. Generic admission supports an empty
+causal plan, and asynchronous staging is capped at 64 MiB with safe recycling.
+Version-2 installation profiles prevent cross-model trained-plan reuse and
+select native fitting when a small weight file makes splitting unnecessary.
+
+Strict numerical failures for quantized cases remain visible, including native
+GPU controls; no new generic quality guarantee is claimed. The refactored
+real 120B frozen path is bit-exact to its previous hybrid reference at 96
+teacher-forced positions. The next real-model screen must retain performance
+and correctness results separately, then validate another trained large MoE
+before claiming cross-family optimization benefits.
+
 Only if the costed oracle leaves headroom, investigate expert-granular storage
 and dispatch in ggml, first with a fixed hot set spread across layers. Keep GPU
 hits on the GPU and CPU misses in RAM, combining partial outputs at the correct
@@ -121,11 +154,12 @@ vectors and all-GPU weighting/reduction pass tight numerical checks on layers
 also use an independent scalar reference. These warm-layer measurements are
 not a full-model executor or generation-speed result.
 
-Still required before whole-model integration: broader rotating working sets,
-actual model activations/router weights, and CPU/GPU scheduling that preserves
-correctness and improves the uninstrumented critical path. The exported hot-set
-plan is not yet wired into expert dispatch or admission/migration. The probe's
-small pinned pool does not justify pinning the full model.
+The standalone probe alone does not establish whole-model integration:
+broader rotating working sets, actual model activations/router weights, and
+correct CPU/GPU scheduling must also be tested. The separate whole-model
+dispatcher described above now consumes trained plans and performs causal
+admission; the probe itself does not. Its small pinned pool does not justify
+pinning the full model.
 The collector now also replays each request with observation inactive to check
 greedy token equivalence. After the user rebooted, all six real requests passed
 that gate. Partial traces remain excluded. Post-reboot auto-fit changed expert
@@ -139,7 +173,28 @@ tested MoE models, documented regressions/overhead, and upstream fallback when
 unsupported or unproven. Do not require dense layer streaming first: its naive
 form loses to static placement in the existing measured baseline.
 
+The next critical-path slice implements early CPU-input preparation, guarded
+CPU/GPU expert overlap, GPU reconciliation boundaries, resident gate/up fusion,
+and optional ranked admission. The final technical median is 46.94 tok/s;
+a separate three-repeat prose screen reached a 60.54 median, but coding and
+reasoning remained 43.18/46.10. This is not the sustained cross-workload
+60 tok/s milestone. Exact quantitative answers and strict native-reference
+diagnostics still fail, so new options remain experimental rather than app
+defaults. A QKV candidate introduced a cross-layout regression and was removed;
+all seven layouts now pass comparisons against the prior hybrid path.
+See the [decode investigation](research/frontier-moe-feasibility.md#guarded-overlap-and-resident-projection-fusion)
+for retained failures, natural-output timing, and remaining validation gates.
+
 ## Milestone 5: Workload-Aware Policies
+
+Immediate decode research order: separate copy waits from transfer/enqueue
+intervals with a profiling observer control; test descriptor-derived routing
+packets if justified; then investigate shared CPU preparation, empty cold
+branches and time-priced admissions. The user's roughly 52 tok/s manual result
+is not a benchmark qualification. Recovering about 2.56 ms/token would bridge
+52 to 60, but no additional saving is assumed. See the
+[optimization queue](research/frontier-moe-feasibility.md#next-optimization-queue-measure-before-removing-waits)
+for contracts, rejected approaches and acceptance gates.
 
 Extend only demonstrated mechanisms to prefill, decode, and concurrent-request
 objectives. Compare static, size-aware LRU, and measured/adaptive policies. Expose

@@ -1,0 +1,2160 @@
+{
+  "schema_version": 1,
+  "model": "gpt-oss-120b-MXFP4",
+  "target_weights_unchanged": true,
+  "hardware": {
+    "cpu": "Ryzen 9 9950X",
+    "gpu": "RTX 5070 Ti 16GB",
+    "ram_gib": 123.48
+  },
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "final_patch_sha256": "5734eb84e5e1c3a6c00b68d65fdc94be4a01bc487d987281753f0d6dcdf1f1ae",
+  "context": 16384,
+  "threads": 8,
+  "batch_threads": 16,
+  "output_tokens": 512,
+  "performance_target_tok_s": 60,
+  "performance_target_met": false,
+  "new_options_promoted_to_default": false,
+  "overlap_screen": {
+    "source_patch_sha256": "b037186a050cc527cb3e9641a35b0726ac84dd70294b770c99bfe8625c6f0623",
+    "restored_original_app": true,
+    "runs": [
+      {
+        "profile": "control",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 38.6156224251753,
+        "samples_tok_s": [
+          39.695277038497586,
+          37.53596781185301
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": null
+      },
+      {
+        "profile": "profiled",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 38.3434351820118,
+        "samples_tok_s": [
+          39.39716847469529,
+          37.289701889328306
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 233478,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 282744,
+          "copy_us": 11920608,
+          "cpu_submit_us": 14753722,
+          "gpu_submit_us": 475342,
+          "overlap_splits": 0,
+          "copy_fences": 0
+        }
+      },
+      {
+        "profile": "gpu-boundary",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 39.23814579978679,
+        "samples_tok_s": [
+          40.51654637583853,
+          37.959745223735055
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 11188454,
+          "cpu_submit_us": 14951398,
+          "gpu_submit_us": 372780,
+          "overlap_splits": 0,
+          "copy_fences": 0
+        }
+      },
+      {
+        "profile": "stage",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 38.136742853031535,
+        "samples_tok_s": [
+          39.24698797700673,
+          37.02649772905634
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 233478,
+          "zero_input_waits": 38556,
+          "zero_input_wait_us": 3466512,
+          "copies": 282744,
+          "copy_us": 8555868,
+          "cpu_submit_us": 14849258,
+          "gpu_submit_us": 487927,
+          "overlap_splits": 0,
+          "copy_fences": 0
+        }
+      },
+      {
+        "profile": "overlap",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 41.81870022361938,
+        "samples_tok_s": [
+          43.00082391438239,
+          40.636576532856374
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 233478,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 282744,
+          "copy_us": 9381798,
+          "cpu_submit_us": 14912557,
+          "gpu_submit_us": 487098,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      },
+      {
+        "profile": "overlap-gpu",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 43.85550812334259,
+        "samples_tok_s": [
+          45.27377449375928,
+          42.4372417529259
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8454349,
+          "cpu_submit_us": 14814738,
+          "gpu_submit_us": 373561,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      }
+    ]
+  },
+  "policy_screen": {
+    "source_patch_sha256": "9e5a718fa64573b3449ea60838e69e1f5448c195a767684b89fbf7900d26d977",
+    "restored_original_app": true,
+    "runs": [
+      {
+        "profile": "fast-control",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 43.94450298905487,
+        "samples_tok_s": [
+          45.14034846025187,
+          42.748657517857865
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8360846,
+          "cpu_submit_us": 14829892,
+          "gpu_submit_us": 364555,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      },
+      {
+        "profile": "fast-capacity",
+        "status": "ok",
+        "budget_mib": 10278,
+        "median_tok_s": 45.11536161809841,
+        "samples_tok_s": [
+          45.325311778278156,
+          44.90541145791867
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8179372,
+          "cpu_submit_us": 14466900,
+          "gpu_submit_us": 361715,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      },
+      {
+        "profile": "fast-big",
+        "status": "ok",
+        "budget_mib": 11264,
+        "median_tok_s": 46.48786639997479,
+        "samples_tok_s": [
+          49.02632971864733,
+          43.94940308130224
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8323274,
+          "cpu_submit_us": 13413093,
+          "gpu_submit_us": 372843,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      },
+      {
+        "profile": "ranked",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 43.593541586689554,
+        "samples_tok_s": [
+          44.75840413591854,
+          42.42867903746057
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8325219,
+          "cpu_submit_us": 14975614,
+          "gpu_submit_us": 366086,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      },
+      {
+        "profile": "ranked32",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 44.19469121900596,
+        "samples_tok_s": [
+          45.20047169332714,
+          43.188910744684776
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8709321,
+          "cpu_submit_us": 14208173,
+          "gpu_submit_us": 359003,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      },
+      {
+        "profile": "ranked-big",
+        "status": "ok",
+        "budget_mib": 11264,
+        "median_tok_s": 46.79362059596901,
+        "samples_tok_s": [
+          46.286307007068054,
+          47.300934184869966
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8334986,
+          "cpu_submit_us": 13371758,
+          "gpu_submit_us": 358004,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      },
+      {
+        "profile": "ranked-ccd0",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 43.002108630582384,
+        "samples_tok_s": [
+          44.37585082666724,
+          41.62836643449752
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8259745,
+          "cpu_submit_us": 15357313,
+          "gpu_submit_us": 391484,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      },
+      {
+        "profile": "ranked-ccd1",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 42.8976238554366,
+        "samples_tok_s": [
+          43.76997497145128,
+          42.025272739421915
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8346208,
+          "cpu_submit_us": 15231172,
+          "gpu_submit_us": 397384,
+          "overlap_splits": 38562,
+          "copy_fences": 38562
+        }
+      }
+    ]
+  },
+  "projection_screen": {
+    "source_patch_sha256": "bd0b637e5f8db89adec0d0e62bd6ccbb3342007ca3056711888aaa5f2d43768b",
+    "restored_original_app": true,
+    "runs": [
+      {
+        "profile": "fast-control",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 44.139242237525295,
+        "samples_tok_s": [
+          45.47289370243705,
+          42.805590772613535
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8409808,
+          "cpu_submit_us": 14700579,
+          "gpu_submit_us": 344986,
+          "overlap_splits": 38562,
+          "copy_fences": 38562,
+          "gpu_expert_projections": 115668
+        }
+      },
+      {
+        "profile": "qkv",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 44.22165565778502,
+        "samples_tok_s": [
+          45.59148766356296,
+          42.85182365200708
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8372228,
+          "cpu_submit_us": 14696084,
+          "gpu_submit_us": 350403,
+          "overlap_splits": 38562,
+          "copy_fences": 38562,
+          "gpu_expert_projections": 115668
+        }
+      },
+      {
+        "profile": "gate-up",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 44.45148261839876,
+        "samples_tok_s": [
+          45.80277229212486,
+          43.10019294467265
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8333574,
+          "cpu_submit_us": 14620821,
+          "gpu_submit_us": 347887,
+          "overlap_splits": 38562,
+          "copy_fences": 38562,
+          "gpu_expert_projections": 77112
+        }
+      },
+      {
+        "profile": "fused",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 44.542715158929184,
+        "samples_tok_s": [
+          46.07591216025108,
+          43.00951815760728
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8367343,
+          "cpu_submit_us": 14554723,
+          "gpu_submit_us": 344183,
+          "overlap_splits": 38562,
+          "copy_fences": 38562,
+          "gpu_expert_projections": 77112
+        }
+      },
+      {
+        "profile": "fused-big",
+        "status": "ok",
+        "budget_mib": 11264,
+        "median_tok_s": 47.52347000107984,
+        "samples_tok_s": [
+          50.2458947066219,
+          44.80104529553779
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8328408,
+          "cpu_submit_us": 13005221,
+          "gpu_submit_us": 331831,
+          "overlap_splits": 38562,
+          "copy_fences": 38562,
+          "gpu_expert_projections": 77112
+        }
+      }
+    ]
+  },
+  "final_three_repetition_screen": {
+    "source_patch_sha256": "5bfd3a948f810e804f4fb29c52ffa72ac34ef17c7b3eae466fbb70e3cbc9f153",
+    "restored_original_app": true,
+    "runs": [
+      {
+        "profile": "gate-up",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 43.21151032269525,
+        "samples_tok_s": [
+          45.3654497047797,
+          42.58530368791371,
+          43.21151032269525
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1582,
+          "splits": 230972,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 303744,
+          "copy_us": 12319979,
+          "cpu_submit_us": 21734811,
+          "gpu_submit_us": 522006,
+          "overlap_splits": 56959,
+          "copy_fences": 0,
+          "gpu_expert_projections": 113904
+        }
+      },
+      {
+        "profile": "gate-up-big",
+        "status": "ok",
+        "budget_mib": 11264,
+        "median_tok_s": 46.905748651623234,
+        "samples_tok_s": [
+          48.36174602837461,
+          44.21465030261675,
+          46.905748651623234
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1582,
+          "splits": 230972,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 303744,
+          "copy_us": 12316754,
+          "cpu_submit_us": 19835078,
+          "gpu_submit_us": 509992,
+          "overlap_splits": 56959,
+          "copy_fences": 0,
+          "gpu_expert_projections": 113904
+        }
+      },
+      {
+        "profile": "ranked-fused-big",
+        "status": "ok",
+        "budget_mib": 11264,
+        "median_tok_s": 46.39973338622352,
+        "samples_tok_s": [
+          45.56954177001971,
+          47.237224009120965,
+          46.39973338622352
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1582,
+          "splits": 230972,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 303744,
+          "copy_us": 12401580,
+          "cpu_submit_us": 19604906,
+          "gpu_submit_us": 514049,
+          "overlap_splits": 56959,
+          "copy_fences": 0,
+          "gpu_expert_projections": 113904
+        }
+      }
+    ]
+  },
+  "q8_drafter_screen": {
+    "source_patch_sha256": "0772b3ea46c821c8962e08b1fa94ceb1d688066352fd7cb165d152f7dc14b4ef",
+    "restored_original_app": true,
+    "runs": [
+      {
+        "profile": "draft-control",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 43.44132553935137,
+        "samples_tok_s": [
+          44.231528580854345,
+          42.651122497848384
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1071,
+          "splits": 156366,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 205632,
+          "copy_us": 8356382,
+          "cpu_submit_us": 15119891,
+          "gpu_submit_us": 344850,
+          "overlap_splits": 38562,
+          "copy_fences": 38562,
+          "gpu_expert_projections": 77112
+        }
+      },
+      {
+        "profile": "draft1",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 33.93842784416801,
+        "samples_tok_s": [
+          33.75635116243031,
+          34.12050452590571
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": null,
+        "speculation_verified": true,
+        "draft_counts": [
+          {
+            "draft_n": 305,
+            "draft_n_accepted": 206
+          },
+          {
+            "draft_n": 305,
+            "draft_n_accepted": 206
+          }
+        ]
+      },
+      {
+        "profile": "draft3",
+        "status": "ok",
+        "budget_mib": 10240,
+        "median_tok_s": 29.911971269173897,
+        "samples_tok_s": [
+          29.745196068120695,
+          30.078746470227095
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 2,
+          "splits": 292,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 384,
+          "copy_us": 7245,
+          "cpu_submit_us": 52279,
+          "gpu_submit_us": 7965,
+          "overlap_splits": 16200,
+          "copy_fences": 16200,
+          "gpu_expert_projections": 144
+        },
+        "speculation_verified": true,
+        "draft_counts": [
+          {
+            "draft_n": 645,
+            "draft_n_accepted": 295
+          },
+          {
+            "draft_n": 645,
+            "draft_n_accepted": 295
+          }
+        ]
+      }
+    ]
+  },
+  "natural_workload_screen": {
+    "source_patch_sha256": "5bfd3a948f810e804f4fb29c52ffa72ac34ef17c7b3eae466fbb70e3cbc9f153",
+    "restored_original_app": true,
+    "runs": [
+      {
+        "profile": "gate-up",
+        "status": "qualification_failed",
+        "budget_mib": 10240,
+        "median_tok_s": 43.92446132660061,
+        "samples_tok_s": [
+          41.608222320444895,
+          42.32225157443439,
+          42.58598646158309,
+          43.56178978791791,
+          43.92446132660061,
+          44.052500586033155,
+          56.535500668850794,
+          58.82679804047642,
+          57.577329003553075
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512,
+          512,
+          512,
+          512,
+          512,
+          512,
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 4854,
+          "splits": 708684,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 931968,
+          "copy_us": 36975562,
+          "cpu_submit_us": 60134688,
+          "gpu_submit_us": 1508974,
+          "overlap_splits": 174759,
+          "copy_fences": 0,
+          "gpu_expert_projections": 349488
+        },
+        "workloads": [
+          {
+            "name": "coding",
+            "status": "ok",
+            "ignore_eos": false,
+            "prompt_sha256": "7105d652b9dbebbab879cdeb9a83b161d632e74a68f3648be688e844a9d11bb4",
+            "median_tok_s": 42.32225157443439,
+            "samples_tok_s": [
+              41.608222320444895,
+              42.32225157443439,
+              42.58598646158309
+            ],
+            "accepted_tokens_per_sample": [
+              512,
+              512,
+              512
+            ]
+          },
+          {
+            "name": "reasoning",
+            "status": "ok",
+            "ignore_eos": false,
+            "prompt_sha256": "473c41d5c6a82c68c3e4a1344b9565c8bf178cfca12913c8e7767644cbb62ec5",
+            "median_tok_s": 43.92446132660061,
+            "samples_tok_s": [
+              43.56178978791791,
+              43.92446132660061,
+              44.052500586033155
+            ],
+            "accepted_tokens_per_sample": [
+              512,
+              512,
+              512
+            ]
+          },
+          {
+            "name": "prose",
+            "status": "ok",
+            "ignore_eos": false,
+            "prompt_sha256": "ff734c338bdd2c46f45b201b5be42ec847091f394cd17b4e2309b3a3a1658453",
+            "median_tok_s": 57.577329003553075,
+            "samples_tok_s": [
+              56.535500668850794,
+              58.82679804047642,
+              57.577329003553075
+            ],
+            "accepted_tokens_per_sample": [
+              512,
+              512,
+              512
+            ]
+          }
+        ],
+        "additional_checks": {
+          "quantitative": {
+            "passed": false,
+            "finish_reason": "stop",
+            "prompt_tokens": 131,
+            "numeric_result": {
+              "token_ms": 37.33,
+              "tokens_per_second": 26.75
+            },
+            "original_loose_gate_passed": false,
+            "expected": {
+              "token_ms": 37.33,
+              "tokens_per_second": 26.79
+            }
+          },
+          "long_retrieval": {
+            "passed": true,
+            "finish_reason": "stop",
+            "prompt_tokens": 12852,
+            "numeric_result": {
+              "first": 7391,
+              "last": 2846
+            }
+          }
+        },
+        "original_runner_status": "qualification_failed"
+      },
+      {
+        "profile": "gate-up-big",
+        "status": "qualification_failed",
+        "budget_mib": 11264,
+        "median_tok_s": 46.09899106919874,
+        "samples_tok_s": [
+          43.17680878133898,
+          43.25394918658504,
+          42.512889433029336,
+          43.73847601626009,
+          46.09899106919874,
+          47.03081622628284,
+          58.601988671507456,
+          60.54249503609928,
+          61.9384253125197
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512,
+          512,
+          512,
+          512,
+          512,
+          512,
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 4852,
+          "splits": 708392,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 931584,
+          "copy_us": 37313980,
+          "cpu_submit_us": 56291239,
+          "gpu_submit_us": 1484004,
+          "overlap_splits": 174687,
+          "copy_fences": 0,
+          "gpu_expert_projections": 349344
+        },
+        "workloads": [
+          {
+            "name": "coding",
+            "status": "ok",
+            "ignore_eos": false,
+            "prompt_sha256": "7105d652b9dbebbab879cdeb9a83b161d632e74a68f3648be688e844a9d11bb4",
+            "median_tok_s": 43.17680878133898,
+            "samples_tok_s": [
+              43.17680878133898,
+              43.25394918658504,
+              42.512889433029336
+            ],
+            "accepted_tokens_per_sample": [
+              512,
+              512,
+              512
+            ]
+          },
+          {
+            "name": "reasoning",
+            "status": "ok",
+            "ignore_eos": false,
+            "prompt_sha256": "473c41d5c6a82c68c3e4a1344b9565c8bf178cfca12913c8e7767644cbb62ec5",
+            "median_tok_s": 46.09899106919874,
+            "samples_tok_s": [
+              43.73847601626009,
+              46.09899106919874,
+              47.03081622628284
+            ],
+            "accepted_tokens_per_sample": [
+              512,
+              512,
+              512
+            ]
+          },
+          {
+            "name": "prose",
+            "status": "ok",
+            "ignore_eos": false,
+            "prompt_sha256": "ff734c338bdd2c46f45b201b5be42ec847091f394cd17b4e2309b3a3a1658453",
+            "median_tok_s": 60.54249503609928,
+            "samples_tok_s": [
+              58.601988671507456,
+              60.54249503609928,
+              61.9384253125197
+            ],
+            "accepted_tokens_per_sample": [
+              512,
+              512,
+              512
+            ]
+          }
+        ],
+        "additional_checks": {
+          "quantitative": {
+            "passed": false,
+            "finish_reason": "stop",
+            "prompt_tokens": 131,
+            "numeric_result": {
+              "token_ms": 37.33,
+              "tokens_per_second": 26.78
+            },
+            "original_loose_gate_passed": true,
+            "expected": {
+              "token_ms": 37.33,
+              "tokens_per_second": 26.79
+            }
+          },
+          "long_retrieval": {
+            "passed": true,
+            "finish_reason": "stop",
+            "prompt_tokens": 12852,
+            "numeric_result": {
+              "first": 7391,
+              "last": 2846
+            }
+          }
+        },
+        "original_runner_status": "ok"
+      }
+    ]
+  },
+  "final_post_removal_screen": {
+    "source_patch_sha256": "5734eb84e5e1c3a6c00b68d65fdc94be4a01bc487d987281753f0d6dcdf1f1ae",
+    "restored_original_app": true,
+    "runs": [
+      {
+        "profile": "gate-up-big",
+        "status": "ok",
+        "budget_mib": 11264,
+        "median_tok_s": 46.94082715692346,
+        "samples_tok_s": [
+          49.0259649226756,
+          44.72752848703293,
+          46.94082715692346
+        ],
+        "accepted_tokens_per_sample": [
+          512,
+          512,
+          512
+        ],
+        "small_answer_checks_passed": true,
+        "scheduler": {
+          "hybrid_graphs": 1582,
+          "splits": 230972,
+          "zero_input_waits": 0,
+          "zero_input_wait_us": 0,
+          "copies": 303744,
+          "copy_us": 12144192,
+          "cpu_submit_us": 19775067,
+          "gpu_submit_us": 504962,
+          "overlap_splits": 56959,
+          "copy_fences": 0,
+          "gpu_expert_projections": 113904
+        }
+      }
+    ]
+  },
+  "limitations": [
+    "Three-repetition technical and natural workload screens are separate; do not select a peak as sustained performance.",
+    "Natural screens disable ignore_eos but cap output at 512; this is not full-answer semantic validation.",
+    "Cache history persists between requests; the first request starts from trained seeds, later requests are adaptive.",
+    "Different cache capacity/plan or workload can change CPU/GPU rounding and free-generation text.",
+    "Strict CPU-reference failures and the earlier quantitative-answer failure remain unresolved.",
+    "Scheduler submit/copy counters are host intervals, not isolated GPU elapsed time or measured PCIe bytes.",
+    "Initial uncached per-submit device-property profiling was invalid and is excluded from valid speed comparisons.",
+    "QKV aliasing was not active on GPT120B: each Q8_0 projection has 256-byte inter-tensor padding.",
+    "The QKV-alias candidate failed the isolated Qwen3 regression and was removed; its former flag is rejected.",
+    "Natural timings preceded removal of the unused QKV candidate; those measured profiles did not enable it. Final source was separately rescreened.",
+    "The original quantitative gate allowed 0.02 error, inconsistent with the requested rounded answer; this summary recomputes exact numeric equality and retains the original loose result.",
+    "Removing redundant post-copy fences did not establish an additional throughput gain.",
+    "Synthetic fixtures are untrained; a second trained larger-than-VRAM MoE remains untested."
+  ],
+  "frozen_gpt_regressions": [
+    {
+      "profile": "gate-up",
+      "returncode": 0,
+      "passed": true,
+      "positions": 96,
+      "max_abs_logit_error": 0.0,
+      "max_relative_l2": 0.0
+    },
+    {
+      "profile": "gate-up-big",
+      "returncode": 0,
+      "passed": true,
+      "positions": 96,
+      "max_abs_logit_error": 0.0,
+      "max_relative_l2": 0.0
+    },
+    {
+      "profile": "ranked-fused-big",
+      "returncode": 0,
+      "passed": true,
+      "positions": 96,
+      "max_abs_logit_error": 0.0,
+      "max_relative_l2": 0.0
+    }
+  ],
+  "final_frozen_gpt_regressions": [
+    {
+      "profile": "gate-up-big",
+      "returncode": 0,
+      "passed": true,
+      "positions": 96,
+      "max_abs_logit_error": 0.0,
+      "max_relative_l2": 0.0
+    }
+  ],
+  "removed_qkv_flag_validation": {
+    "returncode": -6,
+    "explicit_rejection_verified": true,
+    "surface": "llama-server common initialization"
+  },
+  "drafter_provenance": {
+    "quantization": "Q8_0",
+    "threads": 8,
+    "target_weights_modified": false,
+    "files": [
+      {
+        "name": "gpt-oss-120b-dflash-upstream-bf16.gguf",
+        "bytes": 1582738368,
+        "sha256": "d5e571141432c9a5b070437d88bb9deadf90db10e46cc28e7e77f97f79ab8bbd"
+      },
+      {
+        "name": "gpt-oss-120b-dflash-upstream-q8_0.gguf",
+        "bytes": 847128768,
+        "sha256": "189b4fc25ff7d162f31e5e11ad9e9eaf7bc27be3e66979b871f4d99ae7bd92ce"
+      }
+    ]
+  },
+  "rejected_qkv_experiment": {
+    "initial_comparison_passes": 36,
+    "initial_comparison_failures": 15,
+    "isolated_checks": {
+      "runs": [
+        {
+          "profile": "pipeline",
+          "returncode": 0,
+          "passed": true,
+          "max_abs": 0.0,
+          "relative_l2": 0.0
+        },
+        {
+          "profile": "qkv-only",
+          "returncode": 1,
+          "passed": false,
+          "max_abs": 0.00155659019947052,
+          "relative_l2": 0.0015962765976061414
+        },
+        {
+          "profile": "gate-up-only",
+          "returncode": 0,
+          "passed": true,
+          "max_abs": 0.0,
+          "relative_l2": 0.0
+        },
+        {
+          "profile": "pipeline-gate-up",
+          "returncode": 0,
+          "passed": true,
+          "max_abs": 0.0,
+          "relative_l2": 0.0
+        }
+      ],
+      "restored_original_app": true
+    }
+  },
+  "synthetic_compatibility": {
+    "synthetic_untrained": true,
+    "quality_or_speed_claim": false,
+    "executions": 72,
+    "reference_creations": 21,
+    "comparison_passes": 37,
+    "comparison_failures": 14,
+    "restored_original_app": true,
+    "layouts": [
+      {
+        "architecture": "llama",
+        "expert_type": "F32",
+        "checks": [
+          {
+            "profile": "native-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "native-gpu-vs-cpu",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": null
+          },
+          {
+            "profile": "frozen",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3686,
+              "cpu_submit_us": 546,
+              "gpu_submit_us": 726,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "block3",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 1,
+              "splits": 14,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 24,
+              "copy_us": 227,
+              "cpu_submit_us": 34,
+              "gpu_submit_us": 196,
+              "overlap_splits": 19,
+              "copy_fences": 0,
+              "gpu_expert_projections": 6
+            }
+          },
+          {
+            "profile": "adaptive-staged",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 4456,
+              "cpu_submit_us": 662,
+              "gpu_submit_us": 818,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "adaptive-direct",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3580,
+              "cpu_submit_us": 587,
+              "gpu_submit_us": 787,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "native-gpu-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "all-resident-vs-gpu",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 4119,
+              "cpu_submit_us": 435,
+              "gpu_submit_us": 733,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "hybrid-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "optimized-vs-hybrid",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3594,
+              "cpu_submit_us": 510,
+              "gpu_submit_us": 721,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "callback-barrier",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 48,
+              "zero_input_wait_us": 11,
+              "copies": 384,
+              "copy_us": 2190,
+              "cpu_submit_us": 0,
+              "gpu_submit_us": 0,
+              "overlap_splits": 0,
+              "copy_fences": 0,
+              "gpu_expert_projections": 0
+            }
+          },
+          {
+            "profile": "no-stage-barrier",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 4196,
+              "cpu_submit_us": 557,
+              "gpu_submit_us": 731,
+              "overlap_splits": 0,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          }
+        ]
+      },
+      {
+        "architecture": "qwen2moe",
+        "expert_type": "Q8_0",
+        "checks": [
+          {
+            "profile": "native-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "native-gpu-vs-cpu",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": null
+          },
+          {
+            "profile": "frozen",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3765,
+              "cpu_submit_us": 3913,
+              "gpu_submit_us": 837,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "block3",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 1,
+              "splits": 14,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 24,
+              "copy_us": 273,
+              "cpu_submit_us": 37,
+              "gpu_submit_us": 254,
+              "overlap_splits": 19,
+              "copy_fences": 0,
+              "gpu_expert_projections": 6
+            }
+          },
+          {
+            "profile": "adaptive-staged",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 4560,
+              "cpu_submit_us": 722,
+              "gpu_submit_us": 848,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "adaptive-direct",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3978,
+              "cpu_submit_us": 595,
+              "gpu_submit_us": 998,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "native-gpu-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "all-resident-vs-gpu",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 4594,
+              "cpu_submit_us": 505,
+              "gpu_submit_us": 911,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "hybrid-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "optimized-vs-hybrid",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 4337,
+              "cpu_submit_us": 662,
+              "gpu_submit_us": 1168,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          }
+        ]
+      },
+      {
+        "architecture": "qwen3moe",
+        "expert_type": "Q4_K",
+        "checks": [
+          {
+            "profile": "native-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "native-gpu-vs-cpu",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": null
+          },
+          {
+            "profile": "frozen",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3376,
+              "cpu_submit_us": 835,
+              "gpu_submit_us": 1515,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "block3",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 1,
+              "splits": 14,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 24,
+              "copy_us": 203,
+              "cpu_submit_us": 51,
+              "gpu_submit_us": 1064,
+              "overlap_splits": 19,
+              "copy_fences": 0,
+              "gpu_expert_projections": 6
+            }
+          },
+          {
+            "profile": "adaptive-staged",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 4282,
+              "cpu_submit_us": 961,
+              "gpu_submit_us": 1502,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "adaptive-direct",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 4165,
+              "cpu_submit_us": 805,
+              "gpu_submit_us": 2000,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "native-gpu-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "all-resident-vs-gpu",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3285,
+              "cpu_submit_us": 584,
+              "gpu_submit_us": 1480,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "hybrid-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "optimized-vs-hybrid",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 2861,
+              "cpu_submit_us": 772,
+              "gpu_submit_us": 1642,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          }
+        ]
+      },
+      {
+        "architecture": "gpt-oss",
+        "expert_type": "MXFP4",
+        "checks": [
+          {
+            "profile": "native-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "native-gpu-vs-cpu",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": null
+          },
+          {
+            "profile": "frozen",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 432,
+              "copy_us": 3327,
+              "cpu_submit_us": 684,
+              "gpu_submit_us": 814,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "block3",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 1,
+              "splits": 14,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 27,
+              "copy_us": 224,
+              "cpu_submit_us": 43,
+              "gpu_submit_us": 237,
+              "overlap_splits": 19,
+              "copy_fences": 0,
+              "gpu_expert_projections": 6
+            }
+          },
+          {
+            "profile": "adaptive-staged",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 432,
+              "copy_us": 3142,
+              "cpu_submit_us": 654,
+              "gpu_submit_us": 832,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "adaptive-direct",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 432,
+              "copy_us": 3112,
+              "cpu_submit_us": 626,
+              "gpu_submit_us": 835,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "native-gpu-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "all-resident-vs-gpu",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 432,
+              "copy_us": 3882,
+              "cpu_submit_us": 548,
+              "gpu_submit_us": 835,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "hybrid-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "optimized-vs-hybrid",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 432,
+              "copy_us": 3749,
+              "cpu_submit_us": 637,
+              "gpu_submit_us": 826,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          }
+        ]
+      },
+      {
+        "architecture": "llama4",
+        "expert_type": "F16",
+        "checks": [
+          {
+            "profile": "native-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "native-gpu-vs-cpu",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": null
+          },
+          {
+            "profile": "frozen",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 368,
+              "copy_us": 4467,
+              "cpu_submit_us": 263,
+              "gpu_submit_us": 1797,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          },
+          {
+            "profile": "block3",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 1,
+              "splits": 10,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 23,
+              "copy_us": 112,
+              "cpu_submit_us": 25,
+              "gpu_submit_us": 263,
+              "overlap_splits": 13,
+              "copy_fences": 0,
+              "gpu_expert_projections": 4
+            }
+          },
+          {
+            "profile": "adaptive-staged",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 368,
+              "copy_us": 3845,
+              "cpu_submit_us": 441,
+              "gpu_submit_us": 2048,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          },
+          {
+            "profile": "adaptive-direct",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 368,
+              "copy_us": 4129,
+              "cpu_submit_us": 420,
+              "gpu_submit_us": 2033,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          },
+          {
+            "profile": "native-gpu-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "all-resident-vs-gpu",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 368,
+              "copy_us": 4006,
+              "cpu_submit_us": 378,
+              "gpu_submit_us": 1848,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          },
+          {
+            "profile": "hybrid-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "optimized-vs-hybrid",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 368,
+              "copy_us": 4264,
+              "cpu_submit_us": 418,
+              "gpu_submit_us": 2007,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          }
+        ]
+      },
+      {
+        "architecture": "cohere2moe",
+        "expert_type": "BF16",
+        "checks": [
+          {
+            "profile": "native-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "native-gpu-vs-cpu",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": null
+          },
+          {
+            "profile": "frozen",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 352,
+              "copy_us": 3190,
+              "cpu_submit_us": 331,
+              "gpu_submit_us": 647,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          },
+          {
+            "profile": "block3",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 1,
+              "splits": 10,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 22,
+              "copy_us": 137,
+              "cpu_submit_us": 20,
+              "gpu_submit_us": 206,
+              "overlap_splits": 13,
+              "copy_fences": 0,
+              "gpu_expert_projections": 4
+            }
+          },
+          {
+            "profile": "adaptive-staged",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 352,
+              "copy_us": 3160,
+              "cpu_submit_us": 354,
+              "gpu_submit_us": 656,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          },
+          {
+            "profile": "adaptive-direct",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 352,
+              "copy_us": 3147,
+              "cpu_submit_us": 300,
+              "gpu_submit_us": 650,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          },
+          {
+            "profile": "native-gpu-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "all-resident-vs-gpu",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 352,
+              "copy_us": 3253,
+              "cpu_submit_us": 288,
+              "gpu_submit_us": 653,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          },
+          {
+            "profile": "hybrid-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "optimized-vs-hybrid",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 160,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 352,
+              "copy_us": 3178,
+              "cpu_submit_us": 308,
+              "gpu_submit_us": 645,
+              "overlap_splits": 33,
+              "copy_fences": 0,
+              "gpu_expert_projections": 64
+            }
+          }
+        ]
+      },
+      {
+        "architecture": "grok",
+        "expert_type": "Q4_0",
+        "checks": [
+          {
+            "profile": "native-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "native-gpu-vs-cpu",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": null
+          },
+          {
+            "profile": "frozen",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3440,
+              "cpu_submit_us": 589,
+              "gpu_submit_us": 788,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "block3",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 1,
+              "splits": 14,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 24,
+              "copy_us": 187,
+              "cpu_submit_us": 39,
+              "gpu_submit_us": 304,
+              "overlap_splits": 19,
+              "copy_fences": 0,
+              "gpu_expert_projections": 6
+            }
+          },
+          {
+            "profile": "adaptive-staged",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3521,
+              "cpu_submit_us": 621,
+              "gpu_submit_us": 789,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "adaptive-direct",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3394,
+              "cpu_submit_us": 543,
+              "gpu_submit_us": 780,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "native-gpu-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "all-resident-vs-gpu",
+            "returncode": 1,
+            "passed": false,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3789,
+              "cpu_submit_us": 520,
+              "gpu_submit_us": 781,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          },
+          {
+            "profile": "hybrid-reference",
+            "returncode": 0,
+            "passed": null,
+            "scheduler": null
+          },
+          {
+            "profile": "optimized-vs-hybrid",
+            "returncode": 0,
+            "passed": true,
+            "scheduler": {
+              "hybrid_graphs": 16,
+              "splits": 224,
+              "zero_input_waits": 0,
+              "zero_input_wait_us": 0,
+              "copies": 384,
+              "copy_us": 3678,
+              "cpu_submit_us": 575,
+              "gpu_submit_us": 834,
+              "overlap_splits": 49,
+              "copy_fences": 0,
+              "gpu_expert_projections": 96
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "staging_stress": {
+    "pool_bound_verified": true,
+    "admissions": 32,
+    "uploaded_bytes": 201326592,
+    "pool_reuse_required_by_payload": true,
+    "all_runs_passed": true,
+    "restored_original_app": true
+  },
+  "tests": {
+    "default_targets_passed": 8,
+    "patched_targets_passed": 16,
+    "retained_flake": "One oversized HTTP-body validation test raised BrokenPipeError on its first full run; the unchanged local-app target passed on one rerun."
+  }
+}

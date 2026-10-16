@@ -312,13 +312,14 @@ nonzero exit status. No report claims full-model acceleration.
 
 ## Experimental Whole-Model Expert Dispatch
 
-This is a research workflow. With a configured pinned installation, the browser
-app now selects its non-speculative direct-DMA path by default for matching
-GPT-OSS-120B MXFP4 models. Other architectures remain on standard execution;
-the experimental path is not quality-qualified.
-It currently supports only the original GPT-OSS-120B layout: 36 layers,
-128 experts/layer, four selected experts, hidden/intermediate width 2,880,
-MXFP4 weights, and F32 biases. It does not prune experts, change target weights,
+This is a research workflow. Version-2 installations select a model-bound
+trained plan when its descriptor matches, or a generic causal/staged plan
+for other routed MoE layouts. Native fitting remains preferable for small
+resident weight files. The experimental path is not quality-qualified.
+The dispatcher now derives layer/expert/top-k counts, dimensions, component
+sets, and quantizations from loaded tensors. It reuses the backend's original
+expert math, including fused gate/up, optional biases, activation variants,
+and original weighting order. It does not prune experts, change target weights,
 or implement disk computation. Read the
 [measurements and failed quality gates](../docs/research/frontier-moe-feasibility.md#experimental-whole-model-expert-dispatch)
 before using it. The 60 tok/s goal is not met.
@@ -366,8 +367,9 @@ The repacked primitive test requires the x86 AVX2 eight-row MXFP4 layout.
 
 A plan is a UTF-8 text file with `layer expert` integer pairs, one per line,
 and optional whole-line `#` comments. Duplicates, out-of-range entries, malformed
-rows, and plans exceeding the allocated bank are errors. Slot zero is reserved
-for misses, and allocation includes a guard slot; the entire nominal budget
+rows, and plans exceeding the allocated bank are errors. A band of distinct
+zero slots is reserved for misses (one per maximum active expert position),
+and allocation includes a guard slot; the entire nominal budget
 is not available for plan entries.
 
 For the measured 800-group starting plan, first validate a complete routing
@@ -420,11 +422,43 @@ Optional environment switches, scoped to the private process:
 | Switch | Behavior |
 | --- | --- |
 | `VRAMBRIDGE_HYBRID_ADAPT=1` | Causal recent-use admissions; cold experts otherwise execute on CPU |
-| `VRAMBRIDGE_HYBRID_ASYNC=1` | With adaptive mode, a bounded 53,015,040-byte staging pool and ordered asynchronous uploads |
+| `VRAMBRIDGE_HYBRID_ASYNC=1` | With adaptive mode, tensor-sized staging capped at 64 MiB, safe pool recycling, and ordered asynchronous uploads |
 | `VRAMBRIDGE_HYBRID_REPACK=1` | Allow CPU repacking; omit `--no-repack`, add `--no-host --load-mode none`; lossless native-layout export for GPU uploads |
 | `VRAMBRIDGE_HYBRID_DIRECT=1` | With adaptive/asynchronous raw layout and `--no-host`, direct DMA from immutable registered source pages, without staging copies |
+| `VRAMBRIDGE_HYBRID_PLAN=auto` | Empty causal initialization; no checkpoint-specific trained plan is reused |
 | `VRAMBRIDGE_HYBRID_BATCH=4` | Allow up to four target positions per custom graph (range 1-32); residency is frozen for every multi-position call |
 | `VRAMBRIDGE_HYBRID_DFLASH=1` | Allow the specifically selected `--spec-type draft-dflash` experiment; requires the separate attention-bias patch and a smaller resident bank to leave draft-model headroom |
+| `VRAMBRIDGE_HYBRID_PROFILE=1` | Host-side split/copy/submit counters; GPU submit time is launch latency, not GPU execution time |
+| `VRAMBRIDGE_HYBRID_STAGE_INPUT=1` | Prepare the exact CPU hidden-input view before resident GPU expert computation |
+| `VRAMBRIDGE_HYBRID_OVERLAP=1` | Overlap only proven device-only CUDA expert work and independent host-only CPU expert work; callbacks and unsupported graphs retain barriers |
+| `VRAMBRIDGE_HYBRID_BOUNDARY=gpu` | Reconcile the expert contributions on GPU; default remains CPU |
+| `VRAMBRIDGE_HYBRID_FUSE_GATE_UP=1` | Interleave eligible resident gate/up banks without increasing weight storage; reuse native fused projection math |
+| `VRAMBRIDGE_HYBRID_POLICY=ranked` | Prefer weaker training seeds only for zero-frequency eviction ties; active ties use recency; default is `classic` |
+| `VRAMBRIDGE_HYBRID_WINDOW=32` | Recent-history window in routed-token rounds, derived using routed-layer count; allowed range 8-256, default 64 |
+
+The switches remain research options. An installation can opt into the tested
+overlap/fusion bundle using `decode_pipeline: true`; the updated experimental
+manual profile does so, while omission preserves the previous pipeline.
+Ranked-policy/window tuning is not part of that bundle.
+Pair input staging with guarded overlap and verify
+nonzero `overlap_splits` rather than treating an environment variable as proof.
+The scheduler fences pending asynchronous host-source reads before scratch
+reuse; synchronous input copies need no redundant fence. Therefore a zero
+`copy_fences` counter can be correct even when overlap is active. Evaluation
+callbacks disable overlap. Unsupported operations, buffer domains, or
+multi-copy schedules preserve the ordinary barriers.
+
+Cached backend classifications are essential: querying CUDA device properties
+per submission caused a severe profiling observer effect. Keep that invalid
+probe separate from corrected timings. Logical GPU expert-projection counts
+verify active gate/up fusion. The QKV-alias experiment was removed after
+isolated cross-layout regression failure; requesting its former switch now
+fails explicitly rather than silently changing attention math.
+
+For natural-length workload checks, the shared Python `sample()` helper accepts
+keyword-only `prompt=` and `ignore_eos=False`. These preserve the exact requested
+output-count gate: an answer ending early fails instead of being extrapolated
+to 512 tokens. Optional authentication headers are sent but not serialized.
 
 Direct mode also requires `GGML_CUDA_REGISTER_HOST=1`. It is Linux/CUDA-only,
 page-aligns and coalesces source ranges, rejects already CUDA-pinned/repacked
@@ -434,6 +468,9 @@ roughly 57 GiB of RAM until process/context teardown; this is a substantial
 temporary resource commitment, not a lightweight default. Startup failures
 unregister completed ranges; teardown waits for DMA before unregistering.
 Registration failures are errors, never a silent pageable-memory fallback.
+Staged admission is capped at 64 MiB, with raw components copied in chunks
+and completion before pool reuse. Repacked components larger than the pool
+cap are rejected. Budgets/top-k are not assumed to match the 120B measurement.
 
 The checker has two distinct modes:
 
@@ -521,3 +558,124 @@ different model token rates. Keep raw output local until reviewed/sanitized.
 The [matrix schema](schema/vrambridge-model-matrix.schema.json) and
 [reviewed ledger](RESULTS.md) distinguish compatibility, numerical/answer gates,
 and measured performance. Existing strict diagnostic failures are not relaxed.
+
+## Generic MoE Graph Compatibility
+
+The implementation goal is architecture-independent scheduling, not one hot
+plan stretched across unrelated models. The shared native/hybrid expert
+builder preserves routing normalization, optional biases, fused/separate
+projections, activation/clamp variants, shared experts, and pre/post-FFN routing
+weights. The cache derives per-layer key ranges, active counts, history, and
+staging from tensors. Scaled expert tensors, LoRA/Hadamard transformations,
+and multiple hybrid GPUs remain explicit unsupported cases.
+
+The deterministic [fixture generator](../tools/trace/make_moe_fixture.py) uses
+the pinned checkout's GGUF writer and matching `libggml-base` quantizer. It
+requires that developer environment's NumPy/gguf tooling, not extra application
+dependencies. No trained weights are downloaded. It bounds model dimensions,
+refuses existing final/partial files, uses a fixed seed, and marks every model
+**synthetic and untrained**. These are correctness probes, never quality or
+speed benchmarks. The default CTest suite checks fixture input safety without
+importing NumPy/gguf or initializing a GPU.
+
+The complete tiny-model screen used these layouts:
+
+| Architecture fixture | Storage | Blocks | Hidden / FFN | Experts / active | Important coverage |
+| --- | --- | ---: | ---: | ---: | --- |
+| Llama/Mixtral-style | F32 | 3 | 64 / 128 | 8 / 2 | Bias-free SwiGLU |
+| Qwen2-MoE-style | Q8_0 | 3 | 96 / 192 | 7 / 3 | Shared experts, non-power-of-two expert count |
+| Qwen3-MoE-style | Q4_K | 3 | 256 / 256 | 16 / 4 | K-quantized projections |
+| GPT-style | MXFP4 | 3 | 64 / 128 | 4 / 2 | Optional routed biases and OpenAI SwiGLU |
+| Llama4-style | F16 | 4 | 64 / 96 | 4 / 1 | Mixed dense/MoE layers, shared experts, weights before FFN |
+| Cohere-MoE-style | BF16 | 3 | 64 / 128 | 8 / 2 | Fused gate/up, leading dense block, sigmoid routing |
+| Grok-style | Q4_0 | 3 | 64 / 128 | 8 / 2 | GeGLU and normalization variants |
+
+For each layout, the screen created CPU-expert and native-GPU references,
+then checked native-GPU versus CPU, frozen mixed residency, three-position
+blocks, causal staged admission, causal direct admission, and all-resident
+hybrid versus native GPU: **56 executions, including 14 reference creations
+and 42 full-vocabulary comparisons**, 16 teacher-forced positions per comparison.
+All seven execute after the startup defects were corrected.
+
+Llama, Qwen2, Llama4, and Cohere fixtures passed all six strict comparisons.
+The GPT fixture passed its four mixed/block/admission checks against the CPU
+reference, while some native-GPU and all-resident comparisons failed.
+Quantized Qwen3 and Grok retained strict relative-L2 failures, including their
+native-GPU controls. In total 28 comparisons passed and 14 failed. Thresholds
+remain `max_abs <= 0.01` and `relative_l2 <= 0.001`; no failed check is relabeled
+as a correctness pass. Native-placement variation is evidence to investigate,
+not a general exemption. None of this proves trained-model accuracy or a
+cross-model speedup.
+
+The first screen exposed two implementation defects: forcing views onto a
+different backend aliased device storage as CPU memory, and repeated zero
+expert IDs violated unique-ID assumptions of float CUDA expert kernels.
+Views now keep source placement; distinct zero IDs cover each active position.
+Incorrect fixture tensor names and insufficient Llama4 layer-pattern coverage
+were also corrected before rerunning; failed initial artifacts remain local.
+
+The expanded CPU primitive test covers F32, F16, BF16, Q4_0, Q4_K, Q8_0, and
+MXFP4; expert counts 4/7/8/16; active counts 1/2/4/8; token counts 1/2/3;
+partial/all/no active IDs; stale-output clearing; and one/four threads.
+MXFP4 repacking still has a separate byte-exact export test.
+
+A separate F32 stress fixture (two blocks, width 512, FFN 1,024, 16 experts
+and top-16 routing) exercised actual pool reuse: 32 admissions uploaded
+201,326,592 bytes through a verified 67,108,864-byte pool and passed the strict
+full-logit comparison. That is a staging-cap/correctness result, not throughput.
+An app-level Qwen2-MoE fixture test also verified both policies: Automatic
+preferred native fitting for the small file, while Require-hybrid selected
+verified causal staged dispatch without a trained-plan hash. Both produced
+16 output tokens with matching answer hashes at the model's actual 2K context;
+the original 120B direct-DMA app was restored. These untrained answers are not
+quality evidence.
+
+The first app smoke trial exposed the server capping a synthetic 2K model
+while the installation requested 16K. Context planning now respects the model
+limit, readiness rejects any further mismatch immediately, and native context
+adjustments are displayed explicitly. That initial partial trial is retained,
+not counted as a successful 16K test.
+
+For a small reproducible example, unload the app's model first:
+
+```bash
+python3 tools/trace/make_moe_fixture.py \
+  --llama-source /path/to/pinned/llama.cpp \
+  --ggml-base /path/to/patched/libggml-base.so \
+  --architecture qwen2moe --expert-type Q8_0 \
+  --embedding 96 --feed-forward 192 --experts 7 --active 3 \
+  --output benchmarks/results/routing/synthetic-qwen2.gguf
+
+# Create this only if it does not already exist.
+(set -o noclobber; printf '%s\n' \
+  '{"id":"synthetic","split":"test","category":"reasoning","prompt":"abc"}' \
+  > benchmarks/results/routing/synthetic-corpus.jsonl)
+
+GGML_BACKEND_PATH=/path/to/matching/libggml-cuda.so \
+./build/hybrid-tests/vrambridge-logit-check \
+  --model benchmarks/results/routing/synthetic-qwen2.gguf \
+  --corpus benchmarks/results/routing/synthetic-corpus.jsonl --steps 16 \
+  --ctx-size 512 --threads 4 --threads-batch 4 \
+  --n-gpu-layers all --cpu-moe --fit off --no-op-offload --no-repack --no-host \
+  --reference-out benchmarks/results/routing/synthetic-reference.bin \
+  --output benchmarks/results/routing/synthetic-reference.json
+
+GGML_BACKEND_PATH=/path/to/matching/libggml-cuda.so \
+VRAMBRIDGE_HYBRID_PLAN=auto VRAMBRIDGE_HYBRID_ADAPT=1 VRAMBRIDGE_HYBRID_ASYNC=1 \
+./build/hybrid-tests/vrambridge-logit-check \
+  --model benchmarks/results/routing/synthetic-qwen2.gguf \
+  --corpus benchmarks/results/routing/synthetic-corpus.jsonl --steps 16 \
+  --ctx-size 512 --threads 4 --threads-batch 4 \
+  --n-gpu-layers all --cpu-moe --fit off --no-op-offload --no-repack --no-host \
+  --moe-cache-mib 64 \
+  --reference-in benchmarks/results/routing/synthetic-reference.bin \
+  --output benchmarks/results/routing/synthetic-staged-comparison.json
+```
+
+Keep generated GGUFs, binary references, activations, and logs under ignored
+results. Reload the original app/model afterward. The reference stores token
+IDs/full logits; do not publish it. For native-GPU controls omit `--cpu-moe`.
+For frozen/direct cases use a dimension-valid `layer expert` plan; never borrow
+a different model's trained plan. `--batch-check 3` plus
+`VRAMBRIDGE_HYBRID_BATCH=3` checks three-position target blocks, not accepted
+generation throughput.

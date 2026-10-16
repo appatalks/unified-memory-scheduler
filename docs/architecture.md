@@ -65,6 +65,87 @@ and asynchronous GPU graph run independently. A separate backend stream receives
 the CPU result through a small reusable pinned buffer, establishes the GPU branch
 copy dependency, combines contributions, and synchronizes before reuse.
 
+## Model-Agnostic Engine Contract
+
+The scheduler is not allowed to encode a particular checkpoint's layer count,
+expert count, top-k, projection dimensions, or quantization as global constants.
+Those come from GGUF metadata for planning and the loaded tensors for execution.
+Architecture-specific routing and FFN semantics remain owned by the backend;
+native and hybrid expert branches share its original expert-math builder.
+Choosing a different placement must not introduce a second approximate model,
+drop experts, or renormalize routing probabilities per device.
+
+Current generic dispatch derives per-layer expert/key ranges, optional biases,
+fused/separate gate/up storage, per-layer active counts, cache groups, and
+admission history/staging from those descriptors. Shared experts and residual
+work stay outside the routed branch and are not duplicated. The upstream
+activation/clamp, grouped gating, original weighting order, and precision rules
+are reused rather than reimplemented as a GPT-only activation path.
+
+GPU misses use **distinct reserved zero-expert IDs**, one per active position.
+Some float CUDA expert kernels assume unique IDs within a token; using one
+zero ID for every miss was only safe on the originally tested quantized path.
+Graph views retain the backend/storage of their source. Explicit placement
+applies to computation, not an alias of a device pointer masquerading as CPU
+memory. Both rules were exposed by cross-layout fixtures and are regression
+requirements, not model-name exceptions.
+
+Version-2 installation profiles bind a trained residency plan to a canonical
+model descriptor. A different MoE layout cannot inherit that checkpoint's hot
+experts: it starts with an empty causal plan and bounded asynchronous staging.
+Cold-start state is not trained on held-out requests. Small unsharded weight
+files prefer native fitting when they fit the configured residency budget;
+forcing CPU/GPU splitting on an already resident model is not automatically
+beneficial. Dense models continue through native execution.
+
+Metadata detection means **candidate capability**, not a quality or speed
+certification. Loaded operations and complete routed-layer coverage must
+verify before Ready. Scaled expert tensors, LoRA/Hadamard transforms, and
+multi-GPU hybrid execution remain explicit unsupported cases, not successes
+hidden behind fallback. A version-1 installation is migrated as its original
+model-bound descriptor only; that compatibility data is not an engine-wide
+architecture allowlist.
+
+Benefit must be measured against a matched native control per model and
+workload. Synthetic fixtures establish graph/storage behavior, not trained
+quality or generation speed. The separate 60 tok/s 120B goal remains unmet;
+no universal speedup follows merely from model-agnostic dispatch.
+
+### Guarded Decode Overlap
+
+An optional pipeline prepares the exact three-dimensional CPU hidden-input
+view as a dispatcher dependency. The scheduler can then reuse that host copy
+instead of waiting for resident GPU FFN work before making another one.
+This is a graph dependency change, not removal of arbitrary synchronization.
+
+Overlap is limited to one-copy CUDA-to-CPU transitions with no new CPU split
+inputs and a pure expert-operation whitelist. After allocation, all GPU
+tensors/sources must be device-only on the same device; CPU tensors/sources
+must be host-only, retain valid view ownership, and not write weight buffers.
+Custom callbacks and unsupported operations are excluded. Evaluation callbacks
+retain serialization. Pending asynchronous host-source copies are fenced
+before CPU scratch reuse; already synchronous copies are complete. Existing
+merge-input dependencies still reconcile the branches.
+
+Eligible resident gate/up projections share an interleaved parent bank and
+use native fused math, with original separate biases applied after splitting.
+Initial and adaptive uploads distinguish original source stride from the
+interleaved bank stride. Original target weights, selected experts, routing
+probabilities, and CPU cold-expert math remain unchanged. Optional ranked
+admission preserves recent frequency as the primary criterion; seed priority
+only breaks zero-frequency ties, and active-frequency ties use recency.
+All dimensions and eligibility tests remain tensor-derived.
+
+Host-side profiling distinguishes copy/wait time, synchronous CPU submission,
+GPU launch submission, actual overlap, and logical GPU projection count.
+It does not measure CUDA kernel elapsed time or prove continuous occupancy.
+Backend classification is cached at scheduler initialization to avoid
+per-submit CUDA property-query overhead. The optional installation boolean
+`decode_pipeline` enables the tested bundle for experimental manual use.
+Readiness requires a configuration acknowledgement; actual overlap and
+fused-projection graph observations are reported separately. Standard rollback
+strips all pipeline flags. Older installation files remain unchanged.
+
 Default reconciliation sums weighted per-device partial vectors. The alternative
 keeps individual expert outputs and performs weighting/reduction on the merge
 backend. Neither branch separately renormalizes router weights. Tests check both
@@ -115,14 +196,17 @@ JSON report. Router weights are not renormalized per device.
 
 The whole-model prototype uses branches in the target's GGML graph, not the
 layer probe's independent synthetic-input graphs. Original CPU weights remain
-available for cold experts. A permanent zero GPU slot supplies misses, while
+available for cold experts. Reserved zero GPU slots supply misses, while
 masked CPU expert ID `-1` skips resident matmuls and clears their output.
 Original biases and probabilities are retained. Graph dependencies order
 combination before downstream computation; no physical GPU slice is reserved.
 
 Causal admission protects all current selections. Synchronous staging needs
 4,406,400 pinned bytes; the optional asynchronous pool needs 53,015,040 bytes,
-with completion before reuse. Direct DMA instead registers immutable source
+with completion before reuse. Generic staging is capped at 64 MiB and recycled
+only after queued DMA completes; large raw expert components are transferred
+in bounded chunks. CPU-repacked components exceeding that cap are explicitly
+unsupported. Direct DMA instead registers immutable source
 pages with a 64 GiB cap and 24 GiB RAM-headroom checks. Stream ordering places
 uploads before consumers, and cache destruction precedes backend destruction
 so DMA can finish before source unregistration. CPU-repacked storage has a
@@ -133,9 +217,10 @@ every position's inputs. Zero-output prefill stays upstream. The DFlash opt-in
 does not make block positions equivalent to accepted generation tokens.
 The browser app now defaults to automatic model-specific selection. A pinned
 machine-local installation profile provides the patched executable, plan, and
-CUDA plugin. Bounded GGUF metadata selects direct DMA only for the supported
-GPT-OSS-120B MXFP4 shape/type; other architectures select the standard backend
-with an explicit selection reason. Missing installation means standard-only
+CUDA plugin. Version-2 profiles use bounded, architecture-prefixed GGUF
+descriptors and model-bound plans, with a generic causal/staged policy for other
+routed MoE layouts. Native fitting is preferred for small weight files and
+dense models, with an explicit selection reason. Missing installation means standard-only
 operation; malformed installation/metadata is an error, not a silent fallback.
 Explicit plan/plugin CLI arguments still support a required-hybrid launch.
 The hybrid process fixes the tested placement
@@ -169,6 +254,11 @@ The optional hybrid installation profile persists backend paths and a resident
 plan selection locally; model paths, chat history, and per-run settings are not
 persisted. Profile defaults are selected anew on each model load, so browser
 settings from an earlier architecture are not reused by Automatic mode.
+Hybrid context planning takes the minimum of installation and model limits.
+The actual backend slot must match before Ready; native caps update the
+reported actual context with an explicit warning. Required-hybrid model
+switches omit disabled context/bank fields so a previous model's effective
+limits cannot leak into the next load.
 Host/origin checks and loopback binding prevent ordinary cross-site browser access;
 they do not authenticate other local processes. See the
 [local app guide](../tools/vrambridge/README.md).

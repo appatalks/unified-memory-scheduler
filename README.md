@@ -4,6 +4,13 @@ VRAMBridge explores **LLM-aware heterogeneous memory tiering for discrete GPUs**
 
 VRAMBridge does not convert RAM into VRAM and does not assume coherent, Apple-style unified memory. On a PCIe-attached NVIDIA GPU, host memory has different latency, bandwidth, allocation, and migration behavior. Those costs are the subject of the experiment.
 
+**Design goal: a MoE model-agnostic execution engine, not a GPT-OSS-only
+accelerator.** Expert layout, routing width, quantization, activation semantics,
+and resource budgets must be data-driven. The engine should select native
+full-residency or heterogeneous execution according to the model's bottleneck,
+not force every model through one offload policy. This is a goal of broad
+benefit, not a promise that every model is faster on every machine.
+
 ## Status
 
 The measurement baseline is implemented, alongside a Linux-first local browser preview:
@@ -18,10 +25,12 @@ The measurement baseline is implemented, alongside a Linux-first local browser p
 The browser app defaults to automatic model-specific selection.
 A separate, opt-in backend patch now prototypes expert-granular CPU/GPU
 dispatch, a training-only resident bank, and causal admissions for GPT-OSS-120B.
-With a [local hybrid installation profile](tools/vrambridge/README.md#installing-the-default-hybrid-profile),
-matching GPT-OSS-120B MXFP4 models select direct DMA by default; other models
-select standard execution. Without the installation profile, standard execution
-remains available. The prototype is still not quality-qualified for deployment. There is no implemented
+With a [version-2 local hybrid installation profile](tools/vrambridge/README.md#installing-the-default-hybrid-profile),
+model-bound training plans remain isolated to their descriptors; other routed
+MoE layouts can use causal cold-start admission with bounded staging.
+Small weight files prefer native fitting to avoid unnecessary scheduling
+overhead. Dense models still use native execution. Without the installation
+profile, standard execution remains available. The prototype is still not quality-qualified for deployment. There is no implemented
 disk executor, general layer streamer, or KV migration scheduler.
 
 The first measured baseline is complete: for a 44.34 GB dense Qwen2 model on a 15.45 GiB RTX 5070 Ti, llama.cpp auto-fit static placement is fastest and autoregressive generation reaches the system-RAM bandwidth ceiling. CUDA Unified Memory is dominated by bidirectional migration. See [docs/research/baseline-calme-78b.md](docs/research/baseline-calme-78b.md) for the measurements and next-step decision.
@@ -37,6 +46,15 @@ now tests five existing models with matched 16K context, 8/16 threads, and three
 ran through standard execution, not the custom dispatcher; this establishes
 compatibility, not cross-model hybrid gains. Failed exact-answer/AST checks
 and GPT adaptive output-hash variation are retained in the evidence.
+
+The subsequent [generic MoE graph tests](benchmarks/README.md#generic-moe-graph-compatibility)
+exercise seven untrained synthetic model families, variable expert/top-k counts,
+seven storage types, fused/unfused projections, shared experts, optional biases,
+and mixed dense/MoE layers. Numerical failures are retained, including quantized
+cases that also fail native-placement comparisons. These are graph/correctness
+tests, not evidence of trained-model quality or cross-model speedups. The
+refactored real 120B frozen path matched its earlier hybrid reference exactly
+at all 96 teacher-forced positions.
 
 ## Routing And Cache Feasibility
 

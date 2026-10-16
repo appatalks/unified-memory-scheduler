@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import io
 import json
 from pathlib import Path
 import subprocess
@@ -57,6 +58,19 @@ class SweepTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 sweep.validate_sample(timings, {"completion_tokens": count}, 512, elapsed, done)
 
+    def test_private_server_auth_headers_are_sent_but_not_recorded(self):
+        event = {"choices": [{"delta": {"content": "public output"}}],
+                 "timings": {"predicted_n": 512, "prompt_ms": 1000, "predicted_ms": 20000,
+                             "predicted_per_second": 25.55}, "usage": {"completion_tokens": 512}}
+        data = b"data: " + json.dumps(event).encode() + b"\n\ndata: [DONE]\n\n"
+        for headers in (None, {"Authorization": "Bearer unit-test-placeholder"}):
+            with mock.patch.object(sweep.urllib.request, "urlopen", return_value=io.BytesIO(data)) as send, \
+                    mock.patch.object(sweep.time, "monotonic", side_effect=[1.0, 1.5, 22.0]):
+                result = sweep.sample("http://127.0.0.1:12345", 512, headers=headers)
+            self.assertEqual(send.call_args.args[0].get_header("Authorization"),
+                             headers["Authorization"] if headers else None)
+            self.assertNotIn("unit-test-placeholder", json.dumps(result))
+
     def test_original_settings_restored_after_success(self):
         original = initial_status()
         with mock.patch.object(sweep, "request_json", return_value=original), \
@@ -70,6 +84,24 @@ class SweepTests(unittest.TestCase):
         self.assertTrue(report["runs"][1]["matches_control_text"])
         self.assertFalse(report["performance_target_met"])
         self.assertNotIn("/private/", self.output.read_text())
+
+    def test_natural_workload_keeps_exact_count_gate(self):
+        event = {"choices": [{"delta": {"content": "output"}}],
+                 "timings": {"predicted_n": 512, "prompt_ms": 1000, "predicted_ms": 20000,
+                             "predicted_per_second": 25.55}, "usage": {"completion_tokens": 512}}
+        for count in (512, 511):
+            event["usage"]["completion_tokens"] = count
+            data = b"data: " + json.dumps(event).encode() + b"\n\ndata: [DONE]\n\n"
+            with mock.patch.object(sweep.urllib.request, "urlopen", return_value=io.BytesIO(data)) as send, \
+                    mock.patch.object(sweep.time, "monotonic", side_effect=[1.0, 1.5, 22.0]):
+                if count == 512:
+                    sweep.sample("http://127.0.0.1:12345", 512, prompt="Long prose", ignore_eos=False)
+                else:
+                    with self.assertRaises(ValueError):
+                        sweep.sample("http://127.0.0.1:12345", 512, prompt="Long prose", ignore_eos=False)
+            payload = json.loads(send.call_args.args[0].data)
+            self.assertEqual(payload["messages"][0]["content"], "Long prose")
+            self.assertFalse(payload["ignore_eos"])
 
     def test_restores_original_after_candidate_failure(self):
         original = initial_status()

@@ -97,6 +97,9 @@ if(VRAMBRIDGE_LLAMA_SOURCE OR VRAMBRIDGE_LLAMA_LIBRARY_DIR)
         VRAMBRIDGE_LLAMA_LIBRARY_DIR="${VRAMBRIDGE_LLAMA_LIBRARY_DIR}"
         VRAMBRIDGE_HYBRID_SOURCE_SHA256="${VRAMBRIDGE_HYBRID_SOURCE_SHA256}")
     if(VRAMBRIDGE_TEST_MASKED_IDS)
+        add_executable(vrambridge-admission-test tests/test_moe_admission.cpp)
+        target_include_directories(vrambridge-admission-test PRIVATE
+            ${VRAMBRIDGE_LLAMA_SOURCE}/src ${VRAMBRIDGE_LLAMA_SOURCE}/ggml/include)
         add_executable(vrambridge-masked-matmul-test tests/test_masked_matmul.cpp)
         target_include_directories(vrambridge-masked-matmul-test PRIVATE ${VRAMBRIDGE_LLAMA_SOURCE}/ggml/include)
         target_link_libraries(vrambridge-masked-matmul-test PRIVATE ${VRAMBRIDGE_TRACE_LIBRARIES})
@@ -157,6 +160,10 @@ if(BUILD_TESTING)
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_model_matrix.py
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/benchmark/vrambridge-model-matrix.py
     )
+    add_test(NAME vrambridge-moe-fixture-inputs
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_moe_fixtures.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/trace/make_moe_fixture.py
+    )
     find_program(NODE_EXECUTABLE node)
     if(NODE_EXECUTABLE)
         add_test(NAME vrambridge-chat-stream
@@ -180,6 +187,7 @@ if(BUILD_TESTING)
         )
     endif()
     if(TARGET vrambridge-masked-matmul-test)
+        add_test(NAME vrambridge-moe-admission COMMAND vrambridge-admission-test)
         add_test(NAME vrambridge-masked-matmul COMMAND vrambridge-masked-matmul-test)
         add_test(NAME vrambridge-logit-check-help COMMAND vrambridge-logit-check --help)
         add_test(NAME vrambridge-logit-check-inputs
