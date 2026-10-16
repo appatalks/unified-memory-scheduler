@@ -73,6 +73,7 @@ class ModelMatrixTests(unittest.TestCase):
                     "execution_profile": "standard" if values["execution_mode"] == "standard" else "experimental-hybrid-direct",
                     "hybrid_verified": values["execution_mode"] == "auto",
                     "hybrid_decode_pipeline": values["execution_mode"] == "auto",
+                    "hybrid_async_ids": values["execution_mode"] == "auto",
                     "selection_reason": "test selection", "backend": "/opt/llama-server"})
                 sweep.sample = mock.Mock(return_value={"wall_decode_tok_s": 40.0,
                                                       "generated_text_sha256": "a" * 64})
@@ -100,6 +101,7 @@ class ModelMatrixTests(unittest.TestCase):
                 self.assertFalse(report["performance_target_met"])
                 if outcome == "ok":
                     self.assertEqual([run["hybrid_decode_pipeline"] for run in report["runs"]], [False, True])
+                    self.assertEqual([run["hybrid_async_ids"] for run in report["runs"]], [False, True])
                 if outcome == "bad-answer":
                     self.assertTrue(all(run["status"] == "answer_check_failed" for run in report["runs"]))
 

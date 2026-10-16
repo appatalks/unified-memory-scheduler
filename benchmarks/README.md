@@ -429,6 +429,8 @@ Optional environment switches, scoped to the private process:
 | `VRAMBRIDGE_HYBRID_BATCH=4` | Allow up to four target positions per custom graph (range 1-32); residency is frozen for every multi-position call |
 | `VRAMBRIDGE_HYBRID_DFLASH=1` | Allow the specifically selected `--spec-type draft-dflash` experiment; requires the separate attention-bias patch and a smaller resident bank to leave draft-model headroom |
 | `VRAMBRIDGE_HYBRID_PROFILE=1` | Host-side split/copy/submit counters; GPU submit time is launch latency, not GPU execution time |
+| `VRAMBRIDGE_HYBRID_COPY_PROFILE=1` | Requires `PROFILE=1`; separates copy directions and host intervals for destination waits, source synchronization, synchronous copy calls, asynchronous attempts and callbacks |
+| `VRAMBRIDGE_HYBRID_ASYNC_IDS=1` | Experimental CUDA-only handoff using private per-layer GPU ID storage and bounded pinned staging; completion events protect host staging reuse |
 | `VRAMBRIDGE_HYBRID_STAGE_INPUT=1` | Prepare the exact CPU hidden-input view before resident GPU expert computation |
 | `VRAMBRIDGE_HYBRID_OVERLAP=1` | Overlap only proven device-only CUDA expert work and independent host-only CPU expert work; callbacks and unsupported graphs retain barriers |
 | `VRAMBRIDGE_HYBRID_BOUNDARY=gpu` | Reconcile the expert contributions on GPU; default remains CPU |
@@ -447,6 +449,28 @@ reuse; synchronous input copies need no redundant fence. Therefore a zero
 `copy_fences` counter can be correct even when overlap is active. Evaluation
 callbacks disable overlap. Unsupported operations, buffer domains, or
 multi-copy schedules preserve the ordinary barriers.
+
+Copy breakdowns use host/device buffer domains (`H2H`, `H2D`, `D2H`, `D2D`,
+or `unknown`) and logical tensor bytes. They do not measure PCIe hardware
+counters. An event-wait call can enqueue a dependency without blocking the
+host, and a synchronous copy call can include internal driver waits. Compare
+profiling-off, coarse-profile and detailed-profile controls before attributing
+changes to an optimization. Detailed timings retain the same unbatched hybrid
+graph filter as the coarse counters.
+
+The asynchronous-ID prototype keeps an explicit graph dependency: a CPU
+custom operation enqueues the ID upload into its preallocated device output,
+then the GPU expert kernels consume that output on the same backend stream.
+The callback does not dereference its device output from the CPU. Private ID
+buffers are outside graph scratch; host staging is not overwritten until its
+previous copy-completion event finishes. GPU stream ordering protects device
+storage reuse, and teardown synchronizes before freeing staging. Storage
+dimensions derive from each layer's active count and the bounded batch limit;
+device allocation is charged to the cache budget and host staging is capped
+at 64 MiB. Original IDs, distinct miss IDs and expert math are unchanged.
+The ordinary ID-cast/copy path remains the default unless explicitly enabled.
+These direct callback uploads are counted separately from scheduler copies;
+fewer scheduler-copy bytes do not mean that ID transfers disappeared.
 
 Cached backend classifications are essential: querying CUDA device properties
 per submission caused a severe profiling observer effect. Keep that invalid

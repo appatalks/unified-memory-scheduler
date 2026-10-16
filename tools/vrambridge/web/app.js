@@ -68,7 +68,7 @@ function renderStatus() {
   const hybridContext = status.hybrid_context ?? status.context;
   const hybridBudget = status.hybrid_cache_mib ?? status.expert_cache_mib;
   const pipeline = status.hybrid_decode_pipeline
-    ? ` · Decode pipeline: overlap ${status.hybrid_overlap_verified ? "confirmed" : "awaiting eligible decode"}; gate/up fusion ${status.hybrid_gate_up_verified ? "confirmed" : "not yet observed"}`
+    ? ` · Decode pipeline: overlap ${status.hybrid_overlap_verified ? "confirmed" : "awaiting eligible decode"}; gate/up fusion ${status.hybrid_gate_up_verified ? "confirmed" : "not yet observed"}${status.hybrid_async_ids ? `; event-protected GPU IDs ${status.hybrid_async_ids_verified ? "configured" : "awaiting backend"}` : ""}`
     : "";
   el("execution-mode").querySelector('option[value="hybrid"]').disabled = !status.hybrid_available;
   el("selection-reason").textContent = status.selection_reason || "";

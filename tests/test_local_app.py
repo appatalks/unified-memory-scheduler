@@ -246,6 +246,25 @@ class LocalAppTests(unittest.TestCase):
         self.assertIn("hybrid readiness timed out", status["error"])
         self.assertFalse(status["hybrid_verified"])
 
+    def test_async_ids_require_verified_backend_and_do_not_leak_into_standard(self):
+        self.hybrid_runtime(hybrid_decode_pipeline=True, hybrid_async_ids=True, load_timeout=0.4)
+        status = self.load()
+        self.assertTrue(status["hybrid_async_ids"])
+        self.assertTrue(status["hybrid_async_ids_verified"])
+        self.assertEqual(json.loads(status["logs"][0])["hybrid_async_ids"], "1")
+        self.runtime.stop()
+        missing = self.root / "hybrid-no-async-ids.gguf"
+        write_metadata(missing, HYBRID_METADATA)
+        self.request("POST", "/api/v1/model/load", {"model": str(missing)})
+        status = self.wait_state("error")
+        self.assertFalse(status["hybrid_verified"])
+        self.assertIn("async-ids", status["error"])
+        self.runtime.stop()
+        status = self.load(execution_mode="standard")
+        self.assertFalse(status["hybrid_async_ids"])
+        self.assertFalse(status["hybrid_async_ids_verified"])
+        self.assertIsNone(json.loads(status["logs"][0])["hybrid_async_ids"])
+
     def test_decode_pipeline_does_not_claim_overlap_from_configuration_alone(self):
         self.hybrid_runtime(hybrid_decode_pipeline=True)
         model = self.root / "hybrid-pipeline-pending.gguf"
@@ -364,9 +383,12 @@ class LocalAppTests(unittest.TestCase):
                 self.assertFalse(options["hybrid_decode_pipeline"])
                 path.write_text(json.dumps({**profile, "decode_pipeline": True}))
                 self.assertTrue(app.read_hybrid_profile(path)["hybrid_decode_pipeline"])
+                path.write_text(json.dumps({**profile, "decode_pipeline": True, "async_ids": True}))
+                self.assertTrue(app.read_hybrid_profile(path)["hybrid_async_ids"])
                 for changes in ({"schema_version": True}, {"backend_commit": "wrong"},
                                 {"executable": "relative"}, {"plan": None}, {"unexpected": 1},
-                                {"decode_pipeline": "true"}, {"decode_pipeline": 1}):
+                                {"decode_pipeline": "true"}, {"decode_pipeline": 1},
+                                {"async_ids": "true"}, {"async_ids": 1}, {"async_ids": True}):
                     path.write_text(json.dumps({**profile, **changes}))
                     with self.assertRaises(ValueError):
                         app.read_hybrid_profile(path)

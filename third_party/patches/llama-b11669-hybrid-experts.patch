@@ -1,16 +1,23 @@
 diff --git a/common/common.cpp b/common/common.cpp
-index c5db228..47ec547 100644
+index c5db228..187b2ef 100644
 --- a/common/common.cpp
 +++ b/common/common.cpp
-@@ -1415,6 +1415,40 @@ static void common_batch_set_zero_state(common_batch & batch, const llama_model
+@@ -1415,6 +1415,47 @@ static void common_batch_set_zero_state(common_batch & batch, const llama_model
  }
  
  common_init_result_ptr common_init_from_params(common_params & params, bool model_only) {
 +    if (const char * plan = std::getenv("VRAMBRIDGE_HYBRID_PLAN"); plan && plan[0]) {
-+        for (const char * name : {"VRAMBRIDGE_HYBRID_PROFILE", "VRAMBRIDGE_HYBRID_STAGE_INPUT",
-+                                 "VRAMBRIDGE_HYBRID_OVERLAP", "VRAMBRIDGE_HYBRID_FUSE_GATE_UP"}) {
++        for (const char * name : {"VRAMBRIDGE_HYBRID_PROFILE", "VRAMBRIDGE_HYBRID_COPY_PROFILE", "VRAMBRIDGE_HYBRID_STAGE_INPUT",
++                                 "VRAMBRIDGE_HYBRID_OVERLAP", "VRAMBRIDGE_HYBRID_FUSE_GATE_UP",
++                                 "VRAMBRIDGE_HYBRID_ASYNC_IDS"}) {
 +            if (const char * value = std::getenv(name); value && std::string(value) != "0" && std::string(value) != "1") {
 +                throw std::runtime_error(std::string(name) + " must be 0 or 1");
++            }
++        }
++        if (const char * copies = std::getenv("VRAMBRIDGE_HYBRID_COPY_PROFILE"); copies && std::string(copies) == "1") {
++            const char * profile = std::getenv("VRAMBRIDGE_HYBRID_PROFILE");
++            if (!profile || std::string(profile) != "1") {
++                throw std::runtime_error("Copy profiling requires VRAMBRIDGE_HYBRID_PROFILE=1");
 +            }
 +        }
 +        if (const char * qkv = std::getenv("VRAMBRIDGE_HYBRID_FUSE_QKV"); qkv && std::string(qkv) != "0") {
@@ -44,7 +51,7 @@ index c5db228..47ec547 100644
  
      llama_model * model = res->model();
 diff --git a/ggml/src/ggml-backend.cpp b/ggml/src/ggml-backend.cpp
-index ffbcba3..7939a89 100644
+index ffbcba3..5f758dd 100644
 --- a/ggml/src/ggml-backend.cpp
 +++ b/ggml/src/ggml-backend.cpp
 @@ -913,6 +913,7 @@ static bool ggml_is_view_op(enum ggml_op op) {
@@ -55,11 +62,26 @@ index ffbcba3..7939a89 100644
      int backend_id;
      int i_start;
      int i_end;
-@@ -924,6 +925,21 @@ struct ggml_backend_sched_split {
+@@ -923,7 +924,36 @@ struct ggml_backend_sched_split {
+     struct ggml_cgraph graph;
  };
  
++struct vrambridge_copy_profile {
++    uint64_t calls;
++    uint64_t bytes;
++    uint64_t dst_wait_call_us;
++    uint64_t src_sync_us;
++    uint64_t sync_copy_call_us;
++    uint64_t async_attempt_us;
++    uint64_t callback_call_us;
++    uint64_t sync_copies;
++    uint64_t async_copies;
++};
++
  struct ggml_backend_sched {
 +    bool vrambridge_profile;
++    bool vrambridge_profile_copies;
++    vrambridge_copy_profile vrambridge_copy_profiles[5];
 +    uint64_t vrambridge_graphs;
 +    uint64_t vrambridge_splits;
 +    uint64_t vrambridge_zero_wait_us;
@@ -77,7 +99,7 @@ index ffbcba3..7939a89 100644
      bool is_reset; // true if the scheduler has been reset since the last graph split
      bool is_alloc;
  
-@@ -1752,6 +1768,44 @@ void ggml_backend_sched_split_graph(ggml_backend_sched_t sched, struct ggml_cgra
+@@ -1752,6 +1782,44 @@ void ggml_backend_sched_split_graph(ggml_backend_sched_t sched, struct ggml_cgra
      }
  }
  
@@ -122,7 +144,7 @@ index ffbcba3..7939a89 100644
  static bool ggml_backend_sched_alloc_splits(ggml_backend_sched_t sched) {
      bool backend_ids_changed = false;
      for (int i = 0; i < sched->graph.n_nodes; i++) {
-@@ -1811,6 +1865,17 @@ static bool ggml_backend_sched_alloc_splits(ggml_backend_sched_t sched) {
+@@ -1811,6 +1879,17 @@ static bool ggml_backend_sched_alloc_splits(ggml_backend_sched_t sched) {
          }
      }
  
@@ -140,40 +162,104 @@ index ffbcba3..7939a89 100644
      return true;
  }
  
-@@ -1820,7 +1885,8 @@ static bool ggml_backend_sched_is_host_weight(const struct ggml_tensor * t) {
+@@ -1820,51 +1899,105 @@ static bool ggml_backend_sched_is_host_weight(const struct ggml_tensor * t) {
          ggml_backend_buffer_is_host(t->buffer);
  }
  
 -static void ggml_backend_sched_copy_input(ggml_backend_sched_t sched, struct ggml_backend_sched_split * split, struct ggml_tensor * input) {
 +// Whether an asynchronous copy may still read host scratch after returning.
-+static bool ggml_backend_sched_copy_input(ggml_backend_sched_t sched, struct ggml_backend_sched_split * split, struct ggml_tensor * input) {
++static bool ggml_backend_sched_copy_input(ggml_backend_sched_t sched, struct ggml_backend_sched_split * split,
++                                          struct ggml_tensor * input, bool profile) {
      const int split_backend_id = split->backend_id;
      ggml_backend_t split_backend = sched->backends[split_backend_id];
      ggml_backend_t input_backend = ggml_backend_sched_get_tensor_backend(sched, input);
-@@ -1834,7 +1900,7 @@ static void ggml_backend_sched_copy_input(ggml_backend_sched_t sched, struct ggm
+     struct ggml_tensor * input_cpy = tensor_copy(input, split_backend_id, sched->cur_copy);
+-
+-    if (input->flags & GGML_TENSOR_FLAG_INPUT) {
+-        // inputs from the user must be copied immediately to prevent the user overwriting the data before the copy is done
++    vrambridge_copy_profile * stats = nullptr;
++    if (profile && sched->vrambridge_profile_copies) {
++        int direction = 4;
++        if (input->buffer && input_cpy->buffer) {
++            const bool src_host = ggml_backend_buffer_is_host(input->buffer);
++            const bool dst_host = ggml_backend_buffer_is_host(input_cpy->buffer);
++            direction = src_host ? (dst_host ? 0 : 1) : (dst_host ? 2 : 3);
++        }
++        stats = &sched->vrambridge_copy_profiles[direction];
++        ++stats->calls;
++        stats->bytes += ggml_nbytes(input);
++    }
++    auto wait_destination = [&](bool synchronize_event) {
++        const int64_t started = stats ? ggml_time_us() : 0;
+         if (sched->events[split_backend_id][sched->cur_copy] != NULL) {
+-            ggml_backend_event_synchronize(sched->events[split_backend_id][sched->cur_copy]);
++            if (synchronize_event) {
++                ggml_backend_event_synchronize(sched->events[split_backend_id][sched->cur_copy]);
++            } else {
++                ggml_backend_event_wait(split_backend, sched->events[split_backend_id][sched->cur_copy]);
++            }
+         } else {
              ggml_backend_synchronize(split_backend);
          }
++        if (stats) stats->dst_wait_call_us += ggml_time_us() - started;
++    };
++    auto copy_synchronous = [&]() {
++        const int64_t started = stats ? ggml_time_us() : 0;
          ggml_backend_tensor_copy(input, input_cpy);
 -        return;
++        if (stats) {
++            stats->sync_copy_call_us += ggml_time_us() - started;
++            ++stats->sync_copies;
++        }
++    };
++
++    if (input->flags & GGML_TENSOR_FLAG_INPUT) {
++        // inputs from the user must be copied immediately to prevent the user overwriting the data before the copy is done
++        wait_destination(true);
++        copy_synchronous();
 +        return false;
      }
  
      // wait for the split backend to finish using the input before overwriting it
-@@ -1846,7 +1912,7 @@ static void ggml_backend_sched_copy_input(ggml_backend_sched_t sched, struct ggm
+-    if (sched->events[split_backend_id][sched->cur_copy] != NULL) {
+-        ggml_backend_event_wait(split_backend, sched->events[split_backend_id][sched->cur_copy]);
+-    } else {
+-        ggml_backend_synchronize(split_backend);
+-    }
++    wait_destination(false);
  
-     if (sched->callback_copy != NULL && ggml_backend_sched_is_host_weight(input) &&
-         sched->callback_copy(split_backend, input, input_cpy, &split->graph, sched->callback_copy_user_data)) {
+-    if (sched->callback_copy != NULL && ggml_backend_sched_is_host_weight(input) &&
+-        sched->callback_copy(split_backend, input, input_cpy, &split->graph, sched->callback_copy_user_data)) {
 -        return;
-+        return true;
++    if (sched->callback_copy != NULL && ggml_backend_sched_is_host_weight(input)) {
++        const int64_t started = stats ? ggml_time_us() : 0;
++        const bool handled = sched->callback_copy(split_backend, input, input_cpy, &split->graph, sched->callback_copy_user_data);
++        if (stats) stats->callback_call_us += ggml_time_us() - started;
++        if (handled) return true;
      }
  
      // try async copy, but if not possible, we can still use a sync copy without synchronizing the dst backend, since we handle the synchronization here with multiple copies and events
-@@ -1859,12 +1925,34 @@ static void ggml_backend_sched_copy_input(ggml_backend_sched_t sched, struct ggm
-             ggml_backend_synchronize(split_backend);
-         }
-         ggml_backend_tensor_copy(input, input_cpy);
+     // TODO: add public function to facilitate this, since applications do not have direct access to the backend interface
+-    if (!split_backend->iface.cpy_tensor_async || !split_backend->iface.cpy_tensor_async(input_backend, split_backend, input, input_cpy)) {
++    const int64_t started = stats ? ggml_time_us() : 0;
++    const bool copied_async = split_backend->iface.cpy_tensor_async &&
++        split_backend->iface.cpy_tensor_async(input_backend, split_backend, input, input_cpy);
++    if (stats) stats->async_attempt_us += ggml_time_us() - started;
++    if (!copied_async) {
++        const int64_t sync_started = stats ? ggml_time_us() : 0;
+         ggml_backend_synchronize(input_backend);
+-        if (sched->events[split_backend_id][sched->cur_copy] != NULL) {
+-            ggml_backend_event_synchronize(sched->events[split_backend_id][sched->cur_copy]);
+-        } else {
+-            ggml_backend_synchronize(split_backend);
+-        }
+-        ggml_backend_tensor_copy(input, input_cpy);
++        if (stats) stats->src_sync_us += ggml_time_us() - sync_started;
++        wait_destination(true);
++        copy_synchronous();
 +        return false;
      }
++    if (stats) ++stats->async_copies;
 +    return input->buffer == NULL || ggml_backend_buffer_is_host(input->buffer);
  }
  
@@ -203,7 +289,7 @@ index ffbcba3..7939a89 100644
  
      int prev_backend_id = -1;
  
-@@ -1875,29 +1963,71 @@ static enum ggml_status ggml_backend_sched_compute_splits(ggml_backend_sched_t s
+@@ -1875,29 +2008,71 @@ static enum ggml_status ggml_backend_sched_compute_splits(ggml_backend_sched_t s
  
          // ensure the previous split's async work has completed before we start
          // this split, the allocator may have reused buffer regions across splits
@@ -229,7 +315,7 @@ index ffbcba3..7939a89 100644
              if (!ggml_backend_sched_is_host_weight(split->inputs[input_id])) {
 -                ggml_backend_sched_copy_input(sched, split, split->inputs[input_id]);
 +                const int64_t started = profile ? ggml_time_us() : 0;
-+                pending_host_read |= ggml_backend_sched_copy_input(sched, split, split->inputs[input_id]);
++                pending_host_read |= ggml_backend_sched_copy_input(sched, split, split->inputs[input_id], profile);
 +                if (profile) {
 +                    ++sched->vrambridge_copies;
 +                    sched->vrambridge_copy_us += ggml_time_us() - started;
@@ -240,7 +326,7 @@ index ffbcba3..7939a89 100644
              if (ggml_backend_sched_is_host_weight(split->inputs[input_id])) {
 -                ggml_backend_sched_copy_input(sched, split, split->inputs[input_id]);
 +                const int64_t started = profile ? ggml_time_us() : 0;
-+                pending_host_read |= ggml_backend_sched_copy_input(sched, split, split->inputs[input_id]);
++                pending_host_read |= ggml_backend_sched_copy_input(sched, split, split->inputs[input_id], profile);
 +                if (profile) {
 +                    ++sched->vrambridge_copies;
 +                    sched->vrambridge_copy_us += ggml_time_us() - started;
@@ -278,19 +364,21 @@ index ffbcba3..7939a89 100644
              if (ec != GGML_STATUS_SUCCESS) {
                  return ec;
              }
-@@ -1958,6 +2088,11 @@ ggml_backend_sched_t ggml_backend_sched_new(
+@@ -1958,6 +2133,13 @@ ggml_backend_sched_t ggml_backend_sched_new(
      GGML_ASSERT(ggml_backend_dev_type(ggml_backend_get_device(backends[n_backends - 1])) == GGML_BACKEND_DEVICE_TYPE_CPU);
  
      struct ggml_backend_sched * sched = (ggml_backend_sched *) calloc(1, sizeof(struct ggml_backend_sched));
 +    const char * profile = getenv("VRAMBRIDGE_HYBRID_PROFILE");
 +    sched->vrambridge_profile = profile && strcmp(profile, "1") == 0;
++    const char * copy_profile = getenv("VRAMBRIDGE_HYBRID_COPY_PROFILE");
++    sched->vrambridge_profile_copies = sched->vrambridge_profile && copy_profile && strcmp(copy_profile, "1") == 0;
 +    const char * overlap = getenv("VRAMBRIDGE_HYBRID_OVERLAP");
 +    const char * hybrid_plan = getenv("VRAMBRIDGE_HYBRID_PLAN");
 +    sched->vrambridge_overlap = hybrid_plan && hybrid_plan[0] && overlap && strcmp(overlap, "1") == 0;
  
      const char * GGML_SCHED_DEBUG = getenv("GGML_SCHED_DEBUG");
      sched->debug = GGML_SCHED_DEBUG ? atoi(GGML_SCHED_DEBUG) : 0;
-@@ -2000,6 +2135,10 @@ ggml_backend_sched_t ggml_backend_sched_new(
+@@ -2000,6 +2182,10 @@ ggml_backend_sched_t ggml_backend_sched_new(
  
      for (int b = 0; b < n_backends; b++) {
          sched->backends[b] = backends[b];
@@ -301,7 +389,7 @@ index ffbcba3..7939a89 100644
          sched->bufts[b] = bufts ? bufts[b] : ggml_backend_get_default_buffer_type(backends[b]);
          GGML_ASSERT(ggml_backend_supports_buft(backends[b], sched->bufts[b]));
  
-@@ -2022,6 +2161,15 @@ void ggml_backend_sched_free(ggml_backend_sched_t sched) {
+@@ -2022,6 +2208,28 @@ void ggml_backend_sched_free(ggml_backend_sched_t sched) {
      if (sched == NULL) {
          return;
      }
@@ -313,6 +401,19 @@ index ffbcba3..7939a89 100644
 +            (unsigned long long) sched->vrambridge_cpu_submit_us, (unsigned long long) sched->vrambridge_gpu_submit_us,
 +            (unsigned long long) sched->vrambridge_overlapped_splits, (unsigned long long) sched->vrambridge_copy_fences,
 +            (unsigned long long) sched->vrambridge_gpu_expert_projections);
++    }
++    if (sched->vrambridge_profile_copies) {
++        const char * names[] = {"H2H", "H2D", "D2H", "D2D", "unknown"};
++        for (int direction = 0; direction < 5; ++direction) {
++            const auto & stats = sched->vrambridge_copy_profiles[direction];
++            if (!stats.calls) continue;
++            GGML_LOG_WARN("VRAMBridge copy profile %s: calls=%llu bytes=%llu dst_wait_call_us=%llu src_sync_us=%llu sync_copy_call_us=%llu async_attempt_us=%llu callback_call_us=%llu sync_copies=%llu async_copies=%llu\n",
++                names[direction], (unsigned long long) stats.calls, (unsigned long long) stats.bytes,
++                (unsigned long long) stats.dst_wait_call_us, (unsigned long long) stats.src_sync_us,
++                (unsigned long long) stats.sync_copy_call_us, (unsigned long long) stats.async_attempt_us,
++                (unsigned long long) stats.callback_call_us, (unsigned long long) stats.sync_copies,
++                (unsigned long long) stats.async_copies);
++        }
 +    }
      for (int b = 0; b < sched->n_backends; b++) {
          for (int c = 0; c < sched->n_copies; c++) {
@@ -449,7 +550,7 @@ index 6938fb1..64a86db 100644
      // training
      ggml_opt_context_t opt_ctx = nullptr;
 diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
-index 6cadda9..d434091 100644
+index 6cadda9..24018ac 100644
 --- a/src/llama-graph.cpp
 +++ b/src/llama-graph.cpp
 @@ -1766,7 +1766,6 @@ llm_graph_qkv llm_graph_context::build_qkv(
@@ -472,7 +573,7 @@ index 6cadda9..d434091 100644
          }
          if (reshape && hparams.f_clamp_kqv > 0.0f) {
              qkv = ggml_clamp(ctx0, qkv, -hparams.f_clamp_kqv, hparams.f_clamp_kqv);
-@@ -2282,178 +2276,302 @@ ggml_tensor * llm_graph_context::build_moe_ffn(
+@@ -2282,178 +2276,313 @@ ggml_tensor * llm_graph_context::build_moe_ffn(
      //call early so that topk-moe can be used
      ggml_build_forward_expand(gf, weights);
  
@@ -592,7 +693,9 @@ index 6cadda9..d434091 100644
 +                up = ggml_add_id(ctx0, up, tensor(up_exps_b), bias_ids);
 +                cb(up, "ffn_moe_up_biased", il);
 +            }
-+
+ 
+-        if (up_exps_s) {
+-            cb(up, "ffn_moe_up_scaled", il);
 +            if (gate_exps) {
 +                cur = build_lora_mm_id(tensor(gate_exps), cur, selected_experts, gate_exps_s, slots); // [n_ff, n_expert_used, n_tokens]
 +                cb(cur, "ffn_moe_gate", il);
@@ -603,9 +706,7 @@ index 6cadda9..d434091 100644
 +            if (gate_exps_s) {
 +                cb(cur, "ffn_moe_gate_scaled", il);
 +            }
- 
--        if (up_exps_s) {
--            cb(up, "ffn_moe_up_scaled", il);
++
 +            if (gate_exps_b) {
 +                cur = ggml_add_id(ctx0, cur, tensor(gate_exps_b), bias_ids);
 +                cb(cur, "ffn_moe_gate_biased", il);
@@ -882,8 +983,19 @@ index 6cadda9..d434091 100644
 +            dispatch_args, stage_input ? 4 : 3, llama_moe_cache::hybrid_dispatch, 1, moe_cache->hybrid_dispatch_state(il)), cpu);
 +        auto * cpu_ids = place(ggml_cast(ctx0, ggml_view_2d(ctx0, packed,
 +            n_expert_used, n_tokens, packed->nb[2], 0), GGML_TYPE_I32), cpu);
-+        auto * gpu_ids = place(ggml_cast(ctx0, ggml_view_2d(ctx0, packed,
-+            n_expert_used, n_tokens, packed->nb[2], packed->nb[1]), GGML_TYPE_I32), cpu);
++        ggml_tensor * gpu_ids;
++        if (auto * storage = moe_cache->device_ids(il)) {
++            ggml_tensor * args[] = {packed};
++            gpu_ids = place(ggml_custom_4d(ctx0, GGML_TYPE_I32, n_expert_used, n_tokens, 1, 1,
++                args, 1, llama_moe_cache::hybrid_upload_ids, 1, moe_cache->hybrid_dispatch_state(il)), cpu);
++            if (ggml_nbytes(gpu_ids) > ggml_nbytes(storage) ||
++                ggml_backend_tensor_alloc(storage->buffer, gpu_ids, storage->data) != GGML_STATUS_SUCCESS) {
++                throw std::runtime_error("Cannot bind bounded GPU ID handoff storage");
++            }
++        } else {
++            gpu_ids = place(ggml_cast(ctx0, ggml_view_2d(ctx0, packed,
++                n_expert_used, n_tokens, packed->nb[2], packed->nb[1]), GGML_TYPE_I32), cpu);
++        }
 +        auto * cold_weights = ggml_view_3d(ctx0, packed, 1, n_expert_used, n_tokens,
 +            packed->nb[0], packed->nb[2], 2*packed->nb[1]);
 +        auto * cold_mask = ggml_view_3d(ctx0, packed, 1, n_expert_used, n_tokens,
@@ -924,13 +1036,14 @@ index 6cadda9..d434091 100644
      ggml_tensor * cur_experts[LLAMA_MAX_EXPERTS] = { nullptr };
  
 diff --git a/src/llama-moe-cache.cpp b/src/llama-moe-cache.cpp
-index f22d986..02144ce 100644
+index f22d986..58284d1 100644
 --- a/src/llama-moe-cache.cpp
 +++ b/src/llama-moe-cache.cpp
-@@ -6,9 +6,18 @@
+@@ -6,9 +6,19 @@
  #include "ggml-cpp.h"
  
  #include <algorithm>
++#include <cmath>
 +#include <cstdlib>
 +#include <deque>
 +#include <fstream>
@@ -946,7 +1059,7 @@ index f22d986..02144ce 100644
  
  namespace {
  
-@@ -120,16 +129,27 @@ struct moe_cache_lru {
+@@ -120,16 +130,27 @@ struct moe_cache_lru {
  };
  
  // gate, up, down or gate_up, down
@@ -975,7 +1088,7 @@ index f22d986..02144ce 100644
  static bool llama_moe_cache_same_layout(const std::vector<ggml_tensor *> & a, const std::vector<ggml_tensor *> & b) {
      if (a.size() != b.size()) {
          return false;
-@@ -148,9 +168,144 @@ static bool llama_moe_cache_is_host_weight(const ggml_tensor * t) {
+@@ -148,9 +169,148 @@ static bool llama_moe_cache_is_host_weight(const ggml_tensor * t) {
          ggml_backend_buffer_is_host(t->buffer);
  }
  
@@ -1107,6 +1220,10 @@ index f22d986..02144ce 100644
 +    bool ranked_admission = false;
 +    size_t recent_window = 64;
 +    bool fuse_gate_up = false;
++    bool async_ids = false;
++    ggml_backend_buffer_ptr id_staging;
++    size_t id_uploads = 0;
++    size_t id_upload_bytes = 0;
 +    std::vector<std::pair<int32_t, int32_t>> expert_keys;
 +    std::deque<std::vector<int>> history;
 +    size_t routed_layers = 0;
@@ -1120,7 +1237,7 @@ index f22d986..02144ce 100644
      // a GPU with its own budget and banks, it caches the layers assigned to it
      struct device {
          ggml_backend_t backend;
-@@ -173,9 +328,17 @@ struct llama_moe_cache::impl {
+@@ -173,12 +333,24 @@ struct llama_moe_cache::impl {
          size_t host_bytes = 0;
          int32_t n_slots = 0;
          moe_cache_lru lru;
@@ -1138,12 +1255,25 @@ index f22d986..02144ce 100644
          int32_t ig = -1;                    // -1 if the layer is not cached
          ggml_tensor * slot_map = nullptr;   // I32 [1, n_expert] in host memory
          std::vector<ggml_tensor *> experts; // host expert tensors, in the order of the banks
-@@ -220,6 +383,74 @@ struct llama_moe_cache::impl {
++        ggml_tensor * device_ids = nullptr;
++        size_t id_staging_offset = 0;
++        ggml_backend_event_ptr id_event;
++        bool ids_uploaded = false;
+     };
+ 
+     struct binding {
+@@ -220,6 +392,80 @@ struct llama_moe_cache::impl {
  
      impl(const llama_model & model, const std::vector<ggml_backend_t> & backends, const std::vector<ggml_backend_buffer_type_t> & bufts, size_t size) :
              n_expert_used(model.hparams.n_expert_used_max()), layers(model.layers.size()) {
 +        const char * plan_path = std::getenv("VRAMBRIDGE_HYBRID_PLAN");
 +        frozen_hybrid = plan_path != nullptr && plan_path[0] != '\0';
++        if (const char * ids = std::getenv("VRAMBRIDGE_HYBRID_ASYNC_IDS")) {
++            if (std::string(ids) != "0" && std::string(ids) != "1") {
++                throw std::runtime_error("VRAMBRIDGE_HYBRID_ASYNC_IDS must be 0 or 1");
++            }
++            async_ids = frozen_hybrid && std::string(ids) == "1";
++        }
 +        const char * fuse = std::getenv("VRAMBRIDGE_HYBRID_FUSE_GATE_UP");
 +        fuse_gate_up = frozen_hybrid && fuse && std::string(fuse) == "1";
 +        if (frozen_hybrid) {
@@ -1213,7 +1343,7 @@ index f22d986..02144ce 100644
          for (size_t i = 0; i < backends.size(); ++i) {
              const auto dev_type = ggml_backend_dev_type(ggml_backend_get_device(backends[i]));
              if (dev_type == GGML_BACKEND_DEVICE_TYPE_GPU || dev_type == GGML_BACKEND_DEVICE_TYPE_IGPU) {
-@@ -240,8 +471,12 @@ struct llama_moe_cache::impl {
+@@ -240,8 +486,12 @@ struct llama_moe_cache::impl {
  
          // only cache layers that keep all of their experts in host memory, on the device the layer is assigned to
          for (size_t il = 0; il < model.layers.size(); ++il) {
@@ -1228,7 +1358,7 @@ index f22d986..02144ce 100644
                  continue;
              }
              const auto it_dev = std::find_if(devices.begin(), devices.end(), [&](const device & d) { return ggml_backend_get_device(d.backend) == model.dev_layer(il); });
-@@ -263,6 +498,7 @@ struct llama_moe_cache::impl {
+@@ -263,6 +513,7 @@ struct llama_moe_cache::impl {
              }
          }
          if (groups.empty()) {
@@ -1236,16 +1366,19 @@ index f22d986..02144ce 100644
              LLAMA_LOG_WARN("%s: no layer has all of its experts in host memory, MoE cache is disabled\n", __func__);
              return;
          }
-@@ -272,7 +508,7 @@ struct llama_moe_cache::impl {
+@@ -272,7 +523,10 @@ struct llama_moe_cache::impl {
              const size_t alignment = ggml_backend_buft_get_alignment(devices[g.id].buft);
              size_t res = 0;
              for (const ggml_tensor * t : g.ref) {
 -                res += GGML_PAD(t->nb[2]*(n_slots + 1), alignment);
 +                res += GGML_PAD(expert_stride(t)*(n_slots + 1), alignment);
++            }
++            if (async_ids) for (int32_t il : g.layers) {
++                res += GGML_PAD(static_cast<size_t>(layers[il].n_active)*max_batch*sizeof(int32_t), alignment);
              }
              return res;
          };
-@@ -314,17 +550,35 @@ struct llama_moe_cache::impl {
+@@ -314,17 +568,36 @@ struct llama_moe_cache::impl {
              const device & d = devices[g.id];
              const int32_t n_expert  = g.ref[0]->ne[2];
              const size_t  budget    = (size_t) ((double) size*d.split/split_sum*g.host_bytes/d.host_bytes);
@@ -1266,6 +1399,7 @@ index f22d986..02144ce 100644
              }
              g.lru.init(model.layers.size(), n_expert, g.n_slots);
              n_tensors[g.id] += g.ref.size()*(1 + g.layers.size());
++            if (async_ids) n_tensors[g.id] += g.layers.size();
 +            if (fuse_gate_up) {
 +                const auto & source_layer = model.layers[g.layers.front()];
 +                auto * gate = source_layer.ffn_gate_exps;
@@ -1283,7 +1417,7 @@ index f22d986..02144ce 100644
              n_tensors_host  += g.layers.size();
          }
          if (n_tensors_host == 0) {
-@@ -360,19 +614,35 @@ struct llama_moe_cache::impl {
+@@ -360,19 +633,39 @@ struct llama_moe_cache::impl {
                  continue;
              }
              ggml_context * ctx = devices[g.id].ctx.get();
@@ -1315,6 +1449,10 @@ index f22d986..02144ce 100644
                  l.ig      = (int32_t) ig;
 -                l.experts = llama_moe_cache_layer_experts(model.layers[il]);
 +                l.experts = llama_moe_cache_layer_experts(model.layers[il], frozen_hybrid);
++                if (async_ids) {
++                    l.device_ids = ggml_new_tensor_2d(ctx, GGML_TYPE_I32, l.n_active, max_batch);
++                    ggml_format_name(l.device_ids, "moe_cache.device_ids-%d", il);
++                }
                  for (size_t ip = 0; ip < l.experts.size(); ++ip) {
                      ggml_tensor * bank   = g.banks[ip];
 -                    ggml_tensor * cached = ggml_view_3d(ctx, bank, bank->ne[0], bank->ne[1], g.n_slots, bank->nb[1], bank->nb[2], 0);
@@ -1324,13 +1462,37 @@ index f22d986..02144ce 100644
                      ggml_format_name(cached, "moe_cache.%s", l.experts[ip]->name);
                      bindings[l.experts[ip]] = { il, (int32_t) ip, cached };
                  }
-@@ -435,6 +705,105 @@ struct llama_moe_cache::impl {
+@@ -435,6 +728,129 @@ struct llama_moe_cache::impl {
          }
          ggml_backend_buffer_set_usage(buf_host.get(), GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
  
 +        if (frozen_hybrid) {
 +            if (devices.size() != 1) {
 +                throw std::runtime_error("Hybrid dispatch currently requires one GPU backend");
++            }
++            if (async_ids) {
++                const auto device = ggml_backend_get_device(devices[0].backend);
++                if (std::string(ggml_backend_reg_name(ggml_backend_dev_backend_reg(device))) != "CUDA") {
++                    throw std::runtime_error("Asynchronous ID handoff currently requires CUDA");
++                }
++                size_t bytes = 0;
++                for (auto & l : layers) if (l.device_ids) {
++                    const size_t count = GGML_PAD(ggml_nbytes(l.device_ids), 64);
++                    if (count > admission_pool_limit - bytes) {
++                        throw std::runtime_error("ID handoff staging exceeds the 64 MiB cap");
++                    }
++                    l.id_staging_offset = bytes;
++                    bytes += count;
++                    l.id_event.reset(ggml_backend_event_new(device));
++                    if (!l.id_event) throw std::runtime_error("Cannot create ID handoff completion event");
++                }
++                const auto pinned = ggml_backend_dev_host_buffer_type(device);
++                if (!pinned || !bytes) throw std::runtime_error("ID handoff requires bounded pinned staging");
++                id_staging.reset(ggml_backend_buft_alloc_buffer(pinned, bytes));
++                if (!id_staging || ggml_backend_buffer_get_type(id_staging.get()) != pinned) {
++                    throw std::runtime_error("Cannot allocate pinned ID handoff staging");
++                }
++                LLAMA_LOG_WARN("%s: asynchronous GPU ID handoff: %zu-byte per-layer pinned staging; protected reuse\n", __func__, bytes);
 +            }
 +            const bool automatic = std::string(plan_path) == "auto";
 +            std::ifstream plan;
@@ -1430,15 +1592,16 @@ index f22d986..02144ce 100644
          for (size_t id = 0; id < devices.size(); ++id) {
              const device & d = devices[id];
              if (d.host_bytes == 0) {
-@@ -456,14 +825,155 @@ struct llama_moe_cache::impl {
+@@ -456,14 +872,156 @@ struct llama_moe_cache::impl {
      }
  
      ~impl() {
-+        if (async_admissions) {
++        if (async_admissions || async_ids) {
 +            for (const auto & device : devices) ggml_backend_synchronize(device.backend);
 +        }
 +        if (frozen_hybrid) LLAMA_LOG_WARN("%s: hybrid dispatches=%zu CPU experts=%zu GPU experts=%zu prior hits=%zu\n",
 +            __func__, dispatch_calls, cpu_expert_calls, gpu_expert_calls, pre_admission_hits);
++        if (async_ids) LLAMA_LOG_WARN("%s: asynchronous ID uploads=%zu, bytes=%zu\n", __func__, id_uploads, id_upload_bytes);
 +        if (adaptive) LLAMA_LOG_WARN("%s: adaptive admissions=%zu, uploaded=%zu bytes\n",
 +                                    __func__, dynamic_admissions, dynamic_upload_bytes);
          log_stats();
@@ -1586,7 +1749,7 @@ index f22d986..02144ce 100644
  
          // large batches use most experts of a layer, so they gain little from the cache and would evict the experts used in generation
          if (n_tokens == 0 || n_tokens > max_batch || std::min(n_tokens*n_expert_used, l.slot_map->ne[1]) > groups[l.ig].n_slots) {
-@@ -478,6 +988,7 @@ struct llama_moe_cache::impl {
+@@ -478,6 +1036,7 @@ struct llama_moe_cache::impl {
      }
  
      int64_t copy_experts(ggml_backend_t backend, const ggml_tensor * w, ggml_tensor * dst, int64_t e, int64_t last) {
@@ -1594,7 +1757,7 @@ index f22d986..02144ce 100644
          const auto it = bindings.find(w);
          if (it == bindings.end()) {
              return 0;
-@@ -513,6 +1024,7 @@ struct llama_moe_cache::impl {
+@@ -513,6 +1072,7 @@ struct llama_moe_cache::impl {
      }
  
      bool copy(ggml_backend_t backend, const ggml_tensor * src, ggml_tensor * dst, ggml_cgraph * graph) {
@@ -1602,7 +1765,7 @@ index f22d986..02144ce 100644
          const auto it = layer_of.find(src);
          if (it == layer_of.end()) {
              return false;
-@@ -617,6 +1129,33 @@ ggml_tensor * llama_moe_cache::get_experts(const ggml_tensor * w) const {
+@@ -617,6 +1177,69 @@ ggml_tensor * llama_moe_cache::get_experts(const ggml_tensor * w) const {
      return pimpl->get_experts(w);
  }
  
@@ -1623,6 +1786,10 @@ index f22d986..02144ce 100644
 +    return pimpl->groups[pimpl->layers[il].ig].fused_gate_up;
 +}
 +
++ggml_tensor * llama_moe_cache::device_ids(int32_t il) const {
++    return hybrid_layer_enabled(il) ? pimpl->layers[il].device_ids : nullptr;
++}
++
 +void * llama_moe_cache::hybrid_dispatch_state(int32_t il) const {
 +    if (il < 0 || il >= (int32_t) pimpl->layers.size()) throw std::runtime_error("Invalid dispatch layer");
 +    return &pimpl->layers[il];
@@ -1633,11 +1800,43 @@ index f22d986..02144ce 100644
 +    auto * state = static_cast<impl::layer *>(userdata);
 +    state->owner->dispatch(dst, *state);
 +}
++
++void llama_moe_cache::hybrid_upload_ids(ggml_tensor * dst, int ith, int, void * userdata) {
++    if (ith != 0) return;
++    auto & layer = *static_cast<impl::layer *>(userdata);
++    auto & owner = *layer.owner;
++    const auto * packed = dst->src[0];
++    GGML_ASSERT(layer.device_ids && layer.id_event && owner.id_staging);
++    GGML_ASSERT(dst->type == GGML_TYPE_I32 && dst->ne[0] == layer.n_active &&
++                dst->ne[1] > 0 && dst->ne[1] <= owner.batch_limit && dst->ne[2] == 1 && dst->ne[3] == 1);
++    GGML_ASSERT(packed->type == GGML_TYPE_F32 && packed->ne[0] == layer.n_active &&
++                packed->ne[1] == 4 && packed->ne[2] == dst->ne[1] && packed->ne[3] == 1);
++    if (layer.ids_uploaded) ggml_backend_event_synchronize(layer.id_event.get());
++    auto * staging = reinterpret_cast<int32_t *>(
++        static_cast<char *>(ggml_backend_buffer_get_base(owner.id_staging.get())) + layer.id_staging_offset);
++    for (int64_t token = 0; token < dst->ne[1]; ++token) {
++        for (int64_t rank = 0; rank < dst->ne[0]; ++rank) {
++            const float value = *reinterpret_cast<const float *>(
++                static_cast<const char *>(packed->data) + token*packed->nb[2] + packed->nb[1] + rank*packed->nb[0]);
++            GGML_ASSERT(std::isfinite(value) && value >= 0 && value < owner.groups[layer.ig].n_slots);
++            const auto id = static_cast<int32_t>(value);
++            GGML_ASSERT(value == static_cast<float>(id));
++            staging[token*dst->ne[0] + rank] = id;
++        }
++    }
++    const auto backend = owner.devices[owner.groups[layer.ig].id].backend;
++    // Private storage is outside graph scratch. The same stream orders ID uploads before their GPU consumers.
++    ggml_backend_tensor_set_async(backend, dst, staging, 0, ggml_nbytes(dst));
++    ggml_backend_event_record(layer.id_event.get(), backend);
++    layer.ids_uploaded = true;
++    ++owner.id_uploads;
++    owner.id_upload_bytes += ggml_nbytes(dst);
++}
  bool llama_moe_cache::copy(ggml_backend_t backend, const ggml_tensor * src, ggml_tensor * dst, ggml_cgraph * graph) {
      return pimpl->copy(backend, src, dst, graph);
  }
 diff --git a/src/llama-moe-cache.h b/src/llama-moe-cache.h
-index 3b6726b..4542798 100644
+index 3b6726b..4cd6fbe 100644
 --- a/src/llama-moe-cache.h
 +++ b/src/llama-moe-cache.h
 @@ -8,6 +8,20 @@
@@ -1661,7 +1860,7 @@ index 3b6726b..4542798 100644
  // keeps the most recently used experts of host-resident MoE layers in a device buffer
  // each layer has a slot map in host memory: when the scheduler copies it to the device, the copy callback uploads the missing experts
  class llama_moe_cache {
-@@ -24,6 +38,12 @@ public:
+@@ -24,6 +38,14 @@ public:
  
      // the experts of w in the cache, nullptr if w is not cached
      ggml_tensor * get_experts(const ggml_tensor * w) const;
@@ -1669,8 +1868,10 @@ index 3b6726b..4542798 100644
 +    int64_t hybrid_batch_limit() const;
 +    bool hybrid_layer_enabled(int32_t il) const;
 +    ggml_tensor * fused_gate_up(int32_t il) const;
++    ggml_tensor * device_ids(int32_t il) const;
 +    void * hybrid_dispatch_state(int32_t il) const;
 +    static void hybrid_dispatch(ggml_tensor * dst, int ith, int nth, void * userdata);
++    static void hybrid_upload_ids(ggml_tensor * dst, int ith, int nth, void * userdata);
  
      // ggml_backend_sched copy callback, returns false if src is not a slot map
      bool copy(ggml_backend_t backend, const ggml_tensor * src, ggml_tensor * dst, ggml_cgraph * graph);

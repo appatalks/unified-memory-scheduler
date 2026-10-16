@@ -28,6 +28,7 @@
           "execution_profile": {"enum": ["standard", "experimental-hybrid-direct", "experimental-hybrid-staged"]},
           "hybrid_verified": {"type": "boolean"},
           "hybrid_decode_pipeline": {"type": "boolean"},
+          "hybrid_async_ids": {"type": "boolean"},
           "status": {"enum": ["running", "ok", "answer_check_failed", "failed"]},
           "samples": {"type": "array", "items": {"type": "object", "required": ["wall_decode_tok_s", "end_to_end_tok_s", "timings", "usage", "generated_text_sha256"]}},
           "answer_checks": {

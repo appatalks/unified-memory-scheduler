@@ -131,6 +131,7 @@ def execute(args) -> int:
                                execution_profile=state["execution_profile"],
                                hybrid_verified=state["hybrid_verified"],
                                hybrid_decode_pipeline=state.get("hybrid_decode_pipeline", False),
+                               hybrid_async_ids=state.get("hybrid_async_ids", False),
                                selection_reason=state["selection_reason"],
                                backend=Path(state["backend"]).name,
                                settings={key: value for key, value in settings.items() if key != "model"})

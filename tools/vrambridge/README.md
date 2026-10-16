@@ -281,6 +281,13 @@ does not inherit any pipeline flags. Set `decode_pipeline` to `false` and
 restart to disable only these optimizations, or select Standard for stock
 execution. Keep the previous installation JSON for full budget/plan rollback.
 
+The optional boolean `async_ids` additionally selects the CUDA-only,
+event-protected GPU slot-ID handoff; it requires `decode_pipeline: true` and
+defaults to false. Ready requires a backend acknowledgement of its bounded
+private staging/storage. The footer labels this configuration separately.
+Older installations and Standard mode do not inherit it. Treat it as an
+experimental scheduling option, not a numerical or performance guarantee.
+
 Automatic mode prefers native fitting for an unsharded cold-start weight file
 that fits the configured residency budget, avoiding unnecessary split-execution
 overhead. This is a placement preference, not a full-VRAM-fit guarantee: KV,

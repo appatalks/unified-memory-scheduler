@@ -66,3 +66,4 @@ htmlcov/
 !/benchmarks/results/gpt120-trained-hot800.txt
 !/benchmarks/results/gpt120-trained-hot880.txt
 !/benchmarks/results/gpt120-decode-optimization-summary.json
+!/benchmarks/results/gpt120-async-id-handoff-summary.json

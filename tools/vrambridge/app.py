@@ -229,11 +229,13 @@ def read_hybrid_profile(path: Path) -> dict:
         raise ValueError("Hybrid installation profile exceeds 64 KiB.")
     data = json.loads(path.read_text(encoding="utf-8"))
     required = {"schema_version", "backend_commit", "executable", "plan", "cuda_plugin"}
-    optional = {"model_layout", "context", "cache_mib", "transfer", "decode_pipeline"}
+    optional = {"model_layout", "context", "cache_mib", "transfer", "decode_pipeline", "async_ids"}
     if (not isinstance(data, dict) or not required <= set(data) or set(data) - required - optional or
             type(data["schema_version"]) is not int or data["schema_version"] not in (1, 2) or
             data["backend_commit"] != PINNED_LLAMA_COMMIT or
             type(data.get("decode_pipeline", False)) is not bool or
+            type(data.get("async_ids", False)) is not bool or
+            (data.get("async_ids", False) and not data.get("decode_pipeline", False)) or
             any(not isinstance(data[key], str) or not Path(data[key]).is_absolute()
                 for key in ("executable", "cuda_plugin")) or not isinstance(data["plan"], str) or
             (data["plan"] != "auto" and not Path(data["plan"]).is_absolute())):
@@ -261,7 +263,8 @@ def read_hybrid_profile(path: Path) -> dict:
             "hybrid_generic": data["schema_version"] == 2,
             "hybrid_context": data.get("context", 16384), "hybrid_cache_mib": data.get("cache_mib", 10240),
             "hybrid_transfer": data.get("transfer", "direct" if data["schema_version"] == 1 else "staged"),
-            "hybrid_decode_pipeline": data.get("decode_pipeline", False)}
+            "hybrid_decode_pipeline": data.get("decode_pipeline", False),
+            "hybrid_async_ids": data.get("async_ids", False)}
 
 
 class Runtime:
@@ -271,7 +274,7 @@ class Runtime:
                  hybrid_executable: str | None = None, execution_mode: str | None = None,
                  hybrid_layout: dict | None = None, hybrid_generic: bool = False,
                  hybrid_context: int = 16384, hybrid_cache_mib: int = 10240, hybrid_transfer: str = "direct",
-                 hybrid_decode_pipeline: bool = False):
+                 hybrid_decode_pipeline: bool = False, hybrid_async_ids: bool = False):
         if backend_kind not in ("llama.cpp", "ik_llama.cpp"):
             raise ValueError("Unsupported backend kind.")
         if (hybrid_plan is None) != (hybrid_cuda_plugin is None):
@@ -290,7 +293,8 @@ class Runtime:
         if (type(hybrid_context) is not int or not 512 <= hybrid_context <= 65536 or
                 type(hybrid_cache_mib) is not int or not 1 <= hybrid_cache_mib <= 65536 or
                 hybrid_transfer not in ("direct", "staged") or type(hybrid_generic) is not bool or
-                type(hybrid_decode_pipeline) is not bool):
+                type(hybrid_decode_pipeline) is not bool or type(hybrid_async_ids) is not bool or
+                (hybrid_async_ids and not hybrid_decode_pipeline)):
             raise ValueError("Invalid generic hybrid context, residency budget, or transfer policy.")
         self.hybrid_plan = "auto" if hybrid_plan == "auto" else Path(hybrid_plan).resolve(strict=True) if hybrid_plan is not None else None
         self.hybrid_layout = hybrid_layout
@@ -299,6 +303,7 @@ class Runtime:
         self.hybrid_cache_mib = hybrid_cache_mib
         self.hybrid_transfer = hybrid_transfer
         self.hybrid_decode_pipeline = hybrid_decode_pipeline
+        self.hybrid_async_ids = hybrid_async_ids
         self.active_hybrid_transfer = hybrid_transfer
         self.required_hybrid_markers = {"hybrid", "context", "coverage", "direct", "registered"} if hybrid_transfer == "direct" else {"hybrid", "context", "coverage", "staged"}
         self.hybrid_cuda_plugin = hybrid_cuda_plugin.resolve(strict=True) if hybrid_cuda_plugin is not None else None
@@ -383,6 +388,8 @@ class Runtime:
                 "execution_profile": f"experimental-hybrid-{self.active_hybrid_transfer}" if self.hybrid_active else "standard",
                 "hybrid_transfer": self.active_hybrid_transfer if self.hybrid_active else None,
                 "hybrid_decode_pipeline": self.hybrid_active and self.hybrid_decode_pipeline,
+                "hybrid_async_ids": self.hybrid_active and self.hybrid_async_ids,
+                "hybrid_async_ids_verified": self.hybrid_active and "async-ids" in self.hybrid_markers,
                 "hybrid_overlap_verified": self.hybrid_active and "overlap" in self.hybrid_markers,
                 "hybrid_gate_up_verified": self.hybrid_active and "gate-up" in self.hybrid_markers,
                 "hybrid_context": self.context if self.hybrid_active else self.hybrid_context,
@@ -589,6 +596,8 @@ class Runtime:
                     environment.update(
                         VRAMBRIDGE_HYBRID_STAGE_INPUT="1", VRAMBRIDGE_HYBRID_OVERLAP="1",
                         VRAMBRIDGE_HYBRID_BOUNDARY="gpu", VRAMBRIDGE_HYBRID_FUSE_GATE_UP="1")
+                if self.hybrid_async_ids:
+                    environment["VRAMBRIDGE_HYBRID_ASYNC_IDS"] = "1"
             if self.backend_kind == "llama.cpp":
                 environment["GGML_OP_OFFLOAD_MIN_BATCH"] = str(op_offload_min_batch)
             self.logs.clear()
@@ -602,6 +611,8 @@ class Runtime:
                                             if transfer == "direct" else {"hybrid", "context", "coverage", "staged"})
             if hybrid and self.hybrid_decode_pipeline:
                 self.required_hybrid_markers.add("pipeline")
+            if hybrid and self.hybrid_async_ids:
+                self.required_hybrid_markers.add("async-ids")
             self.execution_mode = mode
             self.selection_reason = reason
             self.error = None
@@ -666,6 +677,9 @@ class Runtime:
                                     self.hybrid_markers.add("overlap")
                                 if "VRAMBridge resident gate/up projection fusion active" in line:
                                     self.hybrid_markers.add("gate-up")
+                            if (self.hybrid_async_ids and "asynchronous GPU ID handoff:" in line and
+                                    "per-layer pinned staging; protected reuse" in line):
+                                self.hybrid_markers.add("async-ids")
                         reported_context = re.search(r"n_ctx_slot\s*=\s*'?(\d+)", line)
                         if reported_context:
                             actual = int(reported_context[1])
@@ -733,8 +747,10 @@ class Runtime:
                             and time.monotonic() >= deadline):
                         self._terminate(process)
                         self.state = "error"
+                        missing = ", ".join(sorted(self.required_hybrid_markers - self.hybrid_markers))
                         self.error = ("Experimental hybrid readiness timed out: selected transfers, full routed-layer coverage, "
-                                      "adaptive residency and actual context must all be confirmed. "
+                                      "adaptive residency, requested pipeline settings and actual context must all be confirmed. "
+                                      f"Unconfirmed: {missing or 'backend readiness response'}. "
                                       "Check the patched backend, plan and matching CUDA plugin."
                                       if self.hybrid_active else
                                       "Model loading timed out. See backend output; try a smaller model or CPU mode.")

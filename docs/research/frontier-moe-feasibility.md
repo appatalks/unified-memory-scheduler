@@ -828,6 +828,71 @@ to its previous 16K default after the private tests.
 
 ### Next Optimization Queue: Measure Before Removing Waits
 
+The first follow-up measured the queue below. Profiling-off/coarse/detailed
+technical medians were **46.07/45.51/46.25 tok/s**, three 512-token samples
+each, with all 96-position frozen regression gates passing. No severe observer
+effect was found in this screen; it does not bound all profiling overhead.
+On the detailed run's filtered graphs, H2D destination-wait calls averaged
+about **2.94 ms**, H2D synchronous-copy calls **1.12 ms**, D2H source sync
+**3.29 ms**, and D2H synchronous-copy calls **0.49 ms**. These remain host
+intervals, not isolated DMA measurements.
+
+That evidence changes the first prototype: decouple the tiny CPU-to-GPU slot-ID
+handoff from queued device work before adding GPU-to-CPU packet packing.
+Private per-layer GPU ID buffers, bounded pinned host staging and completion
+events preserve dependencies and lifetime rather than removing barriers.
+In the first matched technical pair, the existing path generated
+**48.93/44.18/47.01** tok/s; asynchronous IDs generated
+**50.95/46.30/49.27**, improving the median **47.01 -> 49.27 (4.8%)**.
+Both profiles passed the unchanged 96-position full-logit gate.
+
+Scheduler H2D copies decreased from 84 to 48 per filtered graph; the missing
+36 are explicit asynchronous callback uploads, not eliminated transfers.
+H2D destination-wait intervals fell from about 2.94 to 1.92 ms/graph, while
+CPU submission increased from about 12.39 to 13.10 ms/graph. That increase is
+not yet attributed between callback overhead, scheduling and bandwidth
+contention. The net speedup, not the wait reduction alone, is the result.
+The first F32/MXFP4 fixtures passed prior-hybrid regression and three-position
+checks; existing native-placement failures remained visible. Broader layout,
+staging, natural-output and long-context tests are required before promotion.
+
+The [completed handoff validation](../../benchmarks/results/gpt120-async-id-handoff-summary.json)
+then compared three exact 512-token segments per natural-style workload:
+
+| Workload | Existing pipeline median | Asynchronous IDs median |
+| --- | ---: | ---: |
+| Coding | 43.84 | 45.31 |
+| Reasoning | 46.56 | 48.26 |
+| Prose | 61.31 | 61.62 |
+
+The prose difference is small and is not evidence of a universal speedup.
+All **12 matched generation hashes** (three technical plus nine natural
+segments) matched their controls, as did routing and migration counts.
+All seven prior-hybrid fixture regressions passed. The full fixture matrix
+retained exactly the same **14 native-reference failures**, with 72 executions,
+21 reference creations and 37 passing comparisons. Callback/no-staging
+negative controls retained zero overlap. Top-16 F32 staging stress again
+uploaded 192 MiB through the bounded 64 MiB pool and passed strict logits.
+
+Both profiles retrieved the two keys at 12,852 prompt tokens. Both also
+returned `26.78` instead of the exact requested `26.79`; the handoff neither
+introduced nor resolved that answer failure. The full eight-target default
+suite, including 53 local-app tests, passed after app integration.
+
+The new CUDA handoff is available through optional installation
+`async_ids: true`, which requires `decode_pipeline: true`. Older files default
+to false; Standard mode strips the flags. Backend acknowledgement of private
+event-protected storage is required before Ready. Following validation, the
+local experimental manual profile enables it, retains its previous-profile
+backup and passes a 64-token live activation check. This is experimental
+promotion, not quality qualification.
+
+The overall 60 tok/s goal remains unmet. Next investigate shared CPU
+preparation, genuinely empty cold branches and time-priced admissions.
+Do not assume that every remaining destination wait is removable: GPU
+reconciliation still needs its producer kernels to finish, and an asynchronous
+API call only helps the critical path when useful independent work can overlap.
+
 The user reported approximately **52 tok/s** during the updated manual trial.
 This is useful operational feedback, not a matched benchmark or a replacement
 for the repeated workload results above. At 52 tok/s, mean token latency is

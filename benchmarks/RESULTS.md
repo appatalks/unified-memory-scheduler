@@ -24,6 +24,26 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## Copy/Wait Breakdown And Event-Protected GPU IDs
+
+The [reviewed handoff summary](results/gpt120-async-id-handoff-summary.json)
+records the first follow-up to research checkpoint `068f69e`. On unchanged
+GPT-OSS-120B MXFP4 at actual 16K context, 8/16 threads and 11,264 MiB residency,
+three matched 512-token technical samples improved the median from
+**47.01 to 49.27 tok/s (+4.8%)**. Natural-style coding/reasoning medians improved
+**43.84 -> 45.31** and **46.56 -> 48.26**; prose was nearly flat at
+**61.31 -> 61.62**. This does not establish the overall 60 tok/s milestone.
+
+The prototype replaces blocking scheduler slot-ID copies with bounded,
+event-protected per-layer transfers and explicit graph dependencies.
+H2D destination-wait calls decreased by about 1.02 ms per filtered graph, but
+CPU submission rose; only the net end-to-end gain is counted. Logical ID
+transfers still occur outside the scheduler-copy counters.
+All 12 compared generation hashes and all seven prior-hybrid fixture gates
+matched controls. Existing native-reference and exact-answer failures remain.
+The optional `async_ids` installation setting is enabled in the local
+experimental manual profile after validation; Standard rollback is unchanged.
+
 ## Decode Overlap And Projection Fusion Screen
 
 The [reviewed summary](results/gpt120-decode-optimization-summary.json) records

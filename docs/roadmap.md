@@ -196,6 +196,15 @@ is not a benchmark qualification. Recovering about 2.56 ms/token would bridge
 [optimization queue](research/frontier-moe-feasibility.md#next-optimization-queue-measure-before-removing-waits)
 for contracts, rejected approaches and acceptance gates.
 
+The first measured follow-up prioritized event-protected GPU slot-ID handoff
+over D2H packing: the matched technical median improved 47.01 -> 49.27 tok/s,
+with smaller coding/reasoning gains and nearly flat prose. Seven prior-hybrid
+regressions and all 12 compared generation hashes matched; existing numerical
+and exact-answer failures remain. The local experimental installation opts
+in via `async_ids`; older installations remain unchanged. Next focus is CPU
+preparation/empty branches and time-priced residency, not arbitrary removal
+of producer/reconciliation waits.
+
 Extend only demonstrated mechanisms to prefill, decode, and concurrent-request
 objectives. Compare static, size-aware LRU, and measured/adaptive policies. Expose
 simple user goals rather than expert-cache parameters; keep ordinary upstream

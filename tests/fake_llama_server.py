@@ -75,6 +75,7 @@ print(json.dumps({
     "hybrid_overlap": os.getenv("VRAMBRIDGE_HYBRID_OVERLAP"),
     "hybrid_boundary": os.getenv("VRAMBRIDGE_HYBRID_BOUNDARY"),
     "hybrid_fuse_gate_up": os.getenv("VRAMBRIDGE_HYBRID_FUSE_GATE_UP"),
+    "hybrid_async_ids": os.getenv("VRAMBRIDGE_HYBRID_ASYNC_IDS"),
     "register_host": os.getenv("GGML_CUDA_REGISTER_HOST"),
     "cuda_plugin": os.getenv("GGML_BACKEND_PATH"),
     "no_repack": args.no_repack,
@@ -91,6 +92,8 @@ if os.getenv("VRAMBRIDGE_HYBRID_PLAN") and Path(args.model).stem != "hybrid-no-m
     else:
         print("impl: adaptive admissions enabled; 1024-byte bounded staging, asynchronous uploads", flush=True)
     coverage = "1/2" if Path(args.model).stem == "hybrid-partial-coverage" else "2/2"
+    if os.getenv("VRAMBRIDGE_HYBRID_ASYNC_IDS") == "1" and Path(args.model).stem != "hybrid-no-async-ids":
+        print("impl: asynchronous GPU ID handoff: 1024-byte per-layer pinned staging; protected reuse", flush=True)
     print(f"impl: tensor-derived hybrid coverage={coverage} routed layers; other layers remain native", flush=True)
     if os.getenv("VRAMBRIDGE_HYBRID_OVERLAP") == "1" and Path(args.model).stem != "hybrid-no-pipeline":
         print("VRAMBridge decode pipeline configured: staged input, guarded overlap, GPU boundary, gate/up fusion", flush=True)

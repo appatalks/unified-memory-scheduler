@@ -16,5 +16,6 @@
   "context": 16384,
   "cache_mib": 11264,
   "transfer": "direct",
-  "decode_pipeline": true
+  "decode_pipeline": true,
+  "async_ids": false
 }
