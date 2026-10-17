@@ -73,3 +73,9 @@ htmlcov/
 !/benchmarks/results/moe-cold-work-and-qwen38-summary.json
 !/benchmarks/results/moe-preparation-packet-verification-summary.json
 !/benchmarks/results/moe-canonical-verification-mtp-summary.json
+!/benchmarks/results/glm45-air-iq4-xs-benchmark-summary.json
+!/benchmarks/results/upstream-pr29887-gpt120b-summary.json
+!/benchmarks/results/qwen36-q8-benchmark-summary.json
+!/benchmarks/results/mistral4-fp32-compatibility-summary.json
+!/benchmarks/results/mistral4-fused-fp32-kernel-summary.json
+!/benchmarks/results/mistral4-native-experimental-summary.json
