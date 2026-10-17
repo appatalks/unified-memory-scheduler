@@ -131,6 +131,8 @@ install(PROGRAMS tools/benchmark/vrambridge-benchmark.py DESTINATION bin RENAME 
 install(PROGRAMS tools/benchmark/vrambridge-routing.py DESTINATION bin RENAME vrambridge-routing)
 install(PROGRAMS tools/benchmark/vrambridge-execution-sweep.py DESTINATION bin RENAME vrambridge-execution-sweep)
 install(PROGRAMS tools/vrambridge/app.py DESTINATION share/vrambridge)
+install(FILES tools/vrambridge/__init__.py tools/vrambridge/__main__.py
+    tools/vrambridge/telemetry.py tools/vrambridge/updates.py DESTINATION share/vrambridge)
 install(FILES tools/vrambridge/hybrid-profile.example.json DESTINATION share/vrambridge)
 install(DIRECTORY tools/vrambridge/web DESTINATION share/vrambridge)
 
@@ -173,7 +175,8 @@ if(BUILD_TESTING)
             COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_chat_stream.mjs
         )
         add_test(NAME synapse-monitor-navigation
-            COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_monitor.mjs)
+            COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_monitor.mjs
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_preferences.mjs)
     else()
         message(STATUS "Node.js not found; browser stream unit tests are unavailable")
     endif()

@@ -1,6 +1,8 @@
 # VRAMBridge Local App
 
-A Linux-first browser preview over ordinary llama.cpp inference. The service and
+The application is distributed as [SYNAPSE](https://github.com/appatalks/synapse);
+this checkout retains a matching source copy alongside the Linux/CUDA research.
+The app targets Linux, Windows and macOS over ordinary llama.cpp inference. The service and
 UI use only Python's standard library and browser APIs, with no frontend build or
 network-loaded assets. Python 3.10+ is required.
 
@@ -24,7 +26,8 @@ The CMake install includes the app and assets under
 `<prefix>/share/vrambridge`; run `python3 <prefix>/share/vrambridge/app.py`.
 It does not install Python or llama.cpp.
 
-1. Enter the absolute path to an existing GGUF file. For sharded models, select the
+1. In **Chat**, open **Model Controls** and browse for a local GGUF or enter its
+   absolute path. Browsing lists filenames only; no files are uploaded. For sharded models, select the
    first shard and keep the remaining shards beside it.
 2. Leave the 4,096-token context and automatic placement selected initially.
 3. Click **Load model**. State changes from loading to ready only after the backend
@@ -33,6 +36,16 @@ It does not install Python or llama.cpp.
    `local-model`. New chat clears the page's conversation.
 5. **Stop** cancels a chat; **Unload** also cancels model loading and releases the
    backend. Ctrl+C or SIGTERM shuts down the service and its backend.
+
+The sidebar contains **Chat**, **Monitor**, and **Connect an app**. Model and
+generation settings stay in the Model Controls pop-up. Monitor combines CPU/GPU
+load histories and uses live RAM/context doughnut pie charts. Experimental
+engine details live on Monitor; runtime failures remain visible on every tab.
+The local model browser enforces filesystem permissions and bounded listings
+(4,096 examined entries, 512 displayed), and reports unavailable folders explicitly.
+Enter sends a chat message; Shift+Enter inserts a new line. Composing text and
+busy/disabled Send states never submit accidentally. The sidebar offers Dark
+and Light themes, saving only the theme choice in local browser storage.
 
 ### Reasoning, Output Limits, And Speed
 

@@ -1473,6 +1473,257 @@ coverage without held-out/future-trace seeding, and then run repeated coding,
 reasoning, prose and retrieval/rollback checks. A trained Qwen MTP draft is not
 a GPT draft; other architectures need their own compatible proposal sources.
 
+## GLM-4.5-Air And Memory Capacity Versus Bandwidth
+
+The [third trained large-MoE report](../../benchmarks/results/glm45-air-iq4-xs-benchmark-summary.json)
+adds the approved GLM-4.5-Air IQ4_XS target without changing its weights or
+selected experts. GLM-5.3-Flash was inspected first: its 320B/18B architecture
+is supported by the pinned backend, but the checked IQ2_XXS needs 94.85 GiB,
+more than the available disk budget. It was not downloaded or benchmarked.
+
+The chosen two-shard 106B/12B target is 60,480,900,352 bytes at a pinned public
+revision, with both LFS SHA256 values verified. Actual descriptors identify
+46 trunk layers, one unused NextN block, 45 routed layers, 128 experts/top8,
+hidden4096 and expert FFN1408. Gate/up IQ4_XS and down IQ4_NL use the existing
+native model builder and generic dispatcher. No GLM-specific scheduler or
+checkpoint-name exception was added, and no GPT training plan was reused.
+
+At 16K and 8/16 threads, three exact 512-token samples per configuration give:
+
+| Configuration | Decode median tok/s |
+| --- | ---: |
+| Standard automatic placement, first window | 12.67 |
+| Native CPU experts/GPU backbone, mapped | 11.30 |
+| Causal direct DMA, 6,144 MiB | **17.28** |
+| Standard automatic placement, reversed order | 12.14 |
+| Native CPU experts/GPU backbone, copied to RAM | 11.43 |
+
+The headline conservatively uses the fastest observed control block median,
+12.67, for a **36.4%** gain. The 8,192 MiB bank failed with CUDA OOM and is
+retained, not hidden by reducing context. The 6 GiB candidate exercised
+569,293 CPU and 404,203 GPU routed-expert contributions; their sum matches
+eight contributions per dispatcher invocation. All selected contributions
+remain present.
+
+The optimized pipeline matches a same-placement, frozen base-hybrid reference
+at 96 full-vocabulary positions with zero error. The seed is first-eight IDs
+in descriptor-derived layers, not training on held-out prompts. This is not
+CPU-only/native-reference equivalence. Original quality failures remain:
+thinking exhausted a 1024-token arithmetic budget without a final answer,
+and Markdown-fenced Python failed the strict AST format rule. Separate
+thinking-off diagnostics pass the unchanged exact integer and AST checks
+in both modes. Format stripping was diagnostic only; generated code was
+never executed. No broad quality qualification is claimed.
+
+### The Low RAM Reading Was Not An Empty Model Working Set
+
+The old pie used `MemTotal - MemAvailable`: an OS pressure estimate, not all
+occupied physical RAM. Initial GPT RSS was about 62.5 GiB. The GLM mapped
+controls and candidate already had roughly 54 GiB RSS, largely file-backed.
+Warm samples read zero new bytes from disk. During these cache-rich runs,
+physical occupancy was about 122 GiB while OS-reported availability exceeded
+110 GiB; cached pages and RSS overlap, and CUDA registration can make the
+availability estimate optimistic.
+
+Copying weights changed the host allocation/accounting substantially:
+OS-unavailable RAM rose from about 10 GiB to 59 GiB, while native decode changed
+only 11.30 to 11.43 tok/s and did not beat stock or hybrid execution. It was
+not promoted. The old sampler's anonymous/file-backed fields did not classify
+most of copy mode's resident mapping; Linux `RssShmem` and system `Shmem` are
+now reported separately, rather than treating all copied memory as private.
+Historical raw counter definitions are retained in the report.
+
+The monitor now distinguishes occupancy, free pages, file cache/buffers,
+shared pages, OS availability and backend RSS. The allocation API's
+OS-available semantics, 64 GiB registration cap and 24 GiB headroom were not
+relaxed. A fuller pie is not an inference speedup.
+
+Selected logical routed weights total 3.37 GB/token. The native rate implies
+a 38.1 GB/s logical read budget, consistent with investigating bandwidth,
+CPU kernels and GPU residency rather than simply allocating more RAM.
+This is not a measured DRAM counter or proof of the hardware ceiling.
+
+### App Surface And Remaining Limits
+
+Explicit **Require hybrid** now permits a causal/unbound cache budget, making
+the measured 6 GiB configuration selectable without editing a checkpoint
+allowlist. Automatic generic defaults and bound training-plan budgets remain
+unchanged; manual overrides cannot alter a bound plan. Fit is still validated
+at runtime and is not guaranteed.
+
+The unchanged-GPT 60 tok/s milestone remains unmet. GLM results are technical
+screens, not natural-output or general answer-quality qualifications. Next
+priorities include resource-cost-aware cache sizing and reducing cold-expert
+bandwidth/compute overhead, not filling RAM for its own sake.
+
+## Upstream Expert-Cache PR 29887
+
+[ggml-org/llama.cpp#29887](https://github.com/ggml-org/llama.cpp/pull/29887)
+merged on 2026-10-07 as `d6cf9acb25e6c657d6c6a4645ab7b69fce119995`.
+It is already an ancestor of our pinned `620d2225c` backend:
+the [public commit comparison](https://github.com/ggml-org/llama.cpp/compare/d6cf9acb25e6c657d6c6a4645ab7b69fce119995...620d2225cc436ab0b001e3200e590e3b286ef9ab)
+reports 189 commits ahead and zero behind. The local source checkout is shallow,
+so the missing merge object locally is not evidence that the feature is absent.
+The native sources, cache flag and historical 8/10 GiB screens above independently
+confirm it is present.
+The pin also includes the October 8 multi-GPU cache follow-up,
+[ggml-org/llama.cpp#30112](https://github.com/ggml-org/llama.cpp/pull/30112).
+Our experimental hybrid branch still requires one GPU.
+
+The upstream policy keeps host experts in shared GPU banks, grouped by device and
+tensor layout. For small batches (up to 32 positions), it reads selected IDs,
+looks up slots, evicts by LRU and uploads every selected miss for GPU execution.
+Larger batches use the ordinary offload path and can read resident cache entries
+without displacing the decode working set. This changes placement, not the
+selected-expert count or target quantization.
+
+SYNAPSE reuses that tensor/slot machinery, but its hybrid branch can execute
+cold experts on the CPU instead of uploading every miss. Residency admissions
+are guarded by observed reuse; uploads, CPU execution and GPU-hit work are
+separate costs. The PR is therefore a foundation of the current engine, not a
+missing switch whose published gain can be multiplied onto our current results.
+
+The PR's headline 67.8 tok/s uses a 32 GiB RTX 5090, a roughly 19 GiB expert
+cache and Qwen3.8-Flash-Next Q4_0. Its 4090 results use a 24 GB card.
+Our 16 GB 5070 Ti, quantizations, CPU and context differ. Those are
+external measurements, not local benchmarks or an indication that this host
+should achieve the same absolute speed.
+
+One separate configuration question is automatic whole-layer fitting plus a
+smaller LRU cache. The current app's Standard expert-cache setting requests
+CPU experts plus a cache; it does not expose the PR's combined fit/cache
+placement. That distinction is worth measuring, rather than assuming the
+historical CPU-expert cache screens cover every upstream configuration.
+
+The [matched policy/loading follow-up](../../benchmarks/results/upstream-pr29887-gpt120b-summary.json)
+now measures stock at 24.42 tok/s, fit plus a 6 GiB cache at 14.26, CPU experts
+plus a 10 GiB mapped cache at 17.31, and the same cache with copied loading at
+29.36. Three restored SYNAPSE windows give 47.89, 48.66 and 48.92 tok/s.
+These use GPT-OSS-120B MXFP4, actual 16K, 8/16 threads and three exact 512-token
+samples each, not the PR's Qwen/5090 setup.
+
+The 69.6% copied-loading improvement is an important qualification to the earlier
+RAM result: copying was not useful for the native CPU-expert control, but can
+help an upload-on-miss GPU cache. Corresponding copy/mmap output hashes and LRU
+counters match. Both modes already hold roughly 58-59 GiB RSS; copied loading
+uses `CUDA_Host`, with 57.5 GiB shared/driver-mapped RSS, versus `CPU_Mapped`.
+Higher OS-unavailable RAM is not the causal objective. This supports optimizing
+the host-buffer/upload path, which our direct registered-source admissions
+already address, rather than filling RAM blindly.
+
+A 12,000 MiB copied upstream-cache attempt failed allocating its prefill compute
+buffer. Default native log verbosity hid cache statistics in the first fit/cache
+screen; its failed activation status is retained, with a separately confirmed
+verbose repeat. Tiny exact integer/AST checks pass, but native-reference quality
+failures and the 60 tok/s milestone are not superseded. No candidate beat the
+current hybrid in these bounded screens; Qwen/GLM and all cache sizes were not
+exhaustively retested. No native change was promoted.
+
+## Fourth Target And Mistral Precision Boundary
+
+The [new Qwen3.6 Q8_0 screen](../../benchmarks/results/qwen36-q8-benchmark-summary.json)
+measures 45.50 stock / 34.07 native CPU-expert / 77.99 hybrid tok/s at 16K/8/16,
+three exact 512-token samples per profile. The empty-causal 8 GiB candidate
+improves on the fastest control by 71.4%, with every top-8 contribution retained.
+Six small checks pass; descriptor-seeded same-placement base/optimized gates
+are exact at 96 positions each. This is not all-native/CPU-reference equivalence
+or the GPT-OSS-120B cross-workload milestone.
+
+The [Mistral Small 4 study](../../benchmarks/results/mistral4-fp32-compatibility-summary.json)
+is a compatibility boundary, not another speedup. The 119B/6.5B UD-IQ4_XS target
+has fused IQ3_S gate/up tensors and IQ4_XS/Q6_K down tensors in two groups.
+Native automatic placement gives 5.64 tok/s, CPU experts/GPU backbone 19.89.
+Their arithmetic checks pass, while both strict AST checks fail; removing
+Markdown alone does not repair the reversed requested nesting.
+
+Hybrid rejects a real capability mismatch: down-projection source-1 must retain
+FP32 range, and CUDA refuses that `MUL_MAT_ID` precision mode. Tensor layout
+coverage is necessary but insufficient for complete operation compatibility.
+No precision flag or capability guard was bypassed.
+
+An isolated GPU gather/dequantize-to-FP32/matmul prototype passed 16 FP32-reference
+checks for real down weights, one/three positions, and synthetic activation
+scales 1/1e6. It is range-safe in those probes, not proven native-equivalent:
+native quantized CPU matmul differs by about 0.0032 relative L2.
+The expanded selected-weight intermediate costs 128 MiB/position, and GPU timing
+does not consistently beat the native CPU primitive even with CPU cache pressure.
+The prototype was not promoted or inserted into full-model execution.
+
+Useful next experiments are on-the-fly quantized-weight/FP32-input GPU math,
+or cost/precision-aware gate-up versus down placement. Expanded-weight residency
+must charge its larger VRAM cost. Any candidate must pass full-model gates and
+beat the 19.89 tok/s native control, not exploit automatic placement's slower
+result as a headline.
+
+The two targets were staged on the mounted NVMe. Five inactive library GGUFs
+were copied to the user-selected XFS archive, SHA256-verified, and replaced
+with original-path symlinks, freeing 71.04 GiB. Active GPT and Strata assets
+were untouched. The 64 GiB tmpfs was not used: it consumes host-RAM capacity
+already needed by weights and pinned transfers, while warm decode reads
+zero new disk bytes. No RAM-capacity or hardware-optimality claim follows.
+
+## Fused FP32 Primitive Follow-Up
+
+The [standalone CUDA follow-up](../../benchmarks/results/mistral4-fused-fp32-kernel-summary.json)
+avoids the large expanded-weight tensor by combining pinned dequantization
+helpers with FP32 activation products/reduction. It is dtype-driven IQ4_XS/Q6_K
+math, not a model-name dispatch exception, and the installed backend is untouched.
+
+Twenty-four completed timing fixtures and four sanitizer fixtures pass the
+fixed FP32-reference and safety checks, including high-range inputs and
+routing/masking/bounds cases. Worst FP32-reference relative L2 is 1.88e-7.
+Memcheck reports zero errors; racecheck zero hazards/errors/warnings. Native
+quantized CPU equivalence is still unproved.
+
+The refined single-position kernel takes 0.075-0.087 ms in its CPU-pressure
+window versus 0.464-0.503 ms for the expanded GPU prototype. Shared scratch is
+4,096/2,064 bytes per CTA; the 128 MiB/position global intermediate is gone.
+These are resident primitive probes with differing API boundaries, not decode
+throughput or a cache-scale full-model prediction.
+
+A retained early restoration OOM exposed process-lifetime CUDA memory: recovery
+succeeded after context exit, and subsequent probes use a non-CUDA parent to
+restore GPT only after its CUDA child exits. The repeated timing and both
+sanitizer runs restore the original settings successfully, without driver reset
+or budget reduction.
+
+Next is opt-in isolated graph integration, full-model numerical/answer gates,
+and matched end-to-end testing against the faster native CPU-expert control.
+Do not remove the FP32 precision guard or claim Mistral hybrid compatibility
+from standalone primitive checks.
+
+## Isolated Mistral Integration And Publication Boundary
+
+The [integrated experiment](../../benchmarks/results/mistral4-native-experimental-summary.json)
+now runs through a separate pinned native build and an unchanged SYNAPSE zipapp
+using a temporary profile. The installed/default backend was not changed.
+The separate [opt-in patch](../../third_party/patches/llama-b11669-fp32-experts-experimental.patch)
+is not part of the normal installer pin.
+
+At 16K/8/16 with three exact 512-token samples per profile, the latest isolated
+window measures 21.09 tok/s for native CPU experts/GPU backbone, 23.96 for
+automatic placement with experimental kernels, and 33.01 for the causal
+8 GiB hybrid. These are research timings, not a qualified headline gain.
+Arithmetic passes and the original strict coding check fails in all profiles.
+
+The revised path prevents quantized fusion from bypassing protected precision
+and can reproduce CPU Q8_K activation semantics using FP32 scales. Primitive
+and padded/broadcast checks pass; integrated memcheck/racecheck are clean.
+Frozen and adaptive same-placement comparisons are exact at 96 positions each.
+All selected top-4 contributions remain present in the throughput and API runs.
+
+Independent native-reference checks still fail at the unchanged 0.01 maximum
+absolute / 0.001 relative-L2 gates. Active captures can perturb results; a
+CPU-empty fusion-off control matched, but mixed CPU/GPU checks still failed,
+and disabling graphs or only router fusion did not resolve the general case.
+Small first-layer expert differences do not establish full-model equivalence.
+
+The publication decision is explicit: publish
+[experimental status and separately labeled research timings](https://github.com/appatalks/Synapse/blob/main/docs/benchmarks/mistral4-native-experimental.md),
+keep Mistral out of the four-model headline table, and do not promote a default
+backend or native-equivalent compatibility claim. All workers finished and the
+original GPT 16K/8/16/12,000 MiB profile was restored.
+
 ## Next Experiments
 
 The subsequent [downloaded-model matrix](../../benchmarks/RESULTS.md#october-16-model-aware-defaults-and-downloaded-model-matrix)

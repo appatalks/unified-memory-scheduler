@@ -2,6 +2,8 @@
 
 import http.client
 import importlib.util
+import io
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -13,6 +15,7 @@ import tempfile
 import threading
 import time
 import unittest
+import zipfile
 from unittest import mock
 from urllib.parse import urlsplit
 
@@ -95,7 +98,9 @@ class LocalAppTests(unittest.TestCase):
     def test_static_assets_status_and_unknown_routes(self):
         for path, expected in (("/", b"SYNAPSE"), ("/app.js", b"textContent"),
                                ("/chat-stream.mjs", b"class ChatStream"),
+                               ("/chat-input.mjs", b"bindChatInput"), ("/theme.js", b"synapse.theme"),
                                ("/monitor.mjs", b"class MonitorView"), ("/navigation.mjs", b"viewForHash"),
+                               ("/updates.mjs", b"class UpdateView"),
                                ("/icon.svg", b"<svg"),
                                ("/style.css", b"@media")):
             code, headers, body = self.request("GET", path)
@@ -109,12 +114,124 @@ class LocalAppTests(unittest.TestCase):
         for path in ("/../app.py", "/%2e%2e/app.py", "/api/v2/status"):
             self.assertEqual(self.request("GET", path)[0], 404)
 
+    def test_loopback_startup_does_not_require_reverse_dns(self):
+        runtime = app.Runtime(str(self.backend))
+        with mock.patch.object(app.socket, "getfqdn", side_effect=AssertionError("Unexpected DNS lookup")):
+            server = app.AppServer(("127.0.0.1", 0), runtime)
+        try:
+            self.assertEqual(server.server_name, "localhost")
+            self.assertEqual(server.server_port, server.server_address[1])
+        finally:
+            server.server_close()
+            runtime.stop(closing=True)
+
     def test_missing_backend_is_explicit(self):
         self.runtime.executable = None
         self.assertFalse(self.runtime.status()["backend_available"])
         code, _, body = self.request("POST", "/api/v1/model/load", {"model": str(self.model)})
         self.assertEqual(code, 503)
         self.assertIn(b"--llama-server", body)
+
+    def test_update_status_and_installation_guards(self):
+        self.server.updates.automatic = False
+        code, _, body = self.request("GET", "/api/v1/update")
+        self.assertEqual(code, 200)
+        self.assertFalse(json.loads(body)["managed"])
+        with mock.patch.object(self.server.updates, "check") as check:
+            self.assertEqual(self.request("POST", "/api/v1/update/check", {})[0], 202)
+            check.assert_called_once_with(force=True)
+        self.assertEqual(self.request("POST", "/api/v1/update/apply", {"version": "1.0.0"})[0], 400)
+        self.runtime.chat_lock.acquire()
+        try:
+            self.assertEqual(self.request("POST", "/api/v1/update/apply", {"version": "1.0.0"})[0], 409)
+        finally:
+            self.runtime.chat_lock.release()
+        self.assertEqual(self.request("POST", "/api/v1/update/check", {},
+                                     {"Origin": "https://untrusted.invalid"})[0], 403)
+
+    def test_managed_update_checks_artifact_and_requests_an_idle_restart(self):
+        archive = self.root / "SYNAPSE.pyz"
+        archive.write_bytes(b"previous app")
+        (self.root / "install.json").write_text(json.dumps(
+            {"schema_version": 1, "app": "SYNAPSE", "mode": "managed"}))
+        self.server.updates = app._updates.UpdateManager("0.1.0rc1", archive, automatic=False)
+        self.server.updates.state = "available"
+        self.server.updates.release = {"tag": "v0.2.0rc1", "version": "0.2.0rc1"}
+        payload = io.BytesIO()
+        with zipfile.ZipFile(payload, "w") as output:
+            output.writestr("__main__.py", "")
+            output.writestr("synapse_app/app.py", "")
+            output.writestr("synapse_app/__init__.py", '__version__ = "0.2.0rc1"')
+        body = payload.getvalue()
+        checksum = (hashlib.sha256(body).hexdigest() + "  SYNAPSE.pyz\n").encode()
+        with mock.patch.object(app._updates, "download", side_effect=[checksum, body]):
+            code, _, response = self.request("POST", "/api/v1/update/apply", {"version": "0.2.0rc1"})
+            self.assertEqual(code, 202, response)
+            self.thread.join(timeout=5)
+        self.assertFalse(self.thread.is_alive())
+        self.assertTrue(self.server.restart_requested)
+        self.assertEqual(app._updates.validate_archive(archive), "0.2.0rc1")
+        self.assertEqual(archive.with_suffix(".pyz.previous").read_bytes(), b"previous app")
+
+    def test_update_restart_never_interrupts_a_chat_that_started_during_download(self):
+        self.runtime.chat_lock.acquire()
+        try:
+            with self.assertRaisesRegex(RuntimeError, "chat started"):
+                self.server.install_update(self.root / "unused.pyz", {})
+            self.assertFalse(self.server.restart_requested)
+            self.assertFalse(self.runtime.closed)
+        finally:
+            self.runtime.chat_lock.release()
+
+    def test_model_browser_only_lists_folders_and_gguf_files(self):
+        (self.root / "nested folder").mkdir()
+        (self.root / "ignored.txt").write_text("private contents must not be returned")
+        (self.root / ".hidden.gguf").write_bytes(b"GGUF")
+        code, _, body = self.request("POST", "/api/v1/models/browse", {"path": str(self.root)})
+        self.assertEqual(code, 200, body)
+        data = json.loads(body)
+        self.assertEqual(data["path"], str(self.root))
+        self.assertEqual([e["name"] for e in data["entries"]], ["nested folder", self.model.name])
+        self.assertTrue(data["entries"][0]["directory"])
+        self.assertFalse(data["entries"][1]["directory"])
+        self.assertNotIn(b"private contents", body)
+        self.assertNotIn(b"GGUF-test-model", body)
+        self.assertFalse(data["truncated"])
+        self.assertIsNone(self.runtime.process)
+        code, _, body = self.request("POST", "/api/v1/models/browse", {"path": str(self.model)})
+        self.assertEqual(code, 200)
+        self.assertEqual(json.loads(body)["path"], str(self.root))
+
+    def test_model_browser_validates_paths_permissions_and_request_guard(self):
+        for value in ("", "relative/folder", True, 5, [], "x" * 4097):
+            with self.subTest(value=str(value)[:30]):
+                self.assertEqual(self.request("POST", "/api/v1/models/browse", {"path": value})[0], 400)
+        self.assertEqual(self.request("POST", "/api/v1/models/browse", {"unknown": 1})[0], 400)
+        self.assertEqual(self.request("POST", "/api/v1/models/browse", {"path": str(self.root / "absent")})[0], 404)
+        with mock.patch.object(app.os, "scandir", side_effect=PermissionError("denied")):
+            self.assertEqual(self.request("POST", "/api/v1/models/browse", {"path": str(self.root)})[0], 403)
+        with mock.patch.object(Path, "home", return_value=self.root):
+            code, _, body = self.request("POST", "/api/v1/models/browse", {})
+            self.assertEqual(code, 200)
+            self.assertEqual(json.loads(body)["path"], str(self.root))
+        self.assertEqual(self.request("POST", "/api/v1/models/browse", {},
+                                     {"Origin": "https://untrusted.invalid"})[0], 403)
+        root = Path(self.root.anchor)
+        with mock.patch.object(app.os, "scandir") as scan:
+            scan.return_value.__enter__.return_value = iter([])
+            self.assertIsNone(app.browse_models(str(root))["parent"])
+
+    def test_model_browser_listing_is_bounded_and_surfaces_truncation(self):
+        entry = mock.Mock(name="entry")
+        entry.name = "model.gguf"
+        entry.is_dir.return_value = False
+        entry.is_file.return_value = True
+        with mock.patch.object(app.os, "scandir") as scan:
+            scan.return_value.__enter__.return_value = iter([entry] * 5000)
+            data = app.browse_models(str(self.root))
+        self.assertEqual(len(data["entries"]), 512)
+        self.assertTrue(data["truncated"])
+        self.assertEqual(entry.is_dir.call_count, 4096)
 
     def test_load_models_api_and_unload(self):
         status = self.load()
@@ -218,6 +335,7 @@ class LocalAppTests(unittest.TestCase):
             self.assertIn("Backend context" if name == "hybrid-wrong-context" else "hybrid readiness timed out",
                           status["error"])
             self.assertFalse(status["hybrid_verified"])
+            self.runtime.process.wait(timeout=5)
             self.assertIsNotNone(self.runtime.process.poll())
 
     def test_decode_pipeline_flags_activation_and_standard_rollback(self):
@@ -249,7 +367,7 @@ class LocalAppTests(unittest.TestCase):
         self.assertFalse(status["hybrid_verified"])
 
     def test_async_ids_require_verified_backend_and_do_not_leak_into_standard(self):
-        self.hybrid_runtime(hybrid_decode_pipeline=True, hybrid_async_ids=True, load_timeout=0.4)
+        self.hybrid_runtime(hybrid_decode_pipeline=True, hybrid_async_ids=True)
         status = self.load()
         self.assertTrue(status["hybrid_async_ids"])
         self.assertTrue(status["hybrid_async_ids_verified"])
@@ -257,8 +375,9 @@ class LocalAppTests(unittest.TestCase):
         self.runtime.stop()
         missing = self.root / "hybrid-no-async-ids.gguf"
         write_metadata(missing, HYBRID_METADATA)
-        self.request("POST", "/api/v1/model/load", {"model": str(missing)})
-        status = self.wait_state("error")
+        with mock.patch.object(self.runtime, "load_timeout", 0.4):
+            self.request("POST", "/api/v1/model/load", {"model": str(missing)})
+            status = self.wait_state("error")
         self.assertFalse(status["hybrid_verified"])
         self.assertIn("async-ids", status["error"])
         self.runtime.stop()
@@ -491,6 +610,38 @@ class LocalAppTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["hybrid_plan_sha256"], before["hybrid_plan_sha256"])
         self.assertEqual(self.runtime.status()["model"], str(slow))
 
+    def test_manual_causal_budget_does_not_change_automatic_or_bound_plan_budgets(self):
+        self.hybrid_runtime(hybrid_generic=True, hybrid_context=2048, hybrid_cache_mib=64,
+                            hybrid_generic_cache_mib=32, hybrid_generic_transfer="direct")
+        other = {"general.architecture": "future-moe", "future-moe.block_count": 3,
+                 "future-moe.embedding_length": 96, "future-moe.feed_forward_length": 192,
+                 "future-moe.expert_count": 7, "future-moe.expert_used_count": 3,
+                 "future-moe.context_length": 1024, "split.count": 2}
+        write_metadata(self.model, other)
+        status = self.load(execution_mode="hybrid", expert_cache_mib=24)
+        self.assertEqual(status["expert_cache_mib"], 24)
+        self.assertEqual(status["hybrid_generic_cache_mib"], 32)
+        self.assertEqual(status["hybrid_cache_mib"], 64)
+        self.assertIn("Explicit causal residency budget: 24 MiB", status["selection_reason"])
+        flags = json.loads(status["logs"][0])
+        self.assertEqual(flags["hybrid_plan"], "auto")
+        self.assertEqual(flags["expert_cache_mib"], "24")
+        self.runtime.stop()
+        for value in (0, -1, True, 65537):
+            code, _, _ = self.request("POST", "/api/v1/model/load",
+                                     {"model": str(self.model), "execution_mode": "hybrid", "expert_cache_mib": value})
+            self.assertEqual(code, 400)
+        code, _, _ = self.request("POST", "/api/v1/model/load",
+                                 {"model": str(self.model), "execution_mode": "auto", "expert_cache_mib": 24})
+        self.assertEqual(code, 400)
+        write_metadata(self.model, HYBRID_METADATA)
+        code, _, _ = self.request("POST", "/api/v1/model/load",
+                                 {"model": str(self.model), "execution_mode": "hybrid", "expert_cache_mib": 24})
+        self.assertEqual(code, 400)
+        status = self.load(execution_mode="hybrid")
+        self.assertEqual(status["expert_cache_mib"], 64)
+        self.assertEqual(json.loads(status["logs"][0])["hybrid_plan"], str(self.plan))
+
     def test_generic_budget_and_direct_transfer_are_independent_of_bound_plan(self):
         self.hybrid_runtime(hybrid_generic=True, hybrid_context=2048, hybrid_cache_mib=64,
                             hybrid_generic_cache_mib=32, hybrid_generic_transfer="direct")
@@ -518,19 +669,25 @@ class LocalAppTests(unittest.TestCase):
         self.assertEqual(status["hybrid_plan_sha256"], self.runtime.hybrid_plan_sha256)
         self.assertEqual(json.loads(status["logs"][0])["hybrid_plan"], str(self.plan))
 
-    def test_generic_profile_rejects_wrong_budget_without_poisoning_live_model(self):
+    def test_generic_budget_requests_do_not_poison_live_model(self):
         self.hybrid_runtime(hybrid_generic=True, hybrid_cache_mib=64, hybrid_generic_cache_mib=32)
         other = {"general.architecture": "future-moe", "future-moe.block_count": 3,
                  "future-moe.embedding_length": 96, "future-moe.feed_forward_length": 192,
-                 "future-moe.expert_count": 7, "future-moe.expert_used_count": 3}
+                 "future-moe.expert_count": 7, "future-moe.expert_used_count": 3, "split.count": 2}
         write_metadata(self.model, other)
         before = self.load(execution_mode="hybrid")
-        code, _, body = self.request("POST", "/api/v1/model/load",
-                                    {"model": str(self.model), "execution_mode": "hybrid", "expert_cache_mib": 64})
-        self.assertEqual(code, 400, body)
-        self.assertIn("32 MiB residency", body.decode())
-        self.assertEqual(self.runtime.status()["hybrid_plan_sha256"], before["hybrid_plan_sha256"])
-        self.assertTrue(self.runtime.status()["hybrid_verified"])
+        for mode, expected_code, message in (("auto", 400, "32 MiB residency"),
+                                             ("hybrid", 409, "Unload the current model")):
+            with self.subTest(mode=mode):
+                code, _, body = self.request("POST", "/api/v1/model/load",
+                                            {"model": str(self.model), "execution_mode": mode,
+                                             "expert_cache_mib": 64})
+                self.assertEqual(code, expected_code, body)
+                self.assertIn(message, body.decode())
+                status = self.runtime.status()
+                self.assertEqual(status["hybrid_plan_sha256"], before["hybrid_plan_sha256"])
+                self.assertEqual(status["expert_cache_mib"], 32)
+                self.assertTrue(status["hybrid_verified"])
 
     def test_generic_options_are_validated_and_preserve_auto_plan_defaults(self):
         self.hybrid_runtime()
