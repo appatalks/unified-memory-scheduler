@@ -1,0 +1,328 @@
+diff --git a/ggml/src/ggml-cuda/ggml-cuda.cu b/ggml/src/ggml-cuda/ggml-cuda.cu
+index 7c45d0d..09e99c9 100644
+--- a/ggml/src/ggml-cuda/ggml-cuda.cu
++++ b/ggml/src/ggml-cuda/ggml-cuda.cu
+@@ -33,6 +33,7 @@
+ #include "ggml-cuda/mmq.cuh"
+ #include "ggml-cuda/mmvf.cuh"
+ #include "ggml-cuda/mmvq.cuh"
++#include "ggml-cuda/mmvq-f32.cuh"
+ #include "ggml-cuda/moe-weighted-reduction.cuh"
+ #include "ggml-cuda/norm.cuh"
+ #include "ggml-cuda/opt-step-adamw.cuh"
+@@ -172,6 +173,11 @@ static bool ggml_cuda_fusion_disabled() {
+     return disabled;
+ }
+ 
++static bool ggml_cuda_topk_fusion_disabled() {
++    static const bool disabled = ggml_cuda_env_flag("GGML_CUDA_DISABLE_TOPK_FUSION");
++    return disabled;
++}
++
+ static bool ggml_cuda_p2p_enabled() {
+     static const bool enabled = ggml_cuda_env_set("GGML_CUDA_P2P");
+     return enabled;
+@@ -1769,6 +1775,8 @@ static bool ggml_cuda_should_fuse_mul_mat(const ggml_tensor * ffn_up,
+     if (!is_mul_mat && !is_mul_mat_id) {
+         return false;
+     }
++    if (is_mul_mat_id && (ggml_cuda_mmvq_f32_requires_unfused(ffn_up) ||
++                         ggml_cuda_mmvq_f32_requires_unfused(ffn_gate))) return false;
+ 
+     const ggml_op expected_bias_op = is_mul_mat ? GGML_OP_ADD : GGML_OP_ADD_ID;
+     const ggml_tensor * ffn_up_bias_src   = has_scale ? ffn_up_scale   : ffn_up;
+@@ -1867,6 +1875,7 @@ static bool ggml_cuda_should_fuse_mul_mat_vec_f(const ggml_tensor * tensor) {
+ }
+ 
+ static bool ggml_cuda_should_fuse_mul_mat_vec_q(const ggml_tensor * tensor) {
++    if (ggml_cuda_mmvq_f32_requires_unfused(tensor)) return false;
+     ggml_tensor *       src0 = tensor->src[0];
+     ggml_tensor *       src1 = tensor->src[1];
+     const ggml_tensor * dst  = tensor;
+@@ -2005,6 +2014,7 @@ static void ggml_cuda_mul_mat(ggml_backend_cuda_context & ctx, const ggml_tensor
+ // returns true when ggml_cuda_mul_mat_id takes the fallback path that requires stream synchronization
+ // [TAG_MUL_MAT_ID_CUDA_GRAPHS]
+ static bool ggml_cuda_mul_mat_id_needs_sync(const ggml_tensor * dst, const int cc) {
++    if (ggml_cuda_supports_mmvq_f32(dst)) return false;
+     const ggml_tensor * src0 = dst->src[0];
+     const ggml_tensor * src1 = dst->src[1];
+ 
+@@ -2041,6 +2051,11 @@ static void ggml_cuda_mul_mat_id(ggml_backend_cuda_context & ctx, ggml_tensor *
+     GGML_ASSERT(src1->type == GGML_TYPE_F32);
+     GGML_ASSERT(dst->type  == GGML_TYPE_F32);
+ 
++    if (ggml_cuda_supports_mmvq_f32(dst)) {
++        ggml_cuda_mul_mat_vec_q_f32(ctx, dst);
++        return;
++    }
++
+     GGML_TENSOR_BINARY_OP_LOCALS
+ 
+     const int cc = ggml_cuda_info().devices[ggml_cuda_get_device()].cc;
+@@ -3723,8 +3738,9 @@ static int ggml_cuda_try_fuse(ggml_backend_cuda_context * cuda_ctx, ggml_cgraph
+     }
+ 
+     //topk-moe
+-    if (cgraph->nodes[i]->op == GGML_OP_UNARY || cgraph->nodes[i]->op == GGML_OP_SOFT_MAX ||
+-            cgraph->nodes[i]->op == GGML_OP_ARGSORT) {
++    if (!ggml_cuda_topk_fusion_disabled() &&
++        (cgraph->nodes[i]->op == GGML_OP_UNARY || cgraph->nodes[i]->op == GGML_OP_SOFT_MAX ||
++         cgraph->nodes[i]->op == GGML_OP_ARGSORT)) {
+         ggml_cuda_topk_moe_args args;
+         const bool              can_fuse = ggml_cuda_topk_moe_fusion(cgraph, i, args);
+         std::vector<ggml_op>    ops;
+@@ -5493,7 +5509,7 @@ static bool ggml_backend_cuda_device_supports_op(ggml_backend_dev_t dev, const g
+                     return false;
+                 }
+                 if (op->op == GGML_OP_MUL_MAT_ID && ggml_get_op_params_i32(op, 3) == GGML_PREC_F32) {
+-                    return false;
++                    return ggml_cuda_supports_mmvq_f32(op);
+                 }
+ #ifdef GGML_USE_MUSA
+                 const int cc = ggml_cuda_info().devices[dev_ctx->device].cc;
+diff --git a/ggml/src/ggml-cuda/mmvq-f32.cu b/ggml/src/ggml-cuda/mmvq-f32.cu
+new file mode 100644
+index 0000000..2bc7715
+--- /dev/null
++++ b/ggml/src/ggml-cuda/mmvq-f32.cu
+@@ -0,0 +1,227 @@
++#include "mmvq-f32.cuh"
++#include "dequantize.cuh"
++
++#include <cstring>
++#include <mutex>
++
++static bool mmvq_f32_enabled() {
++    static const bool enabled = [] {
++        const char * value = std::getenv("GGML_CUDA_MMVQ_F32");
++        if (!value || std::strcmp(value, "0") == 0) {
++            const char * native = std::getenv("GGML_CUDA_MMVQ_Q8_K");
++            if (native && std::strcmp(native, "0") != 0) {
++                GGML_ABORT("GGML_CUDA_MMVQ_Q8_K requires GGML_CUDA_MMVQ_F32=1");
++            }
++            return false;
++        }
++        if (std::strcmp(value, "1") == 0) return true;
++        GGML_ABORT("GGML_CUDA_MMVQ_F32 must be 0 or 1");
++    }();
++    return enabled;
++}
++
++static bool mmvq_native_q8_k() {
++    static const bool enabled = [] {
++        const char * value = std::getenv("GGML_CUDA_MMVQ_Q8_K");
++        if (!value || std::strcmp(value, "0") == 0) return false;
++        if (std::strcmp(value, "1") != 0) GGML_ABORT("GGML_CUDA_MMVQ_Q8_K must be 0 or 1");
++        if (!mmvq_f32_enabled()) GGML_ABORT("GGML_CUDA_MMVQ_Q8_K requires GGML_CUDA_MMVQ_F32=1");
++        return true;
++    }();
++    return enabled;
++}
++
++bool ggml_cuda_mmvq_f32_requires_unfused(const ggml_tensor * dst) {
++    if (!mmvq_f32_enabled() || dst->op != GGML_OP_MUL_MAT_ID || !dst->src[0]) return false;
++    const auto type = dst->src[0]->type;
++    if (mmvq_native_q8_k()) return type == GGML_TYPE_IQ3_S || type == GGML_TYPE_IQ4_XS || type == GGML_TYPE_Q6_K;
++    return ggml_get_op_params_i32(dst, 3) == GGML_PREC_F32 &&
++           (type == GGML_TYPE_IQ4_XS || type == GGML_TYPE_Q6_K);
++}
++
++bool ggml_cuda_supports_mmvq_f32(const ggml_tensor * dst) {
++#if defined(GGML_USE_HIP) || defined(GGML_USE_MUSA)
++    GGML_UNUSED(dst);
++    return false;
++#else
++    if (!mmvq_f32_enabled() || dst->op != GGML_OP_MUL_MAT_ID) return false;
++    const bool native_activations = mmvq_native_q8_k();
++    if (!native_activations && ggml_get_op_params_i32(dst, 3) != GGML_PREC_F32) return false;
++    const auto * w = dst->src[0];
++    const auto * x = dst->src[1];
++    const auto * ids = dst->src[2];
++    if (!w || !x || !ids ||
++        (w->type != GGML_TYPE_IQ4_XS && w->type != GGML_TYPE_Q6_K &&
++         !(native_activations && w->type == GGML_TYPE_IQ3_S)) ||
++        x->type != GGML_TYPE_F32 || ids->type != GGML_TYPE_I32 || dst->type != GGML_TYPE_F32 ||
++        w->ne[0] <= 0 || w->ne[0] > (1 << 20) || w->ne[0] % QK_K ||
++        w->ne[1] <= 0 || w->ne[1] > (1 << 20) || w->ne[2] <= 0 || w->ne[2] > 65536 ||
++        w->ne[3] != 1 || !ggml_is_contiguous(w) || !ggml_is_contiguous(dst) ||
++        x->ne[0] != w->ne[0] || x->ne[1] <= 0 || x->ne[2] <= 0 || x->ne[2] > 32 || x->ne[3] != 1 ||
++        ids->ne[0] <= 0 || ids->ne[0] > 256 || ids->ne[0] % x->ne[1] ||
++        ids->ne[1] != x->ne[2] || ids->ne[2] != 1 || ids->ne[3] != 1 ||
++        x->nb[0] != sizeof(float) || x->nb[1] % sizeof(float) || x->nb[2] % sizeof(float) ||
++        x->nb[1] < size_t(x->ne[0])*sizeof(float) ||
++        x->nb[1] > size_t(INT64_MAX)/size_t(x->ne[1]) ||
++        x->nb[2] > size_t(INT64_MAX)/32 ||
++        x->nb[2] < x->nb[1]*size_t(x->ne[1]) ||
++        ids->nb[0] != sizeof(int32_t) || ids->nb[1] % sizeof(int32_t) ||
++        ids->nb[1] > size_t(INT64_MAX)/32 ||
++        ids->nb[1] < size_t(ids->ne[0])*sizeof(int32_t)) return false;
++    if (native_activations && uint64_t(x->ne[0])*x->ne[1]*x->ne[2]*sizeof(float) > 64*1024*1024) return false;
++    return dst->ne[0] == w->ne[1] && dst->ne[1] == ids->ne[0] &&
++           dst->ne[2] == x->ne[2] && dst->ne[3] == 1;
++#endif
++}
++
++#if !defined(GGML_USE_HIP) && !defined(GGML_USE_MUSA)
++static __global__ void quantize_native_q8_k(
++        const float * input, float * output, int n_input, int columns,
++        int64_t column_stride, int64_t token_stride) {
++    __shared__ float values[QK_K];
++    __shared__ float maximum[QK_K];
++    __shared__ int first[QK_K];
++    __shared__ int invalid;
++    const int index = threadIdx.x;
++    const int column = blockIdx.y;
++    const int token = blockIdx.z;
++    const float value = input[int64_t(token)*token_stride + int64_t(column)*column_stride + blockIdx.x*QK_K + index];
++    if (index == 0) invalid = 0;
++    __syncthreads();
++    if (!isfinite(value)) atomicExch(&invalid, 1);
++    __syncthreads();
++    if (invalid) {
++        if (index == 0) printf("Native Q8_K activations require finite FP32 values\n");
++        __trap();
++    }
++    values[index] = value;
++    maximum[index] = fabsf(value);
++    first[index] = index;
++    __syncthreads();
++    for (int offset = QK_K/2; offset; offset >>= 1) {
++        if (index < offset && (maximum[index + offset] > maximum[index] ||
++            (maximum[index + offset] == maximum[index] && first[index + offset] < first[index]))) {
++            maximum[index] = maximum[index + offset];
++            first[index] = first[index + offset];
++        }
++        __syncthreads();
++    }
++    float quantized = 0;
++    if (maximum[0] != 0) {
++        const float inverse = __fdiv_rn(-127.0f, values[first[0]]);
++        const int q = min(127, __float2int_rn(__fmul_rn(inverse, value)));
++        quantized = __fmul_rn(__fdiv_rn(1.0f, inverse), float(q));
++    }
++    output[(int64_t(token)*columns + column)*n_input + blockIdx.x*QK_K + index] = quantized;
++}
++
++template <ggml_type type, int threads_per_row, int rows_per_block>
++static __global__ void mul_mat_vec_q_f32(
++        const void * weights, const float * input, const int32_t * ids, float * output,
++        int n_input, int n_output, int active, int bank_count, int input_columns,
++        int64_t input_column_stride, int64_t input_token_stride, int64_t ids_token_stride) {
++    __shared__ float tile[rows_per_block][QK_K];
++    __shared__ float partial[rows_per_block][threads_per_row / 32];
++    const int rank = blockIdx.y;
++    const int token = blockIdx.z;
++    const int expert = ids[int64_t(token)*ids_token_stride + rank];
++    const int row_in_block = threadIdx.x / threads_per_row;
++    const int lane = threadIdx.x % threads_per_row;
++    const int row = blockIdx.x*rows_per_block + row_in_block;
++    if (expert < -1 || expert >= bank_count) {
++        if (threadIdx.x == 0 && blockIdx.x == 0) {
++            printf("FP32 expert matvec: invalid expert ID %d for %d banks\n", expert, bank_count);
++        }
++        __trap();
++    }
++    if (expert == -1) {
++        if (lane == 0 && row < n_output) output[(int64_t(token)*active + rank)*n_output + row] = 0;
++        return;
++    }
++    const int blocks_per_row = n_input / QK_K;
++    const int64_t first_block = (int64_t(expert)*n_output + row)*blocks_per_row;
++    const float * x = input + int64_t(token)*input_token_stride + (rank % input_columns)*input_column_stride;
++    float sum = 0;
++    for (int block = 0; block < blocks_per_row; ++block) {
++        if (row < n_output) {
++            if constexpr (type == GGML_TYPE_IQ4_XS) {
++                dequantize_iq4_xs<float>(weights, first_block + block, tile[row_in_block], lane);
++            } else if constexpr (type == GGML_TYPE_Q6_K) {
++                dequantize_q6_K<float>(weights, first_block + block, tile[row_in_block], lane);
++            } else {
++                dequantize_iq3_s<float>(weights, first_block + block, tile[row_in_block], lane);
++            }
++        }
++        if constexpr (threads_per_row == 32) __syncwarp();
++        else __syncthreads();
++        if (row < n_output) {
++            for (int index = lane; index < QK_K; index += threads_per_row) {
++                sum = fmaf(tile[row_in_block][index], x[block*QK_K + index], sum);
++            }
++        }
++        if constexpr (threads_per_row == 32) __syncwarp();
++        else __syncthreads();
++    }
++    for (int offset = 16; offset; offset >>= 1) sum += __shfl_down_sync(0xffffffff, sum, offset);
++    if constexpr (threads_per_row == 32) {
++        if (lane == 0 && row < n_output) output[(int64_t(token)*active + rank)*n_output + row] = sum;
++        return;
++    }
++    if (lane % 32 == 0) partial[row_in_block][lane / 32] = sum;
++    __syncthreads();
++    if (lane == 0 && row < n_output) {
++        if constexpr (threads_per_row == 64) sum += partial[row_in_block][1];
++        output[(int64_t(token)*active + rank)*n_output + row] = sum;
++    }
++}
++#endif
++
++void ggml_cuda_mul_mat_vec_q_f32(ggml_backend_cuda_context & ctx, ggml_tensor * dst) {
++#if defined(GGML_USE_HIP) || defined(GGML_USE_MUSA)
++    GGML_UNUSED_VARS(ctx, dst);
++    GGML_ABORT("FP32 expert matvec requires CUDA");
++#else
++    GGML_ASSERT(ggml_cuda_supports_mmvq_f32(dst));
++    const auto * w = dst->src[0];
++    const auto * x = dst->src[1];
++    const auto * ids = dst->src[2];
++    static std::once_flag notice;
++    const bool native_activations = mmvq_native_q8_k();
++    std::call_once(notice, [native_activations] {
++        GGML_LOG_WARN("ggml_cuda_mmvq_f32: experimental FP32-source expert matvec active; no expanded-weight tensor; activations=%s\n",
++                      native_activations ? "CPU Q8_K semantics with FP32 scales" : "unquantized FP32");
++    });
++    const int rows = w->type == GGML_TYPE_Q6_K ? 2 : 4;
++    const dim3 grid((w->ne[1] + rows - 1) / rows, ids->ne[0], x->ne[2]);
++    const float * input = static_cast<const float *>(x->data);
++    int64_t column_stride = x->nb[1]/sizeof(float);
++    int64_t token_stride = x->nb[2]/sizeof(float);
++    ggml_cuda_pool_alloc<float> converted(ctx.pool());
++    if (native_activations) {
++        converted.alloc(x->ne[0]*x->ne[1]*x->ne[2]);
++        quantize_native_q8_k<<<dim3(x->ne[0]/QK_K, x->ne[1], x->ne[2]), QK_K, 0, ctx.stream()>>>(
++            input, converted.get(), x->ne[0], x->ne[1], column_stride, token_stride);
++        CUDA_CHECK(cudaGetLastError());
++        input = converted.get();
++        column_stride = x->ne[0];
++        token_stride = x->ne[0]*x->ne[1];
++    }
++    if (w->type == GGML_TYPE_IQ4_XS) {
++        mul_mat_vec_q_f32<GGML_TYPE_IQ4_XS, 32, 4><<<grid, 128, 0, ctx.stream()>>>(
++            w->data, input, static_cast<const int32_t *>(ids->data),
++            static_cast<float *>(dst->data), w->ne[0], w->ne[1], ids->ne[0], w->ne[2], x->ne[1],
++            column_stride, token_stride, ids->nb[1]/sizeof(int32_t));
++    } else if (w->type == GGML_TYPE_Q6_K) {
++        mul_mat_vec_q_f32<GGML_TYPE_Q6_K, 64, 2><<<grid, 128, 0, ctx.stream()>>>(
++            w->data, input, static_cast<const int32_t *>(ids->data),
++            static_cast<float *>(dst->data), w->ne[0], w->ne[1], ids->ne[0], w->ne[2], x->ne[1],
++            column_stride, token_stride, ids->nb[1]/sizeof(int32_t));
++    } else {
++        mul_mat_vec_q_f32<GGML_TYPE_IQ3_S, 32, 4><<<grid, 128, 0, ctx.stream()>>>(
++            w->data, input, static_cast<const int32_t *>(ids->data),
++            static_cast<float *>(dst->data), w->ne[0], w->ne[1], ids->ne[0], w->ne[2], x->ne[1],
++            column_stride, token_stride, ids->nb[1]/sizeof(int32_t));
++    }
++    CUDA_CHECK(cudaGetLastError());
++#endif
++}
+diff --git a/ggml/src/ggml-cuda/mmvq-f32.cuh b/ggml/src/ggml-cuda/mmvq-f32.cuh
+new file mode 100644
+index 0000000..e4e5fc8
+--- /dev/null
++++ b/ggml/src/ggml-cuda/mmvq-f32.cuh
+@@ -0,0 +1,7 @@
++#pragma once
++
++#include "common.cuh"
++
++bool ggml_cuda_supports_mmvq_f32(const ggml_tensor * dst);
++bool ggml_cuda_mmvq_f32_requires_unfused(const ggml_tensor * dst);
++void ggml_cuda_mul_mat_vec_q_f32(ggml_backend_cuda_context & ctx, ggml_tensor * dst);

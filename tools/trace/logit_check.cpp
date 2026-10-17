@@ -35,6 +35,7 @@ struct Diagnostic {
     std::string error;
     bool all_layers = false;
     bool attention_details = false;
+    bool expert_details = false;
     std::set<std::string> layers;
     std::map<std::string, size_t> occurrences;
     size_t captured_bytes = 0;
@@ -64,6 +65,13 @@ static bool diagnostic_callback(ggml_tensor * tensor, bool ask, void * data) noe
          prefix == "linear_attn_out" || prefix == "attn_output" || prefix == "ffn_out" ||
          prefix == "ffn_shexp_gated" || prefix == "l_last" || prefix == "ple_gated_value" ||
          prefix == "ple_conv_out" ||
+         (diagnostic.expert_details &&
+          (prefix == "ffn_moe_gate_up" || prefix == "ffn_moe_gate" || prefix == "ffn_moe_up" ||
+           prefix == "ffn_moe_swiglu" || prefix == "ffn_moe_down" ||
+           prefix == "hybrid_cpu_gate_up" || prefix == "hybrid_cpu_gate" || prefix == "hybrid_cpu_up" ||
+           prefix == "hybrid_cpu_swiglu" || prefix == "hybrid_cpu_down" ||
+           prefix == "hybrid_gpu_gate_up" || prefix == "hybrid_gpu_gate" || prefix == "hybrid_gpu_up" ||
+           prefix == "hybrid_gpu_swiglu" || prefix == "hybrid_gpu_down")) ||
          (diagnostic.attention_details &&
           (prefix == "Qcur_full" || prefix == "Qcur_normed" || prefix == "Kcur_normed" ||
            prefix == "Qcur" || prefix == "Kcur" || prefix == "Vcur" || prefix == "indexer_q" ||
@@ -183,12 +191,14 @@ static int run(int argc, char ** argv) {
     int steps = 32;
     int decode_group = 1;
     int64_t template_epoch = 0;
+    std::string reasoning_effort = "low";
     bool eval_callback_check = false;
     bool sync_hybrid_gpu = false;
     bool all_layer_diagnostics = false;
     bool cpu_reference = false;
     int diagnostic_layer_limit = -1;
     bool attention_details = false;
+    bool expert_details = false;
     std::vector<char *> backend_args{argv[0]};
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -204,11 +214,15 @@ static int run(int argc, char ** argv) {
             attention_details = true;
             continue;
         }
+        if (arg == "--debug-experts") {
+            expert_details = true;
+            continue;
+        }
         if (arg == "--help") {
             std::cout << "Usage: vrambridge-logit-check --corpus corpus.jsonl --output report.json "
                          "(--reference-out logits.bin | --reference-in logits.bin) [--steps 32] [--batch-check 1] "
-                         "[--template-epoch UNIX_SECONDS] "
-                         "[--debug-output tensors.json [--debug-all-layers | --debug-layer-limit N] [--debug-attention]] [--cpu-reference] "
+                         "[--template-epoch UNIX_SECONDS] [--reasoning-effort default|none|low|medium|high] "
+                         "[--debug-output tensors.json [--debug-all-layers | --debug-layer-limit N] [--debug-attention] [--debug-experts]] [--cpu-reference] "
                          "[pinned backend model arguments]\n"
                          "Compares full teacher-forced logits, never generation throughput. Reference contains token IDs; keep private.\n";
             return 0;
@@ -226,7 +240,8 @@ static int run(int argc, char ** argv) {
         }
         if (arg == "--corpus" || arg == "--output" || arg == "--reference-out" ||
             arg == "--reference-in" || arg == "--steps" || arg == "--debug-output" ||
-            arg == "--batch-check" || arg == "--debug-layer-limit" || arg == "--template-epoch") {
+            arg == "--batch-check" || arg == "--debug-layer-limit" || arg == "--template-epoch" ||
+            arg == "--reasoning-effort") {
             require(++i < argc, "Missing checker option value");
             const std::string value = argv[i];
             if (arg == "--corpus") corpus = value;
@@ -234,6 +249,12 @@ static int run(int argc, char ** argv) {
             else if (arg == "--reference-out") reference_out = value;
             else if (arg == "--reference-in") reference_in = value;
             else if (arg == "--debug-output") debug_output = value;
+            else if (arg == "--reasoning-effort") {
+                require(value == "default" || value == "none" || value == "low" ||
+                        value == "medium" || value == "high",
+                        "Reasoning effort must be default, none, low, medium, or high");
+                reasoning_effort = value;
+            }
             else if (arg == "--template-epoch") {
                 size_t consumed = 0;
                 template_epoch = std::stoll(value, &consumed);
@@ -274,6 +295,7 @@ static int run(int argc, char ** argv) {
     require(diagnostic_layer_limit < 0 || !debug_output.empty(), "--debug-layer-limit requires --debug-output");
     require(!all_layer_diagnostics || diagnostic_layer_limit < 0, "Choose all layers or a layer limit, not both");
     require(!attention_details || !debug_output.empty(), "--debug-attention requires --debug-output");
+    require(!expert_details || !debug_output.empty(), "--debug-experts requires --debug-output");
     std::ifstream prompts(corpus);
     require(prompts.good(), "Cannot open corpus");
     std::vector<json> requests;
@@ -296,6 +318,10 @@ static int run(int argc, char ** argv) {
     require(prompts.eof() && !requests.empty() && requests.size() <= 20, "Invalid held-out corpus");
     json reference_header;
     File binary = reference_in.empty() ? File(nullptr) : open_reference(reference_in, reference_header, requests.size(), steps);
+    if (!reference_in.empty()) {
+        require(reference_header.value("reasoning_effort", json("low")) == reasoning_effort,
+                "Reference reasoning effort differs");
+    }
     const std::string identity = llama_commit();
     require(identity.size() >= 7 &&
             std::string("620d2225cc436ab0b001e3200e590e3b286ef9ab").rfind(identity, 0) == 0,
@@ -308,6 +334,7 @@ static int run(int argc, char ** argv) {
     diagnostic.sync_hybrid_gpu = sync_hybrid_gpu;
     diagnostic.all_layers = all_layer_diagnostics;
     diagnostic.attention_details = attention_details;
+    diagnostic.expert_details = expert_details;
     params.sampling.temp = 0;
     require(common_params_parse(static_cast<int>(backend_args.size()), backend_args.data(), params,
                                 LLAMA_EXAMPLE_COMMON), "Invalid backend options");
@@ -365,6 +392,7 @@ static int run(int argc, char ** argv) {
                    {"context", llama_n_ctx(ctx)}, {"model", fs::path(params.model.path).filename().string()},
                    {"contains_token_ids", true}, {"backend_commit", llama_commit()}};
     if (cpu_reference) header["cpu_reference"] = true;
+    if (reasoning_effort != "low") header["reasoning_effort"] = reasoning_effort;
     if (!reference_out.empty()) {
         if (!reference_out.parent_path().empty()) fs::create_directories(reference_out.parent_path());
         binary.reset(std::fopen((reference_out.string() + ".part").c_str(), "wx"));
@@ -382,6 +410,7 @@ static int run(int argc, char ** argv) {
                    {"teacher_forced", true}, {"steps_per_request", steps}, {"vocab", count},
                    {"decode_block_size", decode_group},
                    {"template_epoch_seconds", template_epoch},
+                   {"reasoning_effort", reasoning_effort},
                    {"cpu_reference", cpu_reference},
                    {"inactive_eval_callback", eval_callback_check},
                    {"mode", reference_out.empty() ? "reference_comparison" : "reference_creation"},
@@ -396,7 +425,9 @@ static int run(int argc, char ** argv) {
         common_chat_msg system; system.role = "system"; system.content = "You are a helpful assistant.";
         common_chat_msg user; user.role = "user"; user.content = request.at("prompt").get<std::string>();
         chat.messages = {system, user};
-        chat.chat_template_kwargs["reasoning_effort"] = "\"low\"";
+        if (reasoning_effort != "default") {
+            chat.chat_template_kwargs["reasoning_effort"] = json(reasoning_effort).dump();
+        }
         chat.now = std::chrono::system_clock::time_point{std::chrono::seconds{template_epoch}};
         const auto rendered = common_chat_templates_apply(templates.get(), chat);
         const auto tokens = common_tokenize(ctx, rendered.prompt.str(), false, true);

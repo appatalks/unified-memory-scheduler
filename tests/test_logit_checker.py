@@ -83,6 +83,11 @@ class LogitCheckerInputs(unittest.TestCase):
         self.rejected(result)
         self.assertIn("--debug-attention requires --debug-output", result.stderr)
 
+    def test_expert_diagnostics_requires_output(self):
+        result = self.invoke("--debug-experts")
+        self.rejected(result)
+        self.assertIn("--debug-experts requires --debug-output", result.stderr)
+
     def test_template_epoch_is_bounded_before_backend_initialization(self):
         for value in ("-1", "1.5", "12tail", "9223372037", "99999999999999999999"):
             with self.subTest(value=value):
@@ -96,6 +101,32 @@ class LogitCheckerInputs(unittest.TestCase):
         result = self.invoke("--template-epoch", "0")
         self.rejected(result)
         self.assertIn("Reference magic mismatch", result.stderr)
+
+    def test_reasoning_effort_is_validated_before_backend_initialization(self):
+        for value in ("", "invalid", "LOW", "null"):
+            with self.subTest(value=value):
+                result = self.invoke("--reasoning-effort", value)
+                self.rejected(result)
+                self.assertIn("Reasoning effort must be", result.stderr)
+        self.reference.write_bytes(b"BADMAGIC")
+        for value in ("default", "none", "low", "medium", "high"):
+            with self.subTest(value=value):
+                result = self.invoke("--reasoning-effort", value)
+                self.rejected(result)
+                self.assertIn("Reference magic mismatch", result.stderr)
+
+    def test_reference_reasoning_effort_must_match(self):
+        header = {"schema_version": 1, "steps": 32, "requests": 1, "vocab": 2, "context": 128,
+                  "model": "synthetic.gguf", "backend_commit": "620d222", "contains_token_ids": True}
+        body = struct.pack("=Qi", 1, 1) + struct.pack("=iff", 1, 0.25, 0.5) * 32
+        for recorded, requested in ((None, "none"), ("none", "low"), ("default", "none"), (8, "low")):
+            with self.subTest(recorded=recorded, requested=requested):
+                metadata = header if recorded is None else {**header, "reasoning_effort": recorded}
+                packed = json.dumps(metadata).encode()
+                self.reference.write_bytes(b"VRLOG001" + struct.pack("=Q", len(packed)) + packed + body + b"ENDLOG01")
+                result = self.invoke("--reasoning-effort", requested)
+                self.rejected(result)
+                self.assertIn("Reference reasoning effort differs", result.stderr)
 
     def test_invalid_or_duplicate_corpus_records(self):
         for records in ([], [{**self.record, "category": "unknown"}],

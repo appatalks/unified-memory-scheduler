@@ -592,12 +592,21 @@ reference, select its original template date: prompt-token alignment remains
 mandatory, and the checker never substitutes or ignores a mismatched prompt.
 Reports record the selected timestamp. Date-free templates are unaffected.
 
+The checker requests low reasoning effort by default. Use `--reasoning-effort
+default` to omit that template override, or choose `none`, `low`, `medium`, or
+`high` when supported by the model template. References and reports record
+non-default settings; legacy references retain their original low setting.
+The checker rejects mismatched reasoning settings before backend initialization.
+
 `--eval-callback-check` installs an inactive callback; it does **not** serialize
 execution. The old `--serialized-check` spelling is a deprecated alias with an
 explicit warning. `--debug-output` and `--sync-hybrid-gpu` are diagnostics,
 not optimized serving settings.
 `--debug-all-layers` requires `--debug-output` and extends the selected
-intermediate tensors to every layer. Capture remains bounded to one million
+intermediate tensors to every layer. `--debug-experts` additionally captures
+bounded gate/up, activation and down-projection intermediates; it also requires
+`--debug-output`. Active capture can perturb scheduling and is diagnostic only.
+Capture remains bounded to one million
 elements and a 16 MiB raw span per tensor, with a 64 MiB cumulative raw-span
 limit. Strided F32/I32 views are gathered logically; unsupported types and
 capture failures are errors, not silently omitted tensors. Serialized JSON
