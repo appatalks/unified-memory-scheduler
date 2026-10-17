@@ -91,13 +91,17 @@ def validate_sample(timings: dict, usage: dict, tokens: int, elapsed: float, don
 
 
 def sample(base: str, tokens: int, headers: dict[str, str] | None = None, *,
-           prompt: str = PROMPT, ignore_eos: bool = True) -> dict:
+           prompt: str = PROMPT, ignore_eos: bool = True, reasoning_effort: str | None = "low") -> dict:
+    if reasoning_effort not in (None, "low", "medium", "high"):
+        raise ValueError("Reasoning effort must be low, medium, high, or None for the model default.")
     payload = {
         "model": "local-model", "messages": [{"role": "user", "content": prompt}],
         "max_tokens": tokens, "ignore_eos": ignore_eos, "temperature": 0, "seed": 42,
-        "reasoning_effort": "low", "cache_prompt": False, "stream": True,
+        "cache_prompt": False, "stream": True,
         "stream_options": {"include_usage": True}, "timings_per_token": True,
     }
+    if reasoning_effort is not None:
+        payload["reasoning_effort"] = reasoning_effort
     request = urllib.request.Request(base + "/v1/chat/completions", json.dumps(payload).encode(),
                                      {"Content-Type": "application/json", **(headers or {})})
     started = time.monotonic()

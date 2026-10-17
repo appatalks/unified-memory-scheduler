@@ -1,0 +1,1079 @@
+{
+  "schema_version": 1,
+  "target_weights_unchanged": true,
+  "all_selected_experts_preserved": true,
+  "performance_target_met": false,
+  "quality_qualified": false,
+  "hardware": {
+    "cpu": "Ryzen9 9950X",
+    "gpu": "RTX5070 Ti16GB",
+    "ram_gib": 123.48
+  },
+  "models": [
+    "GPT-OSS-120B MXFP4",
+    "Qwen3.8-Flash-Next GSQ-RCO IQ3_S"
+  ],
+  "context": 16384,
+  "generation_threads": 8,
+  "prompt_threads": 16,
+  "exported_patch_sha256": "98fb749abbef50744ff9a198e8142d5f80931a817058356778c86bd8d5f1f000",
+  "cpu_shared_gpt_screen": {
+    "source_patch_sha256": "7c371aaf16249abdf5d3bb222eb39d58bcb1f7135c12159e8bfec5cdd8a7b002",
+    "restore_ready": true,
+    "runs": [
+      {
+        "profile": "prepare-control944-big",
+        "status": "ok",
+        "budget_mib": 12000,
+        "median_tok_s": 46.395644880063884,
+        "tok_s": [
+          46.395644880063884,
+          43.32568404506843,
+          47.03447062575922
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "input_tokens": [
+          98,
+          98,
+          98
+        ],
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 0,
+        "route_packets": null,
+        "copy_breakdown": []
+      },
+      {
+        "profile": "prepare-shared944-big",
+        "status": "ok",
+        "budget_mib": 12000,
+        "median_tok_s": 45.93912346128227,
+        "tok_s": [
+          47.27773939705628,
+          44.314330828055084,
+          45.93912346128227
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "input_tokens": [
+          98,
+          98,
+          98
+        ],
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 57554,
+        "route_packets": null,
+        "copy_breakdown": []
+      }
+    ],
+    "frozen_gates": [
+      {
+        "profile": "prepare-control944-big",
+        "passed": true,
+        "positions": 96,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      },
+      {
+        "profile": "prepare-shared944-big",
+        "passed": true,
+        "positions": 96,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      }
+    ]
+  },
+  "cpu_shared_qwen_screen": {
+    "source_patch_sha256": "98fb749abbef50744ff9a198e8142d5f80931a817058356778c86bd8d5f1f000",
+    "restore_ready": true,
+    "runs": [
+      {
+        "profile": "qwen-causal",
+        "status": "ok",
+        "budget_mib": 8192,
+        "median_tok_s": 43.141084199361096,
+        "tok_s": [
+          41.38238715922918,
+          43.141084199361096,
+          43.90179770108101
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "input_tokens": [
+          72,
+          72,
+          72
+        ],
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 0,
+        "route_packets": null,
+        "copy_breakdown": []
+      },
+      {
+        "profile": "qwen-prepare",
+        "status": "ok",
+        "budget_mib": 8192,
+        "median_tok_s": 43.49933281541098,
+        "tok_s": [
+          42.10133644962113,
+          43.97322173231549,
+          43.49933281541098
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "input_tokens": [
+          72,
+          72,
+          72
+        ],
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 79958,
+        "route_packets": null,
+        "copy_breakdown": []
+      }
+    ],
+    "frozen_gates": []
+  },
+  "packet_initial_screen": {
+    "source_patch_sha256": "85c860b80099fc62ee898b1a353882232d1412d02409784f199f35696be5dd09",
+    "restore_ready": true,
+    "runs": [
+      {
+        "profile": "packet-control944-big",
+        "status": "ok",
+        "budget_mib": 12000,
+        "median_tok_s": 45.89366379845564,
+        "tok_s": [
+          45.89366379845564,
+          41.92325070292568,
+          46.822023899403966
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "input_tokens": [
+          98,
+          98,
+          98
+        ],
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 0,
+        "route_packets": null,
+        "copy_breakdown": [
+          {
+            "direction": "H2D",
+            "calls": 75936,
+            "bytes": 2682100384,
+            "dst_wait_call_us": 3173737,
+            "src_sync_us": 1272,
+            "sync_copy_call_us": 773308,
+            "async_attempt_us": 8278,
+            "callback_call_us": 0,
+            "sync_copies": 75936,
+            "async_copies": 0
+          },
+          {
+            "direction": "D2H",
+            "calls": 170856,
+            "bytes": 657909504,
+            "dst_wait_call_us": 6444,
+            "src_sync_us": 5443174,
+            "sync_copy_call_us": 792705,
+            "async_attempt_us": 3250,
+            "callback_call_us": 0,
+            "sync_copies": 170856,
+            "async_copies": 0
+          }
+        ]
+      },
+      {
+        "profile": "packet-route944-big",
+        "status": "ok",
+        "budget_mib": 12000,
+        "median_tok_s": 40.51595258173295,
+        "tok_s": [
+          40.51595258173295,
+          39.012667770527464,
+          40.89192821470307
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "input_tokens": [
+          98,
+          98,
+          98
+        ],
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 0,
+        "route_packets": [
+          56959,
+          1822688
+        ],
+        "copy_breakdown": [
+          {
+            "direction": "H2D",
+            "calls": 75936,
+            "bytes": 2682100384,
+            "dst_wait_call_us": 48824,
+            "src_sync_us": 1139,
+            "sync_copy_call_us": 743719,
+            "async_attempt_us": 7868,
+            "callback_call_us": 0,
+            "sync_copies": 75936,
+            "async_copies": 0
+          },
+          {
+            "direction": "D2H",
+            "calls": 170856,
+            "bytes": 658820736,
+            "dst_wait_call_us": 6390,
+            "src_sync_us": 14574144,
+            "sync_copy_call_us": 810990,
+            "async_attempt_us": 3172,
+            "callback_call_us": 0,
+            "sync_copies": 170856,
+            "async_copies": 0
+          }
+        ]
+      }
+    ],
+    "frozen_gates": [
+      {
+        "profile": "packet-control944-big",
+        "passed": true,
+        "positions": 96,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      },
+      {
+        "profile": "packet-route944-big",
+        "passed": true,
+        "positions": 96,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      }
+    ]
+  },
+  "packet_complete_screen": {
+    "source_patch_sha256": "842b94b8d5bb32a41346044ea27ce05cb10c69dbe99dee1c7506acb3b97379db",
+    "restore_ready": true,
+    "runs": [
+      {
+        "profile": "packet-control944-big",
+        "status": "ok",
+        "budget_mib": 12000,
+        "median_tok_s": 45.76447272235517,
+        "tok_s": [
+          47.318285764399434,
+          42.976587560793426,
+          45.76447272235517
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "input_tokens": [
+          98,
+          98,
+          98
+        ],
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 0,
+        "route_packets": null,
+        "copy_breakdown": [
+          {
+            "direction": "H2D",
+            "calls": 75936,
+            "bytes": 2682100384,
+            "dst_wait_call_us": 3124285,
+            "src_sync_us": 1224,
+            "sync_copy_call_us": 748697,
+            "async_attempt_us": 8375,
+            "callback_call_us": 0,
+            "sync_copies": 75936,
+            "async_copies": 0
+          },
+          {
+            "direction": "D2H",
+            "calls": 170856,
+            "bytes": 657909504,
+            "dst_wait_call_us": 6344,
+            "src_sync_us": 5376185,
+            "sync_copy_call_us": 784004,
+            "async_attempt_us": 3235,
+            "callback_call_us": 0,
+            "sync_copies": 170856,
+            "async_copies": 0
+          }
+        ]
+      },
+      {
+        "profile": "packet-route944-big",
+        "status": "ok",
+        "budget_mib": 12000,
+        "median_tok_s": 46.31385771425281,
+        "tok_s": [
+          47.108459670596254,
+          43.63210297960783,
+          46.31385771425281
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "input_tokens": [
+          98,
+          98,
+          98
+        ],
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 0,
+        "route_packets": [
+          56959,
+          1822688
+        ],
+        "copy_breakdown": [
+          {
+            "direction": "H2D",
+            "calls": 75936,
+            "bytes": 2682100384,
+            "dst_wait_call_us": 3165583,
+            "src_sync_us": 1124,
+            "sync_copy_call_us": 734126,
+            "async_attempt_us": 7232,
+            "callback_call_us": 0,
+            "sync_copies": 75936,
+            "async_copies": 0
+          },
+          {
+            "direction": "D2H",
+            "calls": 113904,
+            "bytes": 657909504,
+            "dst_wait_call_us": 4346,
+            "src_sync_us": 5501808,
+            "sync_copy_call_us": 548673,
+            "async_attempt_us": 2204,
+            "callback_call_us": 0,
+            "sync_copies": 113904,
+            "async_copies": 0
+          }
+        ]
+      }
+    ],
+    "frozen_gates": [
+      {
+        "profile": "packet-control944-big",
+        "passed": true,
+        "positions": 96,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      },
+      {
+        "profile": "packet-route944-big",
+        "passed": true,
+        "positions": 96,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      }
+    ]
+  },
+  "packet_reverse_order_natural": {
+    "source_patch_sha256": "842b94b8d5bb32a41346044ea27ce05cb10c69dbe99dee1c7506acb3b97379db",
+    "restore_ready": true,
+    "runs": [
+      {
+        "profile": "packet-route944-big",
+        "status": "qualification_failed",
+        "budget_mib": 12000,
+        "median_tok_s": 44.585074517813425,
+        "workloads": [
+          {
+            "name": "coding",
+            "status": "ok",
+            "ignore_eos": false,
+            "median_tok_s": 43.08993549277971,
+            "tok_s": [
+              40.898664753477846,
+              43.94488250967485,
+              43.08993549277971
+            ],
+            "output_tokens": [
+              512,
+              512,
+              512
+            ],
+            "input_tokens": [
+              152,
+              152,
+              152
+            ]
+          },
+          {
+            "name": "reasoning",
+            "status": "ok",
+            "ignore_eos": false,
+            "median_tok_s": 44.585074517813425,
+            "tok_s": [
+              43.11112087133481,
+              44.585074517813425,
+              46.597389340684664
+            ],
+            "output_tokens": [
+              512,
+              512,
+              512
+            ],
+            "input_tokens": [
+              142,
+              142,
+              142
+            ]
+          },
+          {
+            "name": "prose",
+            "status": "ok",
+            "ignore_eos": false,
+            "median_tok_s": 62.54435889045032,
+            "tok_s": [
+              62.54435889045032,
+              63.200598680307216,
+              62.10276329018571
+            ],
+            "output_tokens": [
+              512,
+              512,
+              512
+            ],
+            "input_tokens": [
+              132,
+              132,
+              132
+            ]
+          }
+        ],
+        "additional_checks": {
+          "quantitative": {
+            "passed": false,
+            "numeric_result": {
+              "token_ms": 37.33,
+              "tokens_per_second": 26.78
+            },
+            "input_tokens": 131
+          },
+          "long_retrieval": {
+            "passed": true,
+            "numeric_result": {
+              "first": 7391,
+              "last": 2846
+            },
+            "input_tokens": 12852
+          }
+        },
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 0,
+        "route_packets": [
+          175263,
+          5608416
+        ],
+        "copy_breakdown": [
+          {
+            "direction": "H2D",
+            "calls": 233664,
+            "bytes": 8254759104,
+            "dst_wait_call_us": 9798403,
+            "src_sync_us": 3794,
+            "sync_copy_call_us": 2214143,
+            "async_attempt_us": 22186,
+            "callback_call_us": 0,
+            "sync_copies": 233664,
+            "async_copies": 0
+          },
+          {
+            "direction": "D2H",
+            "calls": 350496,
+            "bytes": 2024464896,
+            "dst_wait_call_us": 13268,
+            "src_sync_us": 16586066,
+            "sync_copy_call_us": 1679296,
+            "async_attempt_us": 6460,
+            "callback_call_us": 0,
+            "sync_copies": 350496,
+            "async_copies": 0
+          }
+        ]
+      },
+      {
+        "profile": "packet-control944-big",
+        "status": "qualification_failed",
+        "budget_mib": 12000,
+        "median_tok_s": 46.51418828515864,
+        "workloads": [
+          {
+            "name": "coding",
+            "status": "ok",
+            "ignore_eos": false,
+            "median_tok_s": 46.110844321583386,
+            "tok_s": [
+              44.45824389669252,
+              46.110844321583386,
+              46.283853493478595
+            ],
+            "output_tokens": [
+              512,
+              512,
+              512
+            ],
+            "input_tokens": [
+              152,
+              152,
+              152
+            ]
+          },
+          {
+            "name": "reasoning",
+            "status": "ok",
+            "ignore_eos": false,
+            "median_tok_s": 46.51418828515864,
+            "tok_s": [
+              45.56107053642654,
+              47.42051967128376,
+              46.51418828515864
+            ],
+            "output_tokens": [
+              512,
+              512,
+              512
+            ],
+            "input_tokens": [
+              142,
+              142,
+              142
+            ]
+          },
+          {
+            "name": "prose",
+            "status": "ok",
+            "ignore_eos": false,
+            "median_tok_s": 65.82755856094896,
+            "tok_s": [
+              65.82755856094896,
+              67.33013571584965,
+              59.7081925718473
+            ],
+            "output_tokens": [
+              512,
+              512,
+              512
+            ],
+            "input_tokens": [
+              132,
+              132,
+              132
+            ]
+          }
+        ],
+        "additional_checks": {
+          "quantitative": {
+            "passed": false,
+            "numeric_result": {
+              "token_ms": 37.33,
+              "tokens_per_second": 26.78
+            },
+            "input_tokens": 131
+          },
+          "long_retrieval": {
+            "passed": true,
+            "numeric_result": {
+              "first": 7391,
+              "last": 2846
+            },
+            "input_tokens": 12852
+          }
+        },
+        "small_checks": [
+          {
+            "name": "arithmetic",
+            "passed": true
+          },
+          {
+            "name": "coding",
+            "passed": true
+          }
+        ],
+        "cpu_prepare_reuses": 0,
+        "route_packets": null,
+        "copy_breakdown": [
+          {
+            "direction": "H2D",
+            "calls": 233664,
+            "bytes": 8254759104,
+            "dst_wait_call_us": 10070830,
+            "src_sync_us": 3486,
+            "sync_copy_call_us": 2133486,
+            "async_attempt_us": 22400,
+            "callback_call_us": 0,
+            "sync_copies": 233664,
+            "async_copies": 0
+          },
+          {
+            "direction": "D2H",
+            "calls": 525744,
+            "bytes": 2024464896,
+            "dst_wait_call_us": 19505,
+            "src_sync_us": 16104782,
+            "sync_copy_call_us": 2363285,
+            "async_attempt_us": 9728,
+            "callback_call_us": 0,
+            "sync_copies": 525744,
+            "async_copies": 0
+          }
+        ]
+      }
+    ],
+    "frozen_gates": []
+  },
+  "qwen_preparation_scalar_gate": [
+    {
+      "block": 1,
+      "returncode": 0,
+      "passed": true,
+      "requests": [
+        {
+          "id": "coding-test",
+          "max_abs_logit_error": 0.0,
+          "max_relative_l2": 0.0,
+          "passed": true
+        },
+        {
+          "id": "reasoning-test",
+          "max_abs_logit_error": 0.0,
+          "max_relative_l2": 0.0,
+          "passed": true
+        },
+        {
+          "id": "prose-test",
+          "max_abs_logit_error": 0.0,
+          "max_relative_l2": 0.0,
+          "passed": true
+        }
+      ],
+      "cpu_prepare_reuses": 4752
+    }
+  ],
+  "qwen_preparation_gate_restore_ready": true,
+  "initial_qwen_noop_rejected": {
+    "scalar_comparison": {
+      "passed": true,
+      "positions": 96,
+      "max_abs": 0.0,
+      "relative_l2": 0.0
+    },
+    "reuse_exercised": false,
+    "reason": "Conservative tiled-workspace guard excluded IQ quantizations; not counted as optimization validation"
+  },
+  "qwen_block_verification": {
+    "model": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf",
+    "variant": "async",
+    "initialization": "empty causal",
+    "cache_mib": 8192,
+    "restore_ready": true,
+    "runs": [
+      {
+        "block": 2,
+        "returncode": 1,
+        "passed": false,
+        "requests": [
+          {
+            "id": "coding-test",
+            "max_abs_logit_error": 1.008035659790039,
+            "max_relative_l2": 0.04592636139012251,
+            "passed": false
+          },
+          {
+            "id": "reasoning-test",
+            "max_abs_logit_error": 1.452906847000122,
+            "max_relative_l2": 0.08802325807481555,
+            "passed": false
+          },
+          {
+            "id": "prose-test",
+            "max_abs_logit_error": 1.2897953987121582,
+            "max_relative_l2": 0.06938004228476782,
+            "passed": false
+          }
+        ]
+      },
+      {
+        "block": 3,
+        "returncode": 1,
+        "passed": false,
+        "requests": [
+          {
+            "id": "coding-test",
+            "max_abs_logit_error": 0.8945939540863037,
+            "max_relative_l2": 0.04561795084372598,
+            "passed": false
+          },
+          {
+            "id": "reasoning-test",
+            "max_abs_logit_error": 1.416003942489624,
+            "max_relative_l2": 0.08665926956909874,
+            "passed": false
+          },
+          {
+            "id": "prose-test",
+            "max_abs_logit_error": 3.08958101272583,
+            "max_relative_l2": 0.14835530098649635,
+            "passed": false
+          }
+        ]
+      }
+    ],
+    "speed_claim": false
+  },
+  "qwen_native_block_control": {
+    "model": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf",
+    "variant": "native",
+    "initialization": "native",
+    "cache_mib": 0,
+    "restore_ready": true,
+    "runs": [
+      {
+        "block": 2,
+        "returncode": 1,
+        "passed": false,
+        "requests": [
+          {
+            "id": "coding-test",
+            "max_abs_logit_error": 0.7843770980834961,
+            "max_relative_l2": 0.05358502202571849,
+            "passed": false
+          },
+          {
+            "id": "reasoning-test",
+            "max_abs_logit_error": 0.9030083417892456,
+            "max_relative_l2": 0.05994454932045945,
+            "passed": false
+          },
+          {
+            "id": "prose-test",
+            "max_abs_logit_error": 0.9334144592285156,
+            "max_relative_l2": 0.05265205278508821,
+            "passed": false
+          }
+        ]
+      }
+    ],
+    "speed_claim": false
+  },
+  "mtp_artifact_inspection": {
+    "inspection_only": true,
+    "declared_architecture": "qwen4exp-mtp",
+    "file_bytes": 889017216,
+    "native_architecture_name": "qwen4exp",
+    "native_registration_accepts_declared_name": false,
+    "native_tensor_contract": "canonical block nextn tensors and native metadata, not merely an architecture rename",
+    "conversion_implemented": false,
+    "draft_loaded": false,
+    "accepted_token_benchmark_run": false,
+    "speculation_enabled": false
+  },
+  "combined_synthetic_regression": {
+    "untrained": true,
+    "executions": 86,
+    "reference_creations": 28,
+    "passing_comparisons": 44,
+    "retained_native_failures": 14,
+    "comparisons": [
+      {
+        "architecture": "llama",
+        "expert_type": "F32",
+        "profile": "optimized-vs-hybrid",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 784
+      },
+      {
+        "architecture": "llama",
+        "expert_type": "F32",
+        "profile": "cold-async-vs-sync",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 784
+      },
+      {
+        "architecture": "qwen2moe",
+        "expert_type": "Q8_0",
+        "profile": "optimized-vs-hybrid",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 1176
+      },
+      {
+        "architecture": "qwen2moe",
+        "expert_type": "Q8_0",
+        "profile": "cold-async-vs-sync",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 1176
+      },
+      {
+        "architecture": "qwen3moe",
+        "expert_type": "Q4_K",
+        "profile": "optimized-vs-hybrid",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 1568
+      },
+      {
+        "architecture": "qwen3moe",
+        "expert_type": "Q4_K",
+        "profile": "cold-async-vs-sync",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 1568
+      },
+      {
+        "architecture": "gpt-oss",
+        "expert_type": "MXFP4",
+        "profile": "optimized-vs-hybrid",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 784
+      },
+      {
+        "architecture": "gpt-oss",
+        "expert_type": "MXFP4",
+        "profile": "cold-async-vs-sync",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 784
+      },
+      {
+        "architecture": "llama4",
+        "expert_type": "F16",
+        "profile": "optimized-vs-hybrid",
+        "passed": true,
+        "cpu_prepare_reuses": 34,
+        "route_packets": 33,
+        "route_packet_bytes": 264
+      },
+      {
+        "architecture": "llama4",
+        "expert_type": "F16",
+        "profile": "cold-async-vs-sync",
+        "passed": true,
+        "cpu_prepare_reuses": 34,
+        "route_packets": 33,
+        "route_packet_bytes": 264
+      },
+      {
+        "architecture": "cohere2moe",
+        "expert_type": "BF16",
+        "profile": "optimized-vs-hybrid",
+        "passed": true,
+        "cpu_prepare_reuses": 0,
+        "route_packets": 33,
+        "route_packet_bytes": 528
+      },
+      {
+        "architecture": "cohere2moe",
+        "expert_type": "BF16",
+        "profile": "cold-async-vs-sync",
+        "passed": true,
+        "cpu_prepare_reuses": 0,
+        "route_packets": 33,
+        "route_packet_bytes": 528
+      },
+      {
+        "architecture": "grok",
+        "expert_type": "Q4_0",
+        "profile": "optimized-vs-hybrid",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 784
+      },
+      {
+        "architecture": "grok",
+        "expert_type": "Q4_0",
+        "profile": "cold-async-vs-sync",
+        "passed": true,
+        "cpu_prepare_reuses": 51,
+        "route_packets": 49,
+        "route_packet_bytes": 784
+      }
+    ],
+    "restore_ready": true
+  },
+  "default_gpt_regression": {
+    "passed": true,
+    "positions": 96,
+    "max_abs": 0.0,
+    "relative_l2": 0.0
+  },
+  "tests": {
+    "configured_targets_passed": 19,
+    "primitive_types": 7,
+    "primitive_threads": [
+      1,
+      4
+    ],
+    "strided_ids": true,
+    "changing_input_and_ids": true,
+    "graph_reset_counter_asserted": true,
+    "inplace_input_mutation": true,
+    "opaque_repack": true,
+    "larger_row_q4k_tiled_case": true
+  },
+  "working_app": {
+    "state": "ready",
+    "context": 16384,
+    "cpu_threads": 8,
+    "batch_threads": 16,
+    "expert_cache_mib": 12000,
+    "hybrid_verified": true,
+    "hybrid_overlap_verified": true,
+    "hybrid_gate_up_verified": true,
+    "hybrid_async_ids_verified": true,
+    "hybrid_plan_sha256": "6a679bec76f1a410ed65fa79c186d164a388fc76419d96dcad5978782343949c",
+    "hybrid_generic_cache_mib": 8192,
+    "hybrid_generic_transfer": "direct",
+    "smoke_output_tokens": 64,
+    "quality_claim": false,
+    "cpu_prepare": false,
+    "route_packet": false,
+    "patch_sha256": "98fb749abbef50744ff9a198e8142d5f80931a817058356778c86bd8d5f1f000"
+  },
+  "decisions": {
+    "cpu_prepare_promoted": false,
+    "route_packet_promoted": false,
+    "mtp_enabled": false,
+    "bound_cache_mib": 12000,
+    "generic_cache_mib": 8192,
+    "transfer": "direct"
+  },
+  "limitations": [
+    "No repeatable end-to-end speedup established for either prototype; app defaults remain unchanged.",
+    "Initial packet omitted CPU bias-ID/pre-FFN consumers and did not reduce GPT D2H copy calls; fixed in the complete protocol.",
+    "Complete packet saved one third of filtered D2H calls, not bytes; fewer calls did not improve held-out generation.",
+    "Profiler intervals are host call/synchronization measurements, not GPU elapsed time or measured physical PCIe traffic.",
+    "Three capped512-token repeats per workload, sequential profiles; reversed order is not a randomized statistical study.",
+    "Initial GPT preparation screen predates extending the read-only prefix contract to tiled expert kernels.",
+    "Qwen preparation scalar gate passes96 positions, but its separate block2/3 verification gates fail.",
+    "Qwen native control also fails; neither prototype is established as the sole cause of native batch-dependent numerics.",
+    "No MTP speed claim: draft format needs a proper bridge, and target verification remains blocked.",
+    "Narrow arithmetic/AST/retrieval checks do not establish broad model quality.",
+    "Existing exact-answer and14 native-reference failures remain, with thresholds unchanged.",
+    "Historical run source hashes are retained; final default-off code has later layout/guard changes.",
+    "No new model downloaded, target requantized, expert pruned, or original model file modified."
+  ]
+}

@@ -92,10 +92,12 @@
         <textarea id="prompt" rows="3" placeholder="What would you like to work on?" required></textarea>
         <div class="chat-options">
           <div><label for="max-output">Max output tokens</label><input id="max-output" type="number" value="8192" min="1" max="65536" step="1" required></div>
+          <div><label for="reasoning-effort">Reasoning effort</label><select id="reasoning-effort"><option value="default">Model default</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
           <p>Includes reasoning and the final answer.<br><span id="context-note"></span></p>
         </div>
         <div class="actions"><button id="send" type="submit" disabled>Send</button><button id="stop" type="button" class="secondary" disabled>Stop</button></div>
         <p id="timing" role="status" title="Generation speed is reported by the backend and includes reasoning tokens. Total time also includes prompt processing and network time."></p>
+        <p class="hint">Rates include reasoning tokens and depend on the prompt, conversation and adaptive cache. Model default preserves backend reasoning settings; explicit effort is model/template dependent. Sampling stays at backend defaults. New chat retains the expert cache; unload/reload resets it.</p>
       </form>
     </section>
   </main>

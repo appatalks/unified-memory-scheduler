@@ -96,7 +96,7 @@ def execute(args) -> int:
                   "One technical-explanation throughput prompt, not sustained multi-category qualification.",
                   "Forced output length can include output after an end marker; not 512 natural answer tokens.",
                   "Arithmetic and AST-only checks do not establish broad answer quality.",
-                  "Only supported GPT-OSS-120B MXFP4 uses custom expert dispatch; other architectures use standard execution.",
+                  "Custom expert dispatch is descriptor-selected; compatibility and speed are reported per model, not guaranteed.",
                   "Do not compare model token rates as quality rankings; standard/automatic use identical thread/context settings.",
                   "Strict CPU-reference logit gates and an earlier quantitative answer screen remain failed.",
               ]}
@@ -113,10 +113,13 @@ def execute(args) -> int:
                     automatic_plan=initial.get("hybrid_initialization") == "auto",
                     cache_mib=initial.get("hybrid_cache_mib", 10240))
                 expect_hybrid = mode == "auto" and policy["hybrid"] and initial.get("hybrid_available", False)
+                budget = initial.get("hybrid_cache_mib", 10240)
+                if policy["automatic_plan"]:
+                    budget = initial.get("hybrid_generic_cache_mib", budget)
                 settings = {"model": str(path), "execution_mode": mode, "context": args.context,
                             "cpu_threads": args.threads, "batch_threads": args.batch_threads,
                             "placement": "auto", "load_mode": "auto", "fit_target_mib": 1024,
-                            "expert_cache_mib": initial.get("hybrid_cache_mib", 10240) if expect_hybrid else 0,
+                            "expert_cache_mib": budget if expect_hybrid else 0,
                             "host_op_offload": not expect_hybrid, "cpu_poll": 50,
                             "op_offload_min_batch": 32}
                 run = {"model": path.name, "first_shard_size_bytes": path.stat().st_size,

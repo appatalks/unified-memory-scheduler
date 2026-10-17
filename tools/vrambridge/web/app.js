@@ -33,6 +33,7 @@ function controls() {
   el("stop").disabled = !controller;
   el("clear").disabled = !!controller;
   el("max-output").disabled = !!controller;
+  el("reasoning-effort").disabled = !!controller;
   for (const id of ["model", "context", "placement", "cpu-threads", "batch-threads", "cpu-poll", "host-op-offload", "op-offload-min-batch", "load-mode", "expert-cache", "fit-target", "draft-model", "draft-tokens"]) {
     el(id).disabled = active || actionPending;
   }
@@ -66,14 +67,14 @@ function renderStatus() {
   const hybrid = (status.execution_profile || "standard").startsWith("experimental-hybrid-");
   const transfer = status.hybrid_transfer === "staged" ? "bounded staging" : "direct DMA";
   const hybridContext = status.hybrid_context ?? status.context;
-  const hybridBudget = status.hybrid_cache_mib ?? status.expert_cache_mib;
+  const hybridBudget = status.expert_cache_mib ?? status.hybrid_cache_mib;
   const pipeline = status.hybrid_decode_pipeline
     ? ` · Decode pipeline: overlap ${status.hybrid_overlap_verified ? "confirmed" : "awaiting eligible decode"}; gate/up fusion ${status.hybrid_gate_up_verified ? "confirmed" : "not yet observed"}${status.hybrid_async_ids ? `; event-protected GPU IDs ${status.hybrid_async_ids_verified ? "configured" : "awaiting backend"}` : ""}`
     : "";
   el("execution-mode").querySelector('option[value="hybrid"]').disabled = !status.hybrid_available;
   el("selection-reason").textContent = status.selection_reason || "";
   el("profile-note").textContent = status.hybrid_generic
-    ? "Automatic detects routed-MoE dimensions, validates plan bindings, and prefers native fitting for small weight files. Unbound MoE layouts can use a generic causal plan with bounded staging. Backend operations and coverage must verify before Ready; speedups are not universal."
+    ? "Automatic detects routed-MoE dimensions, validates plan bindings, and prefers native fitting for small weight files. Unbound layouts use a causal plan with their configured budget and transfer policy. Backend operations and coverage must verify before Ready; speedups are not universal."
     : status.hybrid_available ? "This installation uses a model-bound or explicitly supplied plan. A version-2 installation enables generic automatic fallback; other models use native execution."
     : "No hybrid installation profile is configured. Automatic uses the standard backend. Select Standard for manual settings.";
   el("execution-warning").hidden = !status.execution_warning;
@@ -300,6 +301,11 @@ el("chat-form").addEventListener("submit", async (event) => {
   const prompt = el("prompt").value.trim();
   if (!prompt || controller || status?.state !== "ready") return;
   const maxTokens = Number(el("max-output").value);
+  const reasoningEffort = el("reasoning-effort").value;
+  if (!["default", "low", "medium", "high"].includes(reasoningEffort)) {
+    notice("Select a supported reasoning effort.");
+    return;
+  }
   if (!Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 65536) {
     notice("Max output tokens must be an integer between 1 and 65,536.");
     return;
@@ -326,6 +332,7 @@ el("chat-form").addEventListener("submit", async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "local-model", messages: previous, stream: true, max_tokens: maxTokens,
+        ...(reasoningEffort === "default" ? {} : { reasoning_effort: reasoningEffort }),
         stream_options: { include_usage: true }, timings_per_token: true,
       }),
       signal: controller.signal,

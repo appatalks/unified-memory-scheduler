@@ -1,0 +1,899 @@
+{
+  "schema_version": 1,
+  "context": 16384,
+  "target_weights_unchanged": true,
+  "models": [
+    "Qwen3.8-Flash-Next GSQ-RCO IQ3_S",
+    "GPT-OSS-120B MXFP4"
+  ],
+  "all_selected_target_experts_preserved": true,
+  "numerical_thresholds_relaxed": false,
+  "gate": {
+    "max_abs": 0.01,
+    "relative_l2": 0.001
+  },
+  "gpt_60_tok_s_goal_met": false,
+  "app_speculation_enabled": false,
+  "app_canonical_flags_enabled": false,
+  "hardware": {
+    "cpu": "Ryzen9 9950X",
+    "gpu": "RTX5070 Ti16GB",
+    "ram_gib": 123.48
+  },
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "verification": {
+    "native_short_blocks2_3": {
+      "variant": "native",
+      "cache_mib": 0,
+      "initialization": "native",
+      "flash_request": "off",
+      "scalar_linear": true,
+      "scalar_attention": true,
+      "scalar_expert": false,
+      "cuda_fusion": true,
+      "active_capture": false,
+      "generation_threads": 4,
+      "prompt_threads": 16,
+      "source_sha256": null,
+      "source_hash_recorded": false,
+      "prompt_tokens": [
+        97,
+        118,
+        96
+      ],
+      "runs": [
+        {
+          "block": 2,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "positions": 96
+        },
+        {
+          "block": 3,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "positions": 96
+        }
+      ],
+      "restore_ready": true
+    },
+    "native_short_block4": {
+      "variant": "native",
+      "cache_mib": 0,
+      "initialization": "native",
+      "flash_request": "auto",
+      "scalar_linear": true,
+      "scalar_attention": true,
+      "scalar_expert": false,
+      "cuda_fusion": true,
+      "active_capture": false,
+      "generation_threads": 4,
+      "prompt_threads": 16,
+      "source_sha256": null,
+      "source_hash_recorded": false,
+      "prompt_tokens": [
+        97,
+        118,
+        96
+      ],
+      "runs": [
+        {
+          "block": 4,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "positions": 96
+        }
+      ],
+      "restore_ready": true
+    },
+    "capture_observer_counterexample": {
+      "variant": "native",
+      "cache_mib": 0,
+      "initialization": "native",
+      "flash_request": "not recorded",
+      "scalar_linear": true,
+      "scalar_attention": true,
+      "scalar_expert": false,
+      "cuda_fusion": true,
+      "active_capture": true,
+      "generation_threads": 4,
+      "prompt_threads": 16,
+      "source_sha256": null,
+      "source_hash_recorded": false,
+      "prompt_tokens": [
+        97,
+        118,
+        96
+      ],
+      "runs": [
+        {
+          "block": 2,
+          "returncode": 1,
+          "passed": false,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.5396194458007812,
+              "max_relative_l2": 0.030459223331669394,
+              "passed": false
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "positions": 96
+        }
+      ],
+      "restore_ready": true
+    },
+    "seeded_before_expert_canonicalization": {
+      "variant": "async",
+      "cache_mib": 8192,
+      "initialization": "supplied frozen seed",
+      "flash_request": "auto",
+      "scalar_linear": true,
+      "scalar_attention": true,
+      "scalar_expert": false,
+      "cuda_fusion": true,
+      "active_capture": false,
+      "generation_threads": 4,
+      "prompt_threads": 16,
+      "source_sha256": null,
+      "source_hash_recorded": false,
+      "prompt_tokens": [
+        97,
+        118,
+        96
+      ],
+      "runs": [
+        {
+          "block": 2,
+          "returncode": 1,
+          "passed": false,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.5658173561096191,
+              "max_relative_l2": 0.04238481430016534,
+              "passed": false
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.7062922716140747,
+              "max_relative_l2": 0.05145500386748359,
+              "passed": false
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 2.0937423706054688,
+              "max_relative_l2": 0.1295016169117183,
+              "passed": false
+            }
+          ],
+          "cpu_experts": 44674,
+          "gpu_experts": 1436,
+          "positions": 96
+        },
+        {
+          "block": 3,
+          "returncode": 1,
+          "passed": false,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.5658173561096191,
+              "max_relative_l2": 0.04238481430016534,
+              "passed": false
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.7062922716140747,
+              "max_relative_l2": 0.05145500386748359,
+              "passed": false
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 2.0937423706054688,
+              "max_relative_l2": 0.1295016169117183,
+              "passed": false
+            }
+          ],
+          "cpu_experts": 44674,
+          "gpu_experts": 1436,
+          "positions": 96
+        }
+      ],
+      "restore_ready": true
+    },
+    "seeded_disable_fusion_control": {
+      "variant": "async",
+      "cache_mib": 8192,
+      "initialization": "supplied frozen seed",
+      "flash_request": "auto",
+      "scalar_linear": true,
+      "scalar_attention": true,
+      "scalar_expert": false,
+      "cuda_fusion": false,
+      "active_capture": false,
+      "generation_threads": 4,
+      "prompt_threads": 16,
+      "source_sha256": null,
+      "source_hash_recorded": false,
+      "prompt_tokens": [
+        97,
+        118,
+        96
+      ],
+      "runs": [
+        {
+          "block": 2,
+          "returncode": 1,
+          "passed": false,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.7352533340454102,
+              "max_relative_l2": 0.04529821776793371,
+              "passed": false
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 2.764688014984131,
+              "max_relative_l2": 0.14418614565725216,
+              "passed": false
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.878227710723877,
+              "max_relative_l2": 0.05680753947064452,
+              "passed": false
+            }
+          ],
+          "cpu_experts": 44698,
+          "gpu_experts": 1412,
+          "positions": 96
+        },
+        {
+          "block": 3,
+          "returncode": 1,
+          "passed": false,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.7352533340454102,
+              "max_relative_l2": 0.04529821776793371,
+              "passed": false
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 2.764688014984131,
+              "max_relative_l2": 0.14418614565725216,
+              "passed": false
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.878227710723877,
+              "max_relative_l2": 0.05680753947064452,
+              "passed": false
+            }
+          ],
+          "cpu_experts": 44698,
+          "gpu_experts": 1412,
+          "positions": 96
+        }
+      ],
+      "restore_ready": true
+    },
+    "seeded_canonical_blocks2_3_4": {
+      "variant": "async",
+      "cache_mib": 8192,
+      "initialization": "supplied frozen seed",
+      "flash_request": "auto",
+      "scalar_linear": true,
+      "scalar_attention": true,
+      "scalar_expert": true,
+      "cuda_fusion": true,
+      "active_capture": false,
+      "generation_threads": 4,
+      "prompt_threads": 16,
+      "source_sha256": "1dd1b0177336ae420ae5204069130eff7124747ec8c6ab0bdfe43f16ffcf3837",
+      "source_hash_recorded": true,
+      "prompt_tokens": [
+        97,
+        118,
+        96
+      ],
+      "runs": [
+        {
+          "block": 2,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "cpu_experts": 44673,
+          "gpu_experts": 1437,
+          "positions": 96
+        },
+        {
+          "block": 3,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "cpu_experts": 44673,
+          "gpu_experts": 1437,
+          "positions": 96
+        },
+        {
+          "block": 4,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "cpu_experts": 44673,
+          "gpu_experts": 1437,
+          "positions": 96
+        }
+      ],
+      "restore_ready": true
+    },
+    "native_long_canonical": {
+      "variant": "native",
+      "cache_mib": 0,
+      "initialization": "native",
+      "flash_request": "auto",
+      "scalar_linear": true,
+      "scalar_attention": true,
+      "scalar_expert": false,
+      "cuda_fusion": true,
+      "active_capture": false,
+      "generation_threads": 4,
+      "prompt_threads": 16,
+      "source_sha256": "1dd1b0177336ae420ae5204069130eff7124747ec8c6ab0bdfe43f16ffcf3837",
+      "source_hash_recorded": true,
+      "prompt_tokens": [
+        4636
+      ],
+      "runs": [
+        {
+          "block": 2,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "qsa-long-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "positions": 16
+        },
+        {
+          "block": 3,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "qsa-long-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "positions": 16
+        }
+      ],
+      "restore_ready": true
+    },
+    "seeded_long_canonical": {
+      "variant": "async",
+      "cache_mib": 8192,
+      "initialization": "supplied frozen seed",
+      "flash_request": "auto",
+      "scalar_linear": true,
+      "scalar_attention": true,
+      "scalar_expert": true,
+      "cuda_fusion": true,
+      "active_capture": false,
+      "generation_threads": 4,
+      "prompt_threads": 16,
+      "source_sha256": "1dd1b0177336ae420ae5204069130eff7124747ec8c6ab0bdfe43f16ffcf3837",
+      "source_hash_recorded": true,
+      "prompt_tokens": [
+        4636
+      ],
+      "runs": [
+        {
+          "block": 2,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "qsa-long-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "cpu_experts": 7500,
+          "gpu_experts": 190,
+          "positions": 16
+        },
+        {
+          "block": 4,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "qsa-long-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "cpu_experts": 7500,
+          "gpu_experts": 190,
+          "positions": 16
+        }
+      ],
+      "restore_ready": true
+    },
+    "native_long_unmodified_control": {
+      "variant": "native",
+      "cache_mib": 0,
+      "initialization": "native",
+      "flash_request": "auto",
+      "scalar_linear": false,
+      "scalar_attention": false,
+      "scalar_expert": false,
+      "cuda_fusion": true,
+      "active_capture": false,
+      "generation_threads": 4,
+      "prompt_threads": 16,
+      "source_sha256": null,
+      "source_hash_recorded": false,
+      "prompt_tokens": [
+        4636
+      ],
+      "runs": [
+        {
+          "block": 1,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "qsa-long-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "positions": 4
+        }
+      ],
+      "restore_ready": true
+    },
+    "trained_seed_block4": {
+      "variant": "async",
+      "cache_mib": 6144,
+      "initialization": "supplied frozen seed",
+      "flash_request": "auto",
+      "scalar_linear": true,
+      "scalar_attention": true,
+      "scalar_expert": true,
+      "cuda_fusion": true,
+      "active_capture": false,
+      "generation_threads": 8,
+      "prompt_threads": 16,
+      "source_sha256": "50dd3799afee5507de54d6ee316e841ac8c02605882f3c1cb34a7a3152031750",
+      "source_hash_recorded": true,
+      "prompt_tokens": [
+        97,
+        118,
+        96
+      ],
+      "runs": [
+        {
+          "block": 4,
+          "returncode": 0,
+          "passed": true,
+          "requests": [
+            {
+              "id": "coding-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "reasoning-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            },
+            {
+              "id": "prose-test",
+              "max_abs_logit_error": 0.0,
+              "max_relative_l2": 0.0,
+              "passed": true
+            }
+          ],
+          "cpu_experts": 20121,
+          "gpu_experts": 25989,
+          "positions": 96
+        }
+      ],
+      "restore_ready": true
+    }
+  },
+  "root_findings": {
+    "first_hc_gate_max_abs_before_attention_or_experts": 0.095623,
+    "affected_learned_projection_types": [
+      "BF16",
+      "F16"
+    ],
+    "linear_dispatch": "CUDA scalar MMVF versus small-batch tensor-core MMF",
+    "cublas_f32_did_not_fix_earlier_mmf_selection": true,
+    "attention_products_also_need_matching_scalar_shapes": true,
+    "resident_gpu_expert_products_need_matching_token_shapes": true,
+    "cuda_fusion_disable_alone_did_not_fix_seeded_verification": true,
+    "active_capture_can_perturb_later_numerical_results": true
+  },
+  "graph_metadata": {
+    "initial_long_canonical_reference_aborted": true,
+    "failure": "Graph tensor metadata pool exhausted, not GPU weight-memory exhaustion",
+    "ordinary_long_control_passed": true,
+    "opt_in_metadata_headroom_added": true,
+    "default_budget_unchanged": true
+  },
+  "historical_reference_replay": {
+    "initial_prompt_date_mismatch_rejected": true,
+    "stored_date": "2026-10-16",
+    "wall_date_at_first_check": "2026-10-17",
+    "renderer_time_input_was_ignored": true,
+    "renderer_now_wiring_fixed": true,
+    "explicit_bounded_template_epoch_added": true,
+    "timezone_for_replay": "UTC",
+    "prompt_alignment_not_bypassed": true
+  },
+  "mtp_bridge": {
+    "implemented_experimental": true,
+    "native_architecture": "qwen4exp",
+    "nextn_layers": 1,
+    "original_custom_architecture": "qwen4exp-mtp",
+    "original_files_modified": false,
+    "raw_source_tensors": 31,
+    "native_tensors": 34,
+    "derived_file_bytes": 2469565120,
+    "derived_sha256": "fe2c48bd8217c831be1740c9eaba8dced27ca0a95eca7cae5b8abbaf217e8f17",
+    "derived_draft_expert_format": "Q4_0",
+    "upstream_tensor_converter_reused": true,
+    "eh_input_projections_concatenated": true,
+    "norm_gamma_folding_and_indexer_split_reused": true,
+    "target_embedding_and_output_copied_without_requantization": true,
+    "ordinary_output_norm_absent_hc_mixer_owns_norm": true,
+    "target_hidden_width": 10240,
+    "target_bank_and_plan_not_inherited_by_draft_context": true,
+    "conversion_driver_sha256": "3b02f7a7284362561deb8d4a53b735766a2c27207fdf6bf23832c603008ec10f"
+  },
+  "native_mtp_smoke": {
+    "cache_mib": 0,
+    "context": 16384,
+    "draft_format": "Q4_0",
+    "restore_ready": true,
+    "quality_qualified": false,
+    "generation_threads": 4,
+    "source_sha256": null,
+    "source_hash_recorded": false,
+    "runs": [
+      {
+        "profile": "mtp-high-confidence-control",
+        "output_tokens": 128,
+        "total_wall_s": 7.4372234610054875,
+        "prompt_tokens": 16,
+        "prompt_ms": 602.34,
+        "predicted_ms": 6832.16,
+        "output_tok_s": 18.588557645020025,
+        "draft_proposals": 2,
+        "draft_accepted": 2,
+        "output_sha256": "930505d9abb6421ae6930eed28a5eef8a3e770d32383666267e45d1353bd473d"
+      },
+      {
+        "profile": "mtp-two",
+        "output_tokens": 128,
+        "total_wall_s": 4.528392290005286,
+        "prompt_tokens": 16,
+        "prompt_ms": 513.881,
+        "predicted_ms": 4013.18,
+        "output_tok_s": 31.645727328452747,
+        "draft_proposals": 88,
+        "draft_accepted": 83,
+        "output_sha256": "930505d9abb6421ae6930eed28a5eef8a3e770d32383666267e45d1353bd473d"
+      },
+      {
+        "profile": "ordinary-native",
+        "output_tokens": 128,
+        "total_wall_s": 6.359005098995112,
+        "prompt_tokens": 16,
+        "prompt_ms": 359.732,
+        "predicted_ms": 5997.919,
+        "output_tok_s": 21.174010519315118,
+        "draft_proposals": 0,
+        "draft_accepted": 0,
+        "output_sha256": "930505d9abb6421ae6930eed28a5eef8a3e770d32383666267e45d1353bd473d"
+      }
+    ],
+    "execution_complete": true,
+    "all_output_hashes_match": true
+  },
+  "validation": {
+    "configured_targets_passed": 19,
+    "patch_pinned_apply": true,
+    "patch_dflash_compatible": true,
+    "patch_reverse_apply": true,
+    "patch_sha256": "961544562fa0f9c45c1b5ee71e91196d693b01285572c40197c5c260df07319b",
+    "default_gpt_regression": {
+      "passed": true,
+      "positions": 96,
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cache_mib": 11264,
+      "frozen_seed_pairs": 880,
+      "generation_threads": 8,
+      "prompt_threads": 16,
+      "template_epoch_seconds": 1792152000
+    },
+    "app_ready": true,
+    "app_smoke_output_tokens": 64,
+    "app_cache_mib": 12000,
+    "app_generic_cache_mib": 8192,
+    "app_scalar_flags_enabled": false,
+    "speculation_enabled": false,
+    "legacy_gpt_template_epoch_seconds": 1792152000,
+    "legacy_date_alignment_failure_preserved": true
+  },
+  "limitations": [
+    "Teacher-forced positions are not accepted speculative output tokens or a speed benchmark.",
+    "Short untrained prefix seeds exercise both backends, not representative warmed adaptive residency.",
+    "Long-context gates sample one synthetic prompt, not arbitrary contexts or rollback histories.",
+    "Canonical scalar-shaped execution may cost throughput; no app default was promoted.",
+    "Prototype runs before source hashing was added retain an explicitly unrecorded source hash.",
+    "Native MTP smoke uses128 coding tokens,4 generation/16 prompt threads and no expert cache.",
+    "The p_min1.0 confidence control actually proposed and accepted2 tokens; it is not a zero-draft baseline.",
+    "Native MTP token equality is a sampled greedy check, not general distributional or quality qualification.",
+    "Original GPT quantitative/native-reference failures are not superseded by Qwen verification.",
+    "The derived draft and diagnostic references/logits/tokens remain private; only reviewed metrics are published."
+  ],
+  "mtp_training_seed": {
+    "budget_mib": 6144,
+    "training_only": true,
+    "training_tokens": 192,
+    "collected_test_tokens": 192,
+    "test_routes_excluded_from_seed": true,
+    "training_cuda_fusion": false,
+    "training_cuda_graphs": false,
+    "collector_and_build_wall_s": 57.11731578099716,
+    "routed_weight_bytes": 50292326400,
+    "seed_pairs": 3067,
+    "groups": [
+      {
+        "layers": 14,
+        "capacity": 917,
+        "seeded": 907
+      },
+      {
+        "layers": 5,
+        "capacity": 326,
+        "seeded": 316
+      },
+      {
+        "layers": 15,
+        "capacity": 982,
+        "seeded": 972
+      },
+      {
+        "layers": 3,
+        "capacity": 195,
+        "seeded": 185
+      },
+      {
+        "layers": 9,
+        "capacity": 589,
+        "seeded": 579
+      },
+      {
+        "layers": 1,
+        "capacity": 64,
+        "seeded": 54
+      },
+      {
+        "layers": 1,
+        "capacity": 64,
+        "seeded": 54
+      }
+    ],
+    "observed_training_coverage": 0.6648546006944445,
+    "trace_sha256": "eaf00288e22cd0128c13b4080fef7393dea77b66c044f6829e25235a93c50700",
+    "plan_sha256": "2cd4537dd7b2906680c6295a44a93cb072200b0028710498107148ac4f2d7efc",
+    "restore_ready": true,
+    "throughput_claim": false
+  },
+  "calibration_failures_retained": [
+    "Training-only corpus rejected: collector requires training and test records.",
+    "Unsupported no-warmup argument rejected; collector already disables warmup internally.",
+    "Greedy-sequence observation guard rejected the initial instrumented calibration; partial trace not used."
+  ],
+  "hybrid_mtp_first_screen": {
+    "cache_mib": 6144,
+    "context": 16384,
+    "draft_format": "Q4_0",
+    "restore_ready": true,
+    "quality_qualified": false,
+    "generation_threads": 8,
+    "source_sha256": null,
+    "source_hash_recorded": false,
+    "runs": [
+      {
+        "profile": "hybrid-scalar",
+        "output_tokens": 512,
+        "total_wall_s": 18.442286473000422,
+        "prompt_tokens": 16,
+        "prompt_ms": 412.69,
+        "predicted_ms": 18027.818,
+        "output_tok_s": 28.345083137626528,
+        "draft_proposals": 0,
+        "draft_accepted": 0,
+        "output_sha256": "c4c1d0566c8ef9b10c8473e370daa191d6d24a2421a71750d2278cd2e48e0d14"
+      },
+      {
+        "profile": "hybrid-mtp-two",
+        "output_tokens": 512,
+        "total_wall_s": 17.945772671999293,
+        "prompt_tokens": 16,
+        "prompt_ms": 2037.008,
+        "predicted_ms": 15902.083,
+        "output_tok_s": 32.13415500346716,
+        "draft_proposals": 350,
+        "draft_accepted": 335,
+        "output_sha256": "c4c1d0566c8ef9b10c8473e370daa191d6d24a2421a71750d2278cd2e48e0d14"
+      },
+      {
+        "profile": "hybrid-mtp-three",
+        "output_tokens": 512,
+        "total_wall_s": 15.792198699004075,
+        "prompt_tokens": 16,
+        "prompt_ms": 593.07,
+        "predicted_ms": 15197.496,
+        "output_tok_s": 33.62396015764702,
+        "draft_proposals": 402,
+        "draft_accepted": 376,
+        "output_sha256": "c4c1d0566c8ef9b10c8473e370daa191d6d24a2421a71750d2278cd2e48e0d14"
+      }
+    ],
+    "execution_complete": true,
+    "all_output_hashes_match": true
+  }
+}

@@ -232,6 +232,24 @@ Small weight files prefer native fitting; dense models use the standard backend.
 Without an installation profile, the app remains standard-only; no backend is
 silently downloaded or substituted.
 
+The installation can separately set `generic_cache_mib` and `generic_transfer`
+for causal initialization on layouts that do not match the trained plan.
+These are tensor-descriptor policies, not architecture-name exceptions.
+Omitting them preserves the old budget and transfer behavior. A trained plan
+retains its own `cache_mib`/`transfer`; it is never borrowed for another layout.
+The API exposes both policies and the actual selected residency budget, and
+the UI displays the latter. The model-matrix runner uses the selected budget.
+
+On the tested 16 GB GPU, the downloaded Qwen3.8-Flash-Next IQ3_S used an
+8,192 MiB causal bank with direct registered-source transfers: three technical
+512-token samples improved the median from 25.39 tok/s for native CPU experts
+with a GPU backbone to 43.88 tok/s. This is a different control from stock
+automatic placement, not a matched Strata comparison or quality qualification.
+The conservative example keeps generic transfers staged; direct generic
+transfers must be explicitly selected and satisfy the backend's CUDA/raw-layout,
+64 GiB registration cap and 24 GiB RAM-headroom checks. Neither an 8 GiB bank
+nor metadata eligibility guarantees every model will fit or accelerate.
+
 ### Installing The Default Hybrid Profile
 
 Build the [pinned backend patch](../../benchmarks/README.md#experimental-whole-model-expert-dispatch)
@@ -271,8 +289,12 @@ compatibility; upgrade the file to version 2 to enable generic selection.
 The optional boolean `decode_pipeline` enables early CPU-input preparation,
 guarded CPU/GPU expert overlap, GPU reconciliation and resident gate/up fusion.
 Omitting it preserves the previous pipeline. The updated experimental example
-selects the tested hot880 plan and 11,264 MiB bank; these are machine-specific
+selects the tested hot944 plan and 12,000 MiB bank; these are machine-specific
 trial settings, not a quality qualification or VRAM-fit guarantee.
+The previous hot880/11,264 MiB plan remains available for smaller VRAM budgets.
+The larger bank passed the local 12,852-token retrieval allocation check, but
+both profiles retain the same failed exact quantitative answer. This is an
+experimental performance promotion, not a quality pass.
 Ready requires the backend to acknowledge the pipeline configuration.
 The footer separately reports whether actual guarded overlap and the fused
 projection graph have been observed; configuration alone is not execution proof.
@@ -337,7 +359,7 @@ initialization. Launch paths and plan entries are validated; no weights,
 executables, or plugins are downloaded. The normal executable/symlink is not
 replaced. Restart using the same arguments to resume experimental mode.
 
-The updated manual installation fixes context at **16,384**, residency at **11,264 MiB**, raw
+The updated manual installation fixes context at **16,384**, residency at **12,000 MiB**, raw
 default host loading, no repacking, no host-op offload, and **fitting off**.
 The reserve field is disabled and does not promise spare VRAM. Generation and
 prompt threads default to **8/16** (bounded by CPU affinity) and can be changed
@@ -370,6 +392,25 @@ workload-dependent range. Exact quantitative and broader numerical diagnostics
 still fail; use wrong answers as experimental evidence, not trusted results.
 Report the prompt, output-token count, rate, elapsed time, and any wrong answer
 or backend error. No claim of sustained 60 tok/s follows from this trial.
+
+### Comparing Manual Rates
+
+The chat timing line separates the backend's generation and prompt durations,
+input/output token counts, and client total wall time. For example, 614 output
+tokens at 41.6 tok/s were logged with 14.73 seconds of generation and 1.28
+seconds of prompt processing (16.01 seconds backend total). The displayed
+generation rate already excludes prompt processing; it should not be replaced
+with output tokens divided by total time.
+
+Reasoning effort defaults to **Model default**, preserving the previous
+request. Low/Medium/High explicitly forward the selected option; its effect
+depends on the model template. Sampling remains at backend defaults. Published
+controlled replays may instead fix temperature/seed and output length, so
+they are not exact reproductions of an unconstrained UI answer.
+Compare the same prompt, history, reasoning setting, token budget and cache
+start. New chat clears history but retains the adaptive expert bank; backend
+unload/reload resets the bank. None of these observations proves that history
+or cache state caused a particular rate change.
 
 To roll back, unload, stop the app (Ctrl+C or SIGTERM), then relaunch without
 the hybrid flags using the original official executable:

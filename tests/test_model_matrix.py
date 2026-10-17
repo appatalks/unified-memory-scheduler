@@ -85,7 +85,9 @@ class ModelMatrixTests(unittest.TestCase):
                 app = types.SimpleNamespace(PINNED_LLAMA_COMMIT="test",
                                             model_metadata=lambda path: {"general.architecture": "gpt-oss"},
                                             supports_hybrid=lambda metadata: True,
-                                            select_hybrid_policy=lambda *args, **kwargs: {"hybrid": True})
+                                            select_hybrid_policy=lambda *args, **kwargs: {"hybrid": True, "automatic_plan": outcome == "ok"})
+                if outcome == "ok":
+                    original["hybrid_generic_cache_mib"] = 8192
                 with mock.patch.object(matrix, "load_module", side_effect=[sweep, app]), \
                         mock.patch.object(matrix, "quality_sample", return_value={"check_passed": outcome != "bad-answer"}):
                     if outcome == "interrupt":
@@ -100,6 +102,8 @@ class ModelMatrixTests(unittest.TestCase):
                 self.assertEqual(report["restore"]["status"], "ready")
                 self.assertFalse(report["performance_target_met"])
                 if outcome == "ok":
+                    hybrid_settings = sweep.load_profile.call_args_list[1].args[1]
+                    self.assertEqual(hybrid_settings["expert_cache_mib"], 8192)
                     self.assertEqual([run["hybrid_decode_pipeline"] for run in report["runs"]], [False, True])
                     self.assertEqual([run["hybrid_async_ids"] for run in report["runs"]], [False, True])
                 if outcome == "bad-answer":

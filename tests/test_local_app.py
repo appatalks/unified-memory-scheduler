@@ -462,6 +462,73 @@ class LocalAppTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["hybrid_plan_sha256"], before["hybrid_plan_sha256"])
         self.assertEqual(self.runtime.status()["model"], str(slow))
 
+    def test_generic_budget_and_direct_transfer_are_independent_of_bound_plan(self):
+        self.hybrid_runtime(hybrid_generic=True, hybrid_context=2048, hybrid_cache_mib=64,
+                            hybrid_generic_cache_mib=32, hybrid_generic_transfer="direct")
+        other = {"general.architecture": "future-moe", "future-moe.block_count": 3,
+                 "future-moe.embedding_length": 96, "future-moe.feed_forward_length": 192,
+                 "future-moe.expert_count": 7, "future-moe.expert_used_count": 3,
+                 "future-moe.context_length": 1024}
+        write_metadata(self.model, other)
+        status = self.load(execution_mode="hybrid")
+        self.assertEqual(status["expert_cache_mib"], 32)
+        self.assertEqual(status["hybrid_cache_mib"], 64)
+        self.assertEqual(status["hybrid_generic_cache_mib"], 32)
+        self.assertEqual(status["hybrid_generic_transfer"], "direct")
+        self.assertEqual(status["execution_profile"], "experimental-hybrid-direct")
+        self.assertTrue(status["hybrid_verified"])
+        flags = json.loads(status["logs"][0])
+        self.assertEqual(flags["hybrid_plan"], "auto")
+        self.assertEqual(flags["expert_cache_mib"], "32")
+        self.assertEqual(flags["hybrid_direct"], "1")
+        self.assertEqual(flags["register_host"], "1")
+        self.runtime.stop()
+        write_metadata(self.model, HYBRID_METADATA)
+        status = self.load(execution_mode="hybrid")
+        self.assertEqual(status["expert_cache_mib"], 64)
+        self.assertEqual(status["hybrid_plan_sha256"], self.runtime.hybrid_plan_sha256)
+        self.assertEqual(json.loads(status["logs"][0])["hybrid_plan"], str(self.plan))
+
+    def test_generic_profile_rejects_wrong_budget_without_poisoning_live_model(self):
+        self.hybrid_runtime(hybrid_generic=True, hybrid_cache_mib=64, hybrid_generic_cache_mib=32)
+        other = {"general.architecture": "future-moe", "future-moe.block_count": 3,
+                 "future-moe.embedding_length": 96, "future-moe.feed_forward_length": 192,
+                 "future-moe.expert_count": 7, "future-moe.expert_used_count": 3}
+        write_metadata(self.model, other)
+        before = self.load(execution_mode="hybrid")
+        code, _, body = self.request("POST", "/api/v1/model/load",
+                                    {"model": str(self.model), "execution_mode": "hybrid", "expert_cache_mib": 64})
+        self.assertEqual(code, 400, body)
+        self.assertIn("32 MiB residency", body.decode())
+        self.assertEqual(self.runtime.status()["hybrid_plan_sha256"], before["hybrid_plan_sha256"])
+        self.assertTrue(self.runtime.status()["hybrid_verified"])
+
+    def test_generic_options_are_validated_and_preserve_auto_plan_defaults(self):
+        self.hybrid_runtime()
+        profile = {"schema_version": 2, "backend_commit": app.PINNED_LLAMA_COMMIT,
+                   "executable": str(self.backend), "plan": "auto", "cuda_plugin": str(self.plugin),
+                   "context": 2048, "cache_mib": 64, "transfer": "direct"}
+        path = self.root / "generic-options.json"
+        path.write_text(json.dumps(profile))
+        runtime = app.Runtime(str(self.backend), **app.read_hybrid_profile(path))
+        self.assertEqual(runtime.hybrid_generic_cache_mib, 64)
+        self.assertEqual(runtime.active_hybrid_transfer, "direct")
+        for changes in ({"generic_cache_mib": None}, {"generic_cache_mib": True},
+                        {"generic_cache_mib": 0}, {"generic_cache_mib": 65537},
+                        {"generic_cache_mib": "32"}, {"generic_transfer": None},
+                        {"generic_transfer": "unknown"}, {"generic_transfer": True}):
+            path.write_text(json.dumps({**profile, **changes}))
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                app.read_hybrid_profile(path)
+        path.write_text(json.dumps({**profile, "generic_cache_mib": 32, "generic_transfer": "staged"}))
+        runtime = app.Runtime(str(self.backend), **app.read_hybrid_profile(path))
+        self.assertEqual(runtime.expert_cache_mib, 32)
+        self.assertEqual(runtime.active_hybrid_transfer, "staged")
+        for changes in ({"hybrid_generic_cache_mib": True}, {"hybrid_generic_cache_mib": 0},
+                        {"hybrid_generic_cache_mib": 65537}, {"hybrid_generic_transfer": "unknown"}):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                app.Runtime(str(self.backend), **changes)
+
     def test_generic_installation_profile_accepts_causal_initialization_and_binds_trained_plans(self):
         self.hybrid_runtime()
         path = self.root / "generic-profile.json"

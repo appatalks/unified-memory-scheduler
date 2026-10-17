@@ -24,6 +24,142 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## Canonical Qwen Verification And Native MTP Research
+
+The [reviewed follow-up](results/moe-canonical-verification-mtp-summary.json)
+isolates scalar/batched execution differences without weakening the
+0.01 maximum-absolute / 0.001 relative-L2 logit gates. Scalar-shaped learned
+BF16/F16 projections, attention products, and resident GPU expert products
+make Qwen blocks **2/3/4 exact at 96 sampled positions each**, including mixed
+CPU/GPU execution. Native and seeded mixed-residency long-context samples
+also pass with zero error. A training-only, group-capacity-aware 6,144 MiB
+seed passes a separate 96-position block4 gate.
+
+Initial seeded failures, the unsuccessful CUDA-fusion-disable control,
+active-capture observer effects, and a graph-metadata allocation failure
+are retained. Extra graph metadata is reserved only for canonical experiments;
+ordinary app allocation and execution remain unchanged.
+
+A derived native MTP draft reuses the pinned upstream converter's tensor
+transforms, original raw draft tensors, and unchanged target embedding/output
+tensors. It is not an architecture-label rename. Only the derived draft's
+experts are quantized to Q4_0; original target/draft files are untouched.
+The separate MTP context does not inherit the target bank or seed plan.
+
+| Screen | Scalar control | MTP, two proposals | MTP, three proposals |
+| --- | ---: | ---: | ---: |
+| Native CPU experts/GPU backbone, 4/16 threads, 128 coding tokens | 21.17 | 31.65 | Not tested |
+| Frozen 6,144 MiB hybrid, 8/16 threads, 512 coding tokens | 28.35 | 32.13 | 33.62 |
+
+Numbers are accepted-output decode tok/s, not proposal or teacher-forced
+positions/s. Drafting, verification and synchronization are inside the
+generation interval; total request wall times are retained separately.
+All compared output hashes match within each screen. Hybrid two/three
+proposal runs accepted **335/350** and **376/402** draft tokens, respectively;
+rejected proposals were not counted as output.
+
+These are **single-sample screens**, not cross-workload qualification or a new
+overall best. The frozen 6 GiB bank and canonical execution differ from the
+earlier 8 GiB adaptive Qwen configuration; do not infer a regression or a
+33.62 tok/s hardware ceiling from that unmatched comparison. The 60 tok/s
+unchanged-GPT milestone remains unmet. Canonical/MTP app options stay off.
+
+## Shared Preparation, Routing Packets And Per-Model Verification
+
+The [reviewed exploration](results/moe-preparation-packet-verification-summary.json)
+records the requested follow-up without promoting unqualified gains.
+Shared CPU activation/row-map preparation passed strict primitives and frozen
+math, but technical medians were mixed: GPT **46.40 -> 45.94**, Qwen
+**43.14 -> 43.50 tok/s**. The latter's sub-1% screen is inconclusive, despite
+79,958 actual reuses and a zero-error 96-position scalar comparison.
+
+The complete routing packet reduced filtered D2H calls **170,856 -> 113,904**
+with identical logical bytes. Its technical median improved
+**45.76 -> 46.31**, but a reverse-order natural screen was slower:
+
+| Workload | Existing handoff | Routing packet |
+| --- | ---: | ---: |
+| Coding | 46.11 | 43.09 |
+| Reasoning | 46.51 | 44.59 |
+| Prose | 65.83 | 62.54 |
+
+An initial packet failed to remove separate CPU bias-ID copies; those and
+pre-FFN consumers were fixed before the complete test. Both iterations and the
+failed exact quantitative check are retained. These measurement windows are
+not matched to the earlier 50.06 technical result and do not establish its
+cause or a new hardware limit.
+
+Qwen block2/3 verification also failed unchanged strict gates, including a
+native block2 control. Its available drafter declares `qwen4exp-mtp`, not the
+native loader's canonical format. No adapter, MTP timing claim or speculative
+app mode was enabled. Both prototypes remain off. All **19 configured test
+targets** passed; seven combined prior-hybrid and seven cold-copy comparisons
+passed with the same 14 native-reference failures. The working app was
+restored to GPT's 12,000 MiB profile and passed live activation.
+
+## Cold-Work Experiment And Second Trained Large MoE
+
+The [reviewed follow-up](results/moe-cold-work-and-qwen38-summary.json)
+tests lessons from Strata without target expert skipping or weight changes.
+On GPT-OSS-120B at 11,264 MiB, a bounded transient cold-GPU path was slower:
+**48.42** control, **40.93** synchronous-copy reference, **42.96 tok/s**
+asynchronous candidate. Matching-placement logit gates passed; extra PCIe
+uploads outweighed the reduction in CPU expert calls. Initial CUDA OOM and
+scratch-ID bound failures were retained, with the latter fixed.
+
+The already-downloaded Qwen3.8-Flash-Next IQ3_S demonstrated a second real
+large-MoE benefit at 16K/8/16: **25.39 -> 43.88 tok/s** median over three
+512-token technical samples. The control uses native CPU experts/GPU backbone;
+the candidate uses an empty causal plan and 8,192 MiB direct-DMA bank. This
+is not stock automatic placement or a matched Strata/MTP comparison.
+Both passed the narrow integer/AST checks, not broad quality qualification.
+
+A separate Qwen cold-offload pair was nearly flat/slower (**44.85 -> 44.41**),
+so transient offload remains disabled on both tested models. Scalar-shaped
+router diagnostics also failed to resolve batch verification. No speculation,
+expert pruning or relaxed numerical threshold was enabled. The app now has
+separate optional causal budget/transfer settings while preserving the GPT
+trained-plan profile. The overall GPT 60 tok/s goal remains unmet.
+
+## Admission Lifetime Research And Larger Resident Bank
+
+The [reviewed investigation](results/gpt120-admission-capacity-research-summary.json)
+records negative probation/ranked/anchored admission screens, a fresh CPU
+thread sweep, native batch-verification failures and a larger-cache winner.
+With the same 16K/8/16/direct/overlap/fusion/asynchronous-ID settings,
+11,264 MiB/hot880 versus 12,000 MiB/hot944 technical medians were
+**47.33 -> 50.06 tok/s**. Separate three-by-512 natural workload medians were:
+
+| Workload | Previous bank | Larger bank |
+| --- | ---: | ---: |
+| Coding | 44.33 | 46.71 |
+| Reasoning | 47.01 | 49.26 |
+| Prose | 62.42 | 65.99 |
+
+Both passed the 12,852-token retrieval/allocation check and narrow integer/AST
+checks. Both retained the same exact quantitative-answer failure, so neither
+is quality-qualified. Matching-placement frozen gates passed; native scalar
+versus multi-position gates still fail and speculative serving stays off.
+The local experimental app uses the larger bank; the prior plan and Standard
+rollback remain. The overall sustained 60 tok/s goal is still unmet.
+
+## Manual Universe Replay And Negative CPU-Empty Screen
+
+The [reviewed comparison](results/gpt120-universe-cpu-empty-summary.json)
+investigates the reported 41.6-versus-52 tok/s difference without treating
+unmatched requests as a regression. The recorded 614-token case had the full
+updated profile active. Controlled model-default-reasoning, T0/seed42,
+three-by-512 replay of the supplied Universe/Earth prompt measured
+**45.89 -> 47.65 tok/s** with asynchronous IDs; original UI sampling/history
+was not reconstructed and the original difference remains unattributed.
+
+An all-masked raw CPU operator early-zero path passed primitive, frozen and
+seven-layout regression checks, but its matched median was **46.60 versus
+47.19**, despite 61,983 exercised operators. It remains disabled in the app.
+The same 14 native-reference failures remain visible. The 17 configured test
+targets passed. New app timing components and an explicit reasoning selector
+improve manual comparisons without changing default reasoning or sampling.
+
 ## Copy/Wait Breakdown And Event-Protected GPU IDs
 
 The [reviewed handoff summary](results/gpt120-async-id-handoff-summary.json)

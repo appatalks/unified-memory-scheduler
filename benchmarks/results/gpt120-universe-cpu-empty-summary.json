@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "target_model": "GPT-OSS-120B MXFP4",
+  "target_weights_unchanged": true,
+  "performance_target_met": false,
+  "quality_qualified": false,
+  "context": 16384,
+  "cache_mib": 11264,
+  "cpu_threads": 8,
+  "batch_threads": 16,
+  "prompt": "Tell me the history of the Universe and the Earth",
+  "sampling": {
+    "temperature": 0,
+    "seed": 42,
+    "reasoning_effort": "model default",
+    "cache_prompt": false,
+    "ignore_eos": true,
+    "max_tokens": 512
+  },
+  "reported_app_case": {
+    "output_tokens": 614,
+    "input_tokens": 80,
+    "backend_tok_s": 41.63,
+    "generation_ms": 14725.33,
+    "prompt_ms": 1279.71,
+    "backend_total_ms": 16005.05,
+    "pipeline_and_async_ids_verified": true,
+    "earlier_52_tok_s_matched_request_available": false,
+    "cause_of_original_difference_established": false
+  },
+  "async_id_matched_replay": {
+    "source_patch_sha256": "27c76b76aac2646c6b440b54f9815d2220d326d40b5966ba4ada6fd3253bc786",
+    "restored_original_app": true,
+    "runs": [
+      {
+        "profile": "previous-ui-big",
+        "status": "ok",
+        "median_tok_s": 45.88682945814005,
+        "samples_tok_s": [
+          46.09116393322439,
+          45.88682945814005,
+          44.44086424049599
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "prompt_tokens": [
+          77,
+          77,
+          77
+        ],
+        "same_text_as_control": [
+          true,
+          true,
+          true
+        ],
+        "empty_cpu_ops": 0,
+        "small_answer_checks_passed": true
+      },
+      {
+        "profile": "current-ui-big",
+        "status": "ok",
+        "median_tok_s": 47.652924620933845,
+        "samples_tok_s": [
+          47.817648313322266,
+          47.65154433815924,
+          47.652924620933845
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "prompt_tokens": [
+          77,
+          77,
+          77
+        ],
+        "same_text_as_control": [
+          true,
+          true,
+          true
+        ],
+        "empty_cpu_ops": 0,
+        "small_answer_checks_passed": true
+      }
+    ],
+    "frozen_gates": []
+  },
+  "cpu_empty_matched_replay": {
+    "source_patch_sha256": "ddcb54cba02db63c2194755cc3826979c9f65df46e05d29cf235090c87b304f7",
+    "restored_original_app": true,
+    "runs": [
+      {
+        "profile": "current-ui-big",
+        "status": "ok",
+        "median_tok_s": 47.19063210276995,
+        "samples_tok_s": [
+          47.18677051580143,
+          47.19063210276995,
+          47.959705510099155
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "prompt_tokens": [
+          77,
+          77,
+          77
+        ],
+        "same_text_as_control": [
+          true,
+          true,
+          true
+        ],
+        "empty_cpu_ops": 0,
+        "small_answer_checks_passed": true
+      },
+      {
+        "profile": "cpu-empty-big",
+        "status": "ok",
+        "median_tok_s": 46.59525601556864,
+        "samples_tok_s": [
+          46.57291220025662,
+          47.96043253428827,
+          46.59525601556864
+        ],
+        "output_tokens": [
+          512,
+          512,
+          512
+        ],
+        "prompt_tokens": [
+          77,
+          77,
+          77
+        ],
+        "same_text_as_control": [
+          true,
+          true,
+          true
+        ],
+        "empty_cpu_ops": 61983,
+        "small_answer_checks_passed": true
+      }
+    ],
+    "frozen_gates": [
+      {
+        "profile": "current-ui-big",
+        "passed": true,
+        "positions": 96,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      },
+      {
+        "profile": "cpu-empty-big",
+        "passed": true,
+        "positions": 96,
+        "max_abs": 0.0,
+        "relative_l2": 0.0
+      }
+    ]
+  },
+  "cpu_empty_enabled_in_app": false,
+  "cpu_empty_speedup_established": false,
+  "exported_patch_sha256": "ddcb54cba02db63c2194755cc3826979c9f65df46e05d29cf235090c87b304f7",
+  "synthetic_validation": {
+    "executions": 72,
+    "reference_creations": 21,
+    "comparison_passes": 37,
+    "comparison_failures": 14,
+    "prior_hybrid": [
+      {
+        "architecture": "llama",
+        "passed": true
+      },
+      {
+        "architecture": "qwen2moe",
+        "passed": true
+      },
+      {
+        "architecture": "qwen3moe",
+        "passed": true
+      },
+      {
+        "architecture": "gpt-oss",
+        "passed": true
+      },
+      {
+        "architecture": "llama4",
+        "passed": true
+      },
+      {
+        "architecture": "cohere2moe",
+        "passed": true
+      },
+      {
+        "architecture": "grok",
+        "passed": true
+      }
+    ],
+    "restored_original_app": true
+  },
+  "tests": {
+    "configured_targets_passed": 17,
+    "primitive_types": 7,
+    "primitive_threads": [
+      1,
+      4
+    ],
+    "strided_ids": true,
+    "all_masked_counter_exercised": true,
+    "browser_fixture_passed": true
+  },
+  "app_changes": [
+    "Separate backend prompt/generation durations and input tokens from total wall time",
+    "Explicit reasoning selector; Model default omits the override",
+    "No sampling override; cache/history comparability note"
+  ],
+  "limitations": [
+    "Controlled T0/seed42 replay is not exact UI-default sampling or a reconstruction of the earlier 52 tok/s request.",
+    "User-reported fresh session near50 tok/s is operational feedback, not a matched benchmark.",
+    "The first replay predates the CPU experiment; source hashes remain separate.",
+    "CPU early-zero path skipped61,983 raw CPU operators but did not establish a speed benefit; retained disabled.",
+    "No causal attribution to context, cache or reasoning is made for the original rate difference.",
+    "Existing exact-answer and14 native-reference failures remain unresolved; thresholds unchanged.",
+    "Browser timing/payload verification used synthetic fixture data, not an inference performance measurement.",
+    "New chat clears conversation history but retains residency; backend unload/reload resets the bank.",
+    "CPU process counter is modulo2^32, not a per-layer lifetime count."
+  ]
+}

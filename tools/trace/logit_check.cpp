@@ -3,10 +3,12 @@
 #include "chat.h"
 #include "common.h"
 #include "ggml-backend.h"
+#include "llama-context.h"
 #include "llama.h"
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -15,6 +17,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <vector>
@@ -30,6 +33,11 @@ struct Diagnostic {
     int last_layer = -1;
     json values = json::array();
     std::string error;
+    bool all_layers = false;
+    bool attention_details = false;
+    std::set<std::string> layers;
+    std::map<std::string, size_t> occurrences;
+    size_t captured_bytes = 0;
 };
 
 static bool diagnostic_callback(ggml_tensor * tensor, bool ask, void * data) noexcept {
@@ -40,32 +48,61 @@ static bool diagnostic_callback(ggml_tensor * tensor, bool ask, void * data) noe
     }
     const auto dash = name.rfind('-');
     const std::string prefix = name.substr(0, dash);
-    const bool wanted = diagnostic.armed && ((name == "result_norm" || name == "result_output") ||
+    const bool wanted = diagnostic.armed && ((name == "result_norm" || name == "result_output" ||
+        name == "model.input_embed" || name == "hc_init" || name == "ple_embd") ||
         (dash != std::string::npos &&
-        (name.substr(dash + 1) == "0" || name.substr(dash + 1) == std::to_string(diagnostic.last_layer)) &&
+        (diagnostic.all_layers || diagnostic.layers.count(name.substr(dash + 1))) &&
         (prefix == "attn_post_norm" || prefix == "ffn_norm" || prefix == "ffn_moe_topk" ||
          prefix == "ffn_moe_weights_softmax" || prefix == "ffn_moe_down_biased" ||
          prefix == "ffn_moe_weighted" || prefix == "hybrid_cpu_down_biased" ||
          prefix == "hybrid_cpu_weighted" || prefix == "hybrid_gpu_weighted" ||
-         prefix == "ffn_moe_out")));
+         prefix == "ffn_moe_out" || prefix == "hc_norm" || prefix == "hc_gate" ||
+         prefix == "hc_mixed" || prefix == "hc_inject" || prefix == "hc_combine" ||
+         prefix == "linear_attn_qkv_mixed" || prefix == "conv_output_raw" ||
+         prefix == "q_conv_predelta" || prefix == "k_conv_predelta" || prefix == "v_conv_predelta" ||
+         prefix == "beta_sigmoid" || prefix == "gate" || prefix == "final_output" ||
+         prefix == "linear_attn_out" || prefix == "attn_output" || prefix == "ffn_out" ||
+         prefix == "ffn_shexp_gated" || prefix == "l_last" || prefix == "ple_gated_value" ||
+         prefix == "ple_conv_out" ||
+         (diagnostic.attention_details &&
+          (prefix == "Qcur_full" || prefix == "Qcur_normed" || prefix == "Kcur_normed" ||
+           prefix == "Qcur" || prefix == "Kcur" || prefix == "Vcur" || prefix == "indexer_q" ||
+           prefix == "indexer_top_k" || prefix == "attn_pregate" || prefix == "attn_gated" ||
+           prefix == "kqv_out" || prefix == "kq_soft_max" || prefix == "kqv" ||
+           prefix == "gate_sigmoid")))));
     if (ask) return wanted;
     if (!wanted) return true;
     try {
         const size_t count = ggml_nelements(tensor);
-        if (!ggml_is_contiguous(tensor) || count > 1000000) {
-            throw std::runtime_error("Diagnostic tensor layout is unsupported");
+        if (count > 1000000 || ggml_nbytes(tensor) > 16*1024*1024 ||
+            ggml_nbytes(tensor) > 64*1024*1024 - diagnostic.captured_bytes) {
+            throw std::runtime_error("Diagnostic tensor exceeds the bounded capture size: " + name);
         }
-        json entry = {{"name", name}, {"shape", {tensor->ne[0], tensor->ne[1], tensor->ne[2]}}};
+        json entry = {{"name", name}, {"shape", {tensor->ne[0], tensor->ne[1], tensor->ne[2]}},
+                      {"shape4", {tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3]}},
+                      {"occurrence", diagnostic.occurrences[name]++},
+                      {"strides", {tensor->nb[0], tensor->nb[1], tensor->nb[2], tensor->nb[3]}}};
+        std::vector<uint8_t> raw(ggml_nbytes(tensor));
+        ggml_backend_tensor_get(tensor, raw.data(), 0, raw.size());
+        const auto offset = [&](size_t index) {
+            size_t result = 0;
+            for (int dimension = 0; dimension < 4; ++dimension) {
+                result += (index % tensor->ne[dimension])*tensor->nb[dimension];
+                index /= tensor->ne[dimension];
+            }
+            return result;
+        };
         if (tensor->type == GGML_TYPE_F32) {
             std::vector<float> values(count);
-            ggml_backend_tensor_get(tensor, values.data(), 0, values.size()*sizeof(float));
+            for (size_t i = 0; i < count; ++i) std::memcpy(&values[i], raw.data() + offset(i), sizeof(float));
             entry["values"] = values;
         } else if (tensor->type == GGML_TYPE_I32) {
             std::vector<int32_t> values(count);
-            ggml_backend_tensor_get(tensor, values.data(), 0, values.size()*sizeof(int32_t));
+            for (size_t i = 0; i < count; ++i) std::memcpy(&values[i], raw.data() + offset(i), sizeof(int32_t));
             entry["values"] = values;
         } else throw std::runtime_error("Unexpected diagnostic tensor type");
         diagnostic.values.push_back(entry);
+        diagnostic.captured_bytes += raw.size();
         return true;
     } catch (const std::exception & exc) {
         diagnostic.error = exc.what();
@@ -73,7 +110,7 @@ static bool diagnostic_callback(ggml_tensor * tensor, bool ask, void * data) noe
     }
 }
 
-static void require(bool condition, const char * message) {
+static void require(bool condition, const std::string & message) {
     if (!condition) throw std::runtime_error(message);
 }
 
@@ -145,14 +182,33 @@ static int run(int argc, char ** argv) {
     fs::path corpus, reference_out, reference_in, output, debug_output;
     int steps = 32;
     int decode_group = 1;
+    int64_t template_epoch = 0;
     bool eval_callback_check = false;
     bool sync_hybrid_gpu = false;
+    bool all_layer_diagnostics = false;
+    bool cpu_reference = false;
+    int diagnostic_layer_limit = -1;
+    bool attention_details = false;
     std::vector<char *> backend_args{argv[0]};
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
+        if (arg == "--debug-all-layers") {
+            all_layer_diagnostics = true;
+            continue;
+        }
+        if (arg == "--cpu-reference") {
+            cpu_reference = true;
+            continue;
+        }
+        if (arg == "--debug-attention") {
+            attention_details = true;
+            continue;
+        }
         if (arg == "--help") {
             std::cout << "Usage: vrambridge-logit-check --corpus corpus.jsonl --output report.json "
                          "(--reference-out logits.bin | --reference-in logits.bin) [--steps 32] [--batch-check 1] "
+                         "[--template-epoch UNIX_SECONDS] "
+                         "[--debug-output tensors.json [--debug-all-layers | --debug-layer-limit N] [--debug-attention]] [--cpu-reference] "
                          "[pinned backend model arguments]\n"
                          "Compares full teacher-forced logits, never generation throughput. Reference contains token IDs; keep private.\n";
             return 0;
@@ -169,7 +225,8 @@ static int run(int argc, char ** argv) {
             continue;
         }
         if (arg == "--corpus" || arg == "--output" || arg == "--reference-out" ||
-            arg == "--reference-in" || arg == "--steps" || arg == "--debug-output" || arg == "--batch-check") {
+            arg == "--reference-in" || arg == "--steps" || arg == "--debug-output" ||
+            arg == "--batch-check" || arg == "--debug-layer-limit" || arg == "--template-epoch") {
             require(++i < argc, "Missing checker option value");
             const std::string value = argv[i];
             if (arg == "--corpus") corpus = value;
@@ -177,11 +234,24 @@ static int run(int argc, char ** argv) {
             else if (arg == "--reference-out") reference_out = value;
             else if (arg == "--reference-in") reference_in = value;
             else if (arg == "--debug-output") debug_output = value;
+            else if (arg == "--template-epoch") {
+                size_t consumed = 0;
+                template_epoch = std::stoll(value, &consumed);
+                const auto maximum = std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::system_clock::duration::max()).count();
+                require(consumed == value.size() && template_epoch >= 0 && template_epoch <= maximum,
+                        "Template epoch must be a nonnegative representable Unix timestamp");
+            }
             else {
                 size_t consumed = 0;
                 const int parsed = std::stoi(value, &consumed);
                 require(consumed == value.size(), "Invalid integer option");
-                (arg == "--batch-check" ? decode_group : steps) = parsed;
+                if (arg == "--debug-layer-limit") {
+                    require(parsed >= 1 && parsed <= 1024, "Diagnostic layer limit must be between 1 and 1024");
+                    diagnostic_layer_limit = parsed;
+                } else {
+                    (arg == "--batch-check" ? decode_group : steps) = parsed;
+                }
             }
         } else backend_args.push_back(argv[i]);
     }
@@ -200,6 +270,10 @@ static int run(int argc, char ** argv) {
                 destinations.insert(fs::weakly_canonical(path.string() + ".part")).second,
                 "Checker output paths overlap");
     }
+    require(!all_layer_diagnostics || !debug_output.empty(), "--debug-all-layers requires --debug-output");
+    require(diagnostic_layer_limit < 0 || !debug_output.empty(), "--debug-layer-limit requires --debug-output");
+    require(!all_layer_diagnostics || diagnostic_layer_limit < 0, "Choose all layers or a layer limit, not both");
+    require(!attention_details || !debug_output.empty(), "--debug-attention requires --debug-output");
     std::ifstream prompts(corpus);
     require(prompts.good(), "Cannot open corpus");
     std::vector<json> requests;
@@ -232,6 +306,8 @@ static int run(int argc, char ** argv) {
     common_params params;
     Diagnostic diagnostic;
     diagnostic.sync_hybrid_gpu = sync_hybrid_gpu;
+    diagnostic.all_layers = all_layer_diagnostics;
+    diagnostic.attention_details = attention_details;
     params.sampling.temp = 0;
     require(common_params_parse(static_cast<int>(backend_args.size()), backend_args.data(), params,
                                 LLAMA_EXAMPLE_COMMON), "Invalid backend options");
@@ -252,10 +328,34 @@ static int run(int argc, char ** argv) {
     auto initialized = common_init_from_params(params);
     require(initialized && initialized->context() && initialized->model(), "Model initialization failed");
     auto * ctx = initialized->context();
+    if (cpu_reference) {
+        auto * sched = ctx->get_sched();
+        int configured = 0;
+        for (int i = 0; i < ggml_backend_sched_get_n_backends(sched); ++i) {
+            auto * backend = ggml_backend_sched_get_backend(sched, i);
+            auto * device = ggml_backend_get_device(backend);
+            if (ggml_backend_dev_type(device) != GGML_BACKEND_DEVICE_TYPE_CPU) continue;
+            using set_reference_fn = void (*)(ggml_backend_t, bool);
+            auto set_reference = reinterpret_cast<set_reference_fn>(ggml_backend_reg_get_proc_address(
+                ggml_backend_dev_backend_reg(device), "ggml_backend_cpu_set_use_ref"));
+            require(set_reference != nullptr, "Selected CPU backend lacks its reference-mode hook");
+            set_reference(backend, true);
+            ++configured;
+        }
+        require(configured > 0, "No CPU backend available for reference mode");
+        std::cerr << "Diagnostic CPU reference path enabled; not an optimized serving mode.\n";
+    }
     require(decode_group <= static_cast<int>(llama_n_batch(ctx)) &&
             decode_group <= static_cast<int>(llama_n_ubatch(ctx)), "Checker block exceeds actual batch capacity");
     const auto * model = initialized->model();
     diagnostic.last_layer = llama_model_n_layer(model) - 1;
+    if (diagnostic_layer_limit > 0) {
+        for (int layer = 0; layer <= diagnostic.last_layer && layer < diagnostic_layer_limit; ++layer) {
+            diagnostic.layers.insert(std::to_string(layer));
+        }
+    } else {
+        diagnostic.layers = {"0", std::to_string(diagnostic.last_layer)};
+    }
     const auto * vocab = llama_model_get_vocab(model);
     const int count = llama_vocab_n_tokens(vocab);
     require(count > 0 && count <= 1000000, "Invalid vocabulary");
@@ -264,6 +364,7 @@ static int run(int argc, char ** argv) {
     json header = {{"schema_version", 1}, {"vocab", count}, {"steps", steps}, {"requests", requests.size()},
                    {"context", llama_n_ctx(ctx)}, {"model", fs::path(params.model.path).filename().string()},
                    {"contains_token_ids", true}, {"backend_commit", llama_commit()}};
+    if (cpu_reference) header["cpu_reference"] = true;
     if (!reference_out.empty()) {
         if (!reference_out.parent_path().empty()) fs::create_directories(reference_out.parent_path());
         binary.reset(std::fopen((reference_out.string() + ".part").c_str(), "wx"));
@@ -280,6 +381,8 @@ static int run(int argc, char ** argv) {
                    {"source_sha256", VRAMBRIDGE_LOGIT_SOURCE_SHA256},
                    {"teacher_forced", true}, {"steps_per_request", steps}, {"vocab", count},
                    {"decode_block_size", decode_group},
+                   {"template_epoch_seconds", template_epoch},
+                   {"cpu_reference", cpu_reference},
                    {"inactive_eval_callback", eval_callback_check},
                    {"mode", reference_out.empty() ? "reference_comparison" : "reference_creation"},
                    {"general_model_quality_established", false},
@@ -294,7 +397,7 @@ static int run(int argc, char ** argv) {
         common_chat_msg user; user.role = "user"; user.content = request.at("prompt").get<std::string>();
         chat.messages = {system, user};
         chat.chat_template_kwargs["reasoning_effort"] = "\"low\"";
-        chat.now = std::chrono::system_clock::time_point{};
+        chat.now = std::chrono::system_clock::time_point{std::chrono::seconds{template_epoch}};
         const auto rendered = common_chat_templates_apply(templates.get(), chat);
         const auto tokens = common_tokenize(ctx, rendered.prompt.str(), false, true);
         require(!tokens.empty() && tokens.size() + steps <= llama_n_ctx(ctx), "Prompt exceeds actual context");
@@ -326,7 +429,7 @@ static int run(int argc, char ** argv) {
         diagnostic.armed = false;
         decode(ctx, tokens);
         diagnostic.armed = false;
-        require(diagnostic.error.empty(), "Diagnostic tensor collection failed");
+        require(diagnostic.error.empty(), "Diagnostic tensor collection failed: " + diagnostic.error);
         double maximum = 0, maximum_l2 = 0;
         int top1_matches = 0;
         json position_errors = json::array();
@@ -374,7 +477,7 @@ static int run(int argc, char ** argv) {
                 }
             }
             diagnostic.armed = false;
-            require(diagnostic.error.empty(), "Diagnostic tensor collection failed");
+            require(diagnostic.error.empty(), "Diagnostic tensor collection failed: " + diagnostic.error);
         }
         const bool good = maximum <= .01 && maximum_l2 <= .001;
         passed = passed && good;

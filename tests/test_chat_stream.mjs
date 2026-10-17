@@ -54,6 +54,24 @@ test("final usage-only events preserve speed and include reasoning tokens", () =
   assert.match(stream.metrics(6, "Complete"), /123\.5 tok\/s/);
 });
 
+test("prompt and generation time stay separate from total wall time", () => {
+  const stream = new ChatStream();
+  stream.push(encode(event({
+    timings: { predicted_n: 614, predicted_per_second: 41.63, predicted_ms: 14725.33,
+      prompt_ms: 1279.71, prompt_n: 80 },
+  }) + "data: [DONE]\n\n"));
+  const text = stream.metrics(16.005, "Complete");
+  assert.match(text, /41\.6 tok\/s/);
+  assert.match(text, /614 output tokens/);
+  assert.match(text, /14\.7s generation/);
+  assert.match(text, /1\.3s prompt/);
+  assert.match(text, /80 input tokens/);
+  assert.match(text, /16\.0s total/);
+  stream.timings.predicted_ms = NaN;
+  stream.timings.prompt_ms = -1;
+  assert.doesNotMatch(stream.metrics(16, "Complete"), /s generation|s prompt/);
+});
+
 test("reasoning-only truncation explains the token limit instead of showing a blank answer", () => {
   const stream = new ChatStream();
   stream.push(encode(event(delta({ reasoning_content: "Still thinking" }))

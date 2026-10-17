@@ -43,6 +43,12 @@ export class ChatStream {
     if (Number.isFinite(rate) && rate >= 0) parts.push(`${rate.toFixed(1)} tok/s`);
     else parts.push(this.done || ["Stopped", "Failed"].includes(phase) ? "speed unavailable" : "speed pending");
     if (Number.isInteger(tokens) && tokens >= 0) parts.push(`${tokens.toLocaleString()} output tokens`);
+    for (const [name, label] of [["predicted_ms", "generation"], ["prompt_ms", "prompt"]]) {
+      const value = this.timings[name];
+      if (Number.isFinite(value) && value >= 0) parts.push(`${(value / 1000).toFixed(1)}s ${label}`);
+    }
+    const inputTokens = this.usage?.prompt_tokens ?? this.timings.prompt_n;
+    if (Number.isInteger(inputTokens) && inputTokens >= 0) parts.push(`${inputTokens.toLocaleString()} input tokens`);
     parts.push(`${elapsed.toFixed(1)}s total`);
     return parts.join(" · ");
   }

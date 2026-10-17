@@ -32,7 +32,7 @@ BODY_LIMIT = 1024 * 1024
 RESPONSE_LIMIT = 8 * 1024 * 1024
 PINNED_LLAMA_COMMIT = "620d2225cc436ab0b001e3200e590e3b286ef9ab"
 HYBRID_WARNING = (
-    "Experimental tensor-derived MoE dispatch. Measured speedups currently cover GPT-OSS-120B only, not every model. "
+    "Experimental tensor-derived MoE dispatch. Measured speedups cover limited tested MoE configurations, not every model. "
     "Strict model diagnostics and an answer check remain failed. About 57 GiB of RAM stays pinned "
     "during the measured 120B direct-DMA profile; other layouts and staged transfers differ. "
     "Direct registration enforces a 64 GiB cap and 24 GiB available-RAM headroom. "
@@ -229,13 +229,17 @@ def read_hybrid_profile(path: Path) -> dict:
         raise ValueError("Hybrid installation profile exceeds 64 KiB.")
     data = json.loads(path.read_text(encoding="utf-8"))
     required = {"schema_version", "backend_commit", "executable", "plan", "cuda_plugin"}
-    optional = {"model_layout", "context", "cache_mib", "transfer", "decode_pipeline", "async_ids"}
+    optional = {"model_layout", "context", "cache_mib", "transfer", "decode_pipeline", "async_ids",
+                "generic_cache_mib", "generic_transfer"}
     if (not isinstance(data, dict) or not required <= set(data) or set(data) - required - optional or
             type(data["schema_version"]) is not int or data["schema_version"] not in (1, 2) or
             data["backend_commit"] != PINNED_LLAMA_COMMIT or
             type(data.get("decode_pipeline", False)) is not bool or
             type(data.get("async_ids", False)) is not bool or
             (data.get("async_ids", False) and not data.get("decode_pipeline", False)) or
+            ("generic_cache_mib" in data and (type(data["generic_cache_mib"]) is not int or
+                                             not 1 <= data["generic_cache_mib"] <= 65536)) or
+            ("generic_transfer" in data and data["generic_transfer"] not in ("direct", "staged")) or
             any(not isinstance(data[key], str) or not Path(data[key]).is_absolute()
                 for key in ("executable", "cuda_plugin")) or not isinstance(data["plan"], str) or
             (data["plan"] != "auto" and not Path(data["plan"]).is_absolute())):
@@ -264,7 +268,9 @@ def read_hybrid_profile(path: Path) -> dict:
             "hybrid_context": data.get("context", 16384), "hybrid_cache_mib": data.get("cache_mib", 10240),
             "hybrid_transfer": data.get("transfer", "direct" if data["schema_version"] == 1 else "staged"),
             "hybrid_decode_pipeline": data.get("decode_pipeline", False),
-            "hybrid_async_ids": data.get("async_ids", False)}
+            "hybrid_async_ids": data.get("async_ids", False),
+            "hybrid_generic_cache_mib": data.get("generic_cache_mib"),
+            "hybrid_generic_transfer": data.get("generic_transfer")}
 
 
 class Runtime:
@@ -274,7 +280,8 @@ class Runtime:
                  hybrid_executable: str | None = None, execution_mode: str | None = None,
                  hybrid_layout: dict | None = None, hybrid_generic: bool = False,
                  hybrid_context: int = 16384, hybrid_cache_mib: int = 10240, hybrid_transfer: str = "direct",
-                 hybrid_decode_pipeline: bool = False, hybrid_async_ids: bool = False):
+                 hybrid_decode_pipeline: bool = False, hybrid_async_ids: bool = False,
+                 hybrid_generic_cache_mib: int | None = None, hybrid_generic_transfer: str | None = None):
         if backend_kind not in ("llama.cpp", "ik_llama.cpp"):
             raise ValueError("Unsupported backend kind.")
         if (hybrid_plan is None) != (hybrid_cuda_plugin is None):
@@ -293,6 +300,9 @@ class Runtime:
         if (type(hybrid_context) is not int or not 512 <= hybrid_context <= 65536 or
                 type(hybrid_cache_mib) is not int or not 1 <= hybrid_cache_mib <= 65536 or
                 hybrid_transfer not in ("direct", "staged") or type(hybrid_generic) is not bool or
+                (hybrid_generic_cache_mib is not None and (type(hybrid_generic_cache_mib) is not int or
+                                                         not 1 <= hybrid_generic_cache_mib <= 65536)) or
+                (hybrid_generic_transfer is not None and hybrid_generic_transfer not in ("direct", "staged")) or
                 type(hybrid_decode_pipeline) is not bool or type(hybrid_async_ids) is not bool or
                 (hybrid_async_ids and not hybrid_decode_pipeline)):
             raise ValueError("Invalid generic hybrid context, residency budget, or transfer policy.")
@@ -302,10 +312,12 @@ class Runtime:
         self.hybrid_context = hybrid_context
         self.hybrid_cache_mib = hybrid_cache_mib
         self.hybrid_transfer = hybrid_transfer
+        self.hybrid_generic_cache_mib = hybrid_cache_mib if hybrid_generic_cache_mib is None else hybrid_generic_cache_mib
+        self.hybrid_generic_transfer = (hybrid_transfer if hybrid_plan == "auto" else "staged") if hybrid_generic_transfer is None else hybrid_generic_transfer
         self.hybrid_decode_pipeline = hybrid_decode_pipeline
         self.hybrid_async_ids = hybrid_async_ids
-        self.active_hybrid_transfer = hybrid_transfer
-        self.required_hybrid_markers = {"hybrid", "context", "coverage", "direct", "registered"} if hybrid_transfer == "direct" else {"hybrid", "context", "coverage", "staged"}
+        self.active_hybrid_transfer = self.hybrid_generic_transfer if hybrid_plan == "auto" else hybrid_transfer
+        self.required_hybrid_markers = {"hybrid", "context", "coverage", "direct", "registered"} if self.active_hybrid_transfer == "direct" else {"hybrid", "context", "coverage", "staged"}
         self.hybrid_cuda_plugin = hybrid_cuda_plugin.resolve(strict=True) if hybrid_cuda_plugin is not None else None
         self.hybrid_experts = 0
         self.hybrid_plan_sha256 = None
@@ -361,7 +373,7 @@ class Runtime:
             self.context = self.hybrid_context
             self.cpu_threads = min(8, len(available_cpus()))
             self.batch_threads = min(16, len(available_cpus()))
-            self.expert_cache_mib = self.hybrid_cache_mib
+            self.expert_cache_mib = self.hybrid_generic_cache_mib if self.hybrid_plan == "auto" else self.hybrid_cache_mib
             self.host_op_offload = False
         self.requested_context = self.context
         self.context_warning: str | None = None
@@ -395,6 +407,8 @@ class Runtime:
                 "hybrid_context": self.context if self.hybrid_active else self.hybrid_context,
                 "hybrid_context_budget": self.hybrid_context,
                 "hybrid_cache_mib": self.hybrid_cache_mib,
+                "hybrid_generic_cache_mib": self.hybrid_generic_cache_mib,
+                "hybrid_generic_transfer": self.hybrid_generic_transfer,
                 "execution_warning": HYBRID_WARNING if self.hybrid_active else None,
                 "hybrid_verified": self.hybrid_active and self.required_hybrid_markers <= self.hybrid_markers,
                 "fit_enabled": not self.hybrid_active and self.placement == "auto",
@@ -427,6 +441,7 @@ class Runtime:
         hybrid = mode == "hybrid"
         selected_plan = self.hybrid_plan
         transfer = self.hybrid_transfer
+        selected_cache_mib = self.hybrid_cache_mib
         selected_experts = 0
         selected_plan_sha256 = None
         context_limit = None
@@ -446,8 +461,8 @@ class Runtime:
             hybrid = policy["hybrid"]
             if hybrid and policy["automatic_plan"]:
                 selected_plan = "auto"
-                if self.hybrid_plan != "auto":
-                    transfer = "staged"
+                transfer = self.hybrid_generic_transfer
+                selected_cache_mib = self.hybrid_generic_cache_mib
             if policy["reason"] == "native_budget":
                 reason = ("MoE weight file fits the configured residency budget; native fitting is preferred "
                           "to avoid hybrid scheduling overhead. This is not a fit or speed guarantee.")
@@ -471,7 +486,7 @@ class Runtime:
         cpu_threads = data.get("cpu_threads", min(8, len(available_cpus())) if hybrid else default_cpu_threads())
         batch_threads = data.get("batch_threads", min(16, len(available_cpus())) if hybrid else cpu_threads)
         load_mode = data.get("load_mode", "auto")
-        expert_cache_mib = data.get("expert_cache_mib", self.hybrid_cache_mib if hybrid else 0)
+        expert_cache_mib = data.get("expert_cache_mib", selected_cache_mib if hybrid else 0)
         fit_target_mib = data.get("fit_target_mib", 1024)
         host_op_offload = data.get("host_op_offload", not hybrid)
         cpu_poll = data.get("cpu_poll", 50)
@@ -504,10 +519,10 @@ class Runtime:
             raise AppError(400, "Operation offload minimum batch must be an integer between 1 and 8192.")
         if hybrid:
             if (placement != "auto" or context != planned_context or load_mode != "auto" or
-                    expert_cache_mib != self.hybrid_cache_mib or host_op_offload or draft_value not in (None, "") or
+                    expert_cache_mib != selected_cache_mib or host_op_offload or draft_value not in (None, "") or
                     fit_target_mib != 1024 or op_offload_min_batch != 32):
                 raise AppError(400, "The experimental hybrid profile requires automatic CPU/GPU execution, "
-                               f"{planned_context} context, default loading, {self.hybrid_cache_mib} MiB residency, host-op offload off, "
+                               f"{planned_context} context, default loading, {selected_cache_mib} MiB residency, host-op offload off, "
                                "1024 MiB reserve placeholder (fitting is off), batch threshold 32, and no draft.")
             try:
                 selected_experts = validate_hybrid_plan(selected_plan, layout) if selected_plan != "auto" else 0

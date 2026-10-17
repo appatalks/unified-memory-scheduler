@@ -103,6 +103,21 @@ class SweepTests(unittest.TestCase):
             self.assertEqual(payload["messages"][0]["content"], "Long prose")
             self.assertFalse(payload["ignore_eos"])
 
+    def test_model_default_reasoning_is_not_silently_overridden(self):
+        event = {"choices": [{"delta": {"content": "output"}}],
+                 "timings": {"predicted_n": 512, "prompt_ms": 1000, "predicted_ms": 20000,
+                             "predicted_per_second": 25.55}, "usage": {"completion_tokens": 512}}
+        data = b"data: " + json.dumps(event).encode() + b"\n\ndata: [DONE]\n\n"
+        for effort in (None, "low"):
+            with mock.patch.object(sweep.urllib.request, "urlopen", return_value=io.BytesIO(data)) as send, \
+                    mock.patch.object(sweep.time, "monotonic", side_effect=[1.0, 1.5, 22.0]):
+                sweep.sample("http://127.0.0.1:12345", 512, reasoning_effort=effort)
+            payload = json.loads(send.call_args.args[0].data)
+            if effort is None:
+                self.assertNotIn("reasoning_effort", payload)
+            else:
+                self.assertEqual(payload["reasoning_effort"], effort)
+
     def test_restores_original_after_candidate_failure(self):
         original = initial_status()
         with mock.patch.object(sweep, "request_json", return_value=original), \

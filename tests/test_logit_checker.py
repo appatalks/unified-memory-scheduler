@@ -55,6 +55,48 @@ class LogitCheckerInputs(unittest.TestCase):
         self.rejected(result)
         self.assertIn("paths overlap", result.stderr)
 
+    def test_all_layer_diagnostics_requires_output_before_backend_initialization(self):
+        result = self.invoke("--debug-all-layers")
+        self.rejected(result)
+        self.assertIn("--debug-all-layers requires --debug-output", result.stderr)
+
+    def test_cpu_reference_does_not_bypass_reference_validation(self):
+        self.reference.write_bytes(b"BADMAGIC")
+        result = self.invoke("--cpu-reference")
+        self.rejected(result)
+        self.assertIn("Reference magic mismatch", result.stderr)
+
+    def test_layer_limit_is_bounded_and_requires_diagnostic_output(self):
+        for value in ("0", "-1", "1025", "1.5", "4tail"):
+            with self.subTest(value=value):
+                self.rejected(self.invoke("--debug-layer-limit", value))
+        result = self.invoke("--debug-layer-limit", "4")
+        self.rejected(result)
+        self.assertIn("--debug-layer-limit requires --debug-output", result.stderr)
+        result = self.invoke("--debug-layer-limit", "4", "--debug-all-layers",
+                             "--debug-output", str(self.root / "debug.json"))
+        self.rejected(result)
+        self.assertIn("not both", result.stderr)
+
+    def test_attention_diagnostics_requires_output(self):
+        result = self.invoke("--debug-attention")
+        self.rejected(result)
+        self.assertIn("--debug-attention requires --debug-output", result.stderr)
+
+    def test_template_epoch_is_bounded_before_backend_initialization(self):
+        for value in ("-1", "1.5", "12tail", "9223372037", "99999999999999999999"):
+            with self.subTest(value=value):
+                result = self.invoke("--template-epoch", value)
+                self.rejected(result)
+                if value == "99999999999999999999":
+                    self.assertIn("stoll", result.stderr)
+                else:
+                    self.assertIn("Template epoch must be", result.stderr)
+        self.reference.write_bytes(b"BADMAGIC")
+        result = self.invoke("--template-epoch", "0")
+        self.rejected(result)
+        self.assertIn("Reference magic mismatch", result.stderr)
+
     def test_invalid_or_duplicate_corpus_records(self):
         for records in ([], [{**self.record, "category": "unknown"}],
                         [{**self.record, "prompt": ""}], [{**self.record, "split": "unknown"}],

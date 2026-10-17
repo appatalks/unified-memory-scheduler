@@ -943,6 +943,536 @@ Do not prioritize disk streaming while the target fits RAM, repeat the rejected
 QKV alias, or retry the same slower DFlash setup without a new causal reason.
 Avoid new dependencies, global machine tuning, and approximate expert pruning.
 
+### Universe Replay And Empty CPU Operator Experiment
+
+A manual 614-token result at 41.63 tok/s was verified in the live backend
+logs: generation 14,725.33 ms, prompt 1,279.71 ms, total 16,005.05 ms, with
+80 input tokens. All configured overlap/fusion/asynchronous-ID markers were
+active. The user subsequently observed near 50 tok/s in a fresh session.
+The original approximately 52 tok/s request was not available as a matched
+control, so the cause of the original difference remains unattributed.
+
+For the supplied prompt, "Tell me the history of the Universe and the Earth",
+three exact 512-token controlled segments with model-default reasoning,
+temperature 0/seed 42 and no prompt reuse measured **45.89 tok/s** without
+asynchronous IDs and **47.65** with them. This did not reproduce a regression
+from that scheduling change, but is not a reconstruction of UI-default
+sampling, its 614-token answer, or an earlier cache state.
+
+The next CPU prototype detects an entirely `-1` masked expert-ID tensor before
+activation conversion and row-map/atomic setup, clears only logical output
+rows using their actual strides, and retains workspace/shape checks. Partial
+or other invalid IDs still use the original path. Active expert math, biases,
+shared experts and downstream FFN work are unchanged. The flag is read once
+at CPU initialization, with a process counter confirming actual execution.
+
+Primitive controls passed across seven types, one/four threads and strided
+IDs. The real frozen comparisons passed all 96 positions with zero measured
+logit error; all three compared generation hashes matched. Despite **61,983**
+empty CPU operators being exercised, the matched Universe median was
+**46.60** versus **47.19** for the current control, with mixed paired results.
+No repeatable speedup was established, so `CPU_EMPTY` remains **off** in the
+app. Less CPU work is not proof of less critical-path latency.
+
+All seven prior-hybrid layout regressions passed; the same 14 native-reference
+failures remained. The configured 17-target suite passed, including explicit
+empty-path off/on controls. The [reviewed replay and negative result](../../benchmarks/results/gpt120-universe-cpu-empty-summary.json)
+retains separate source hashes for the pre-experiment replay and CPU candidate.
+
+The app now shows separate prompt/generation durations and input tokens,
+offers an explicit reasoning-effort selector with unchanged Model-default
+behavior, and explains conversation/cache comparability. Browser fixture
+checks verify the displayed timing components and that default reasoning and
+sampling are not silently overridden. These fixture timings are not measured
+inference performance. Existing conversations are preserved in their tabs.
+
+## Admission Lifetimes, Larger Residency And Current Research
+
+The [reviewed research summary](../../benchmarks/results/gpt120-admission-capacity-research-summary.json)
+separates useful performance changes, negative experiments and numerical
+diagnostics. All measurements below retain the original target weights and
+selected experts. The general 60 tok/s milestone remains **unmet**.
+
+### Measure Reuse, Not Just Upload Volume
+
+New opt-in `VRAMBRIDGE_HYBRID_PAYBACK=1` records dynamic admission lifetimes
+with a 64 MiB combined metadata cap. It counts subsequent resident hits,
+dynamic/seed evictions, evicted reuse buckets and live residency separately.
+Per-layer admission counts must equal dynamic evictions plus dynamic live
+entries; both reuse histograms must reconcile exactly. Live entries are
+right-censored, not classified as wasted.
+
+Observer-off/on technical medians were **48.01/48.35 tok/s**, with matching
+generation hashes and migrations and passing frozen full-logit gates.
+This screen does not establish zero instrumentation overhead in every case.
+Across the observed requests there were **6,866** admissions, **118,466**
+future hits, **6,023** dynamic evictions, **837** seed evictions and **843**
+dynamic live entries. Evicted reuse counts for zero/one/two/three/four-plus
+future hits were **745/666/516/414/3,682**. The zero-future-reuse entries
+accounted for **9.874 GB** of uploads. They may still have helped their
+admission-time execution, so this is not a measured wasted-time total.
+Counts include initialization/partial-prefill observations; they do not share
+the filtered scheduler profiler's exact denominator.
+
+Three experimental causal policies failed to improve generation:
+
+| Screen | Classic control median | Candidate median | Decision |
+| --- | ---: | ---: | --- |
+| Prior-lifetime probation | 48.81 | 47.95 | Not promoted |
+| Seed/recency-ranked eviction ties | 48.35 | 47.15 | Not promoted |
+| Protect top-quarter training-seed slots | 48.35 | 46.70 | Not promoted |
+
+Probation strengthens the existing four-read margin after a previously
+observed low-reuse lifetime; it is a heuristic, not a millisecond-priced cost
+model. Upload volume decreased **91.00 -> 78.24 GB**, but generation slowed.
+Anchoring increased CPU expert selections **64,277 -> 69,620**. These are
+closed-loop generation screens, not fixed-routing isolated cost experiments;
+placement and native floating-point differences can change generated paths.
+Neither lower upload traffic nor a protected seed set proves lower latency.
+The experimental policies remain explicitly gated; classic remains default.
+
+A fresh thread sweep on the asynchronous-ID engine measured technical
+medians of **47.33/47.74/45.57/45.96 tok/s** at **4/8/12/16** generation
+threads, respectively. All comparisons used the same external frozen
+reference and passed. Keep eight: using every core is not automatically faster.
+
+### Larger Cache: A Measured Experimental Winner
+
+The training trace alone generated a **944-group** seed plan, compared with
+the previous 880. At actual 16K context, 8/16 threads, direct DMA and the
+existing overlap/fusion/asynchronous-ID pipeline, increasing the bank from
+**11,264 to 12,000 MiB** improved the technical median **47.33 -> 50.06**
+tok/s. Matching-placement frozen comparisons passed; this does not establish
+CPU-only reference equivalence.
+
+Separate natural-style requests retained `ignore_eos=false`, T0/seed42,
+model-default reasoning and three exact 512-token generation segments:
+
+| Workload | 11,264 MiB / hot880 samples | 12,000 MiB / hot944 samples | Median change |
+| --- | --- | --- | --- |
+| Coding | 44.62 / 44.33 / 44.01 | 44.69 / 46.71 / 47.01 | 44.33 -> 46.71 |
+| Reasoning | 45.62 / 47.01 / 48.37 | 46.34 / 49.26 / 49.35 | 47.01 -> 49.26 |
+| Prose | 60.62 / 63.12 / 62.42 | 65.99 / 67.40 / 65.29 | 62.42 -> 65.99 |
+
+Both configurations passed the narrow integer/AST checks and retrieved both
+keys from **12,852 input tokens** without allocation failure. Both still
+answered **26.78** instead of the exact requested **26.79**, so the original
+reports correctly remain `qualification_failed`. The larger bank is suitable
+only for experimental performance promotion on this tested machine. It is
+not a universal VRAM budget, a quality qualification, or cross-workload 60.
+Requests run sequentially within each profile and residency persists; this
+is not a randomized statistical study or a cold-cache-per-request benchmark.
+
+The local app and installation example use the larger plan/budget, retaining
+the prior installation backup, hot880 plan, eight generation threads, explicit
+experimental warnings and Standard rollback. Neither new admission policy nor
+the negative CPU-empty path is enabled.
+
+### Multi-Token Verification Is Still A Numerical Blocker
+
+Two/three/four-position full-vocabulary comparisons fail the unchanged
+**0.01 maximum-absolute / 0.001 relative-L2** gates. Forcing the plugin's
+`GGML_CUDA_MMQ_PREC=q8` produced identical errors; these small expert calls
+use vector kernels, so the proposed A4 MMQ explanation is unsupported.
+The discrepancy also reproduces with the earlier hybrid path, native CPU
+experts/GPU backbone and fully CPU execution against their matched scalar
+references. It is not isolated to overlap, projection fusion or asynchronous
+IDs. These are diagnostic positions, not accepted speculative output.
+
+CPU-only, flash-off intermediate captures found first-layer normalized input
+and selected expert IDs equal for the first sampled token, with routing
+softmax differences around **5.96e-8**. All-layer capture then found that this
+token retained the **same ordered experts in all 36 layers**. Its expert-down
+values first diverged at **layer 29**, after smaller weighted-output differences
+earlier. Hard-routing changes therefore do not explain this token's initial
+divergence. Accumulated rounding/activation-quantization sensitivity remains
+a hypothesis, not a resolved kernel-level cause.
+
+Enabling the pinned CPU backend's existing `use_ref` path made the fully CPU,
+flash-off block2 comparison **exact at all 96 positions** across three requests.
+The coding/reasoning scalar reference token sequences also matched their
+ordinary-mode counterparts; the prose trajectory differed. This isolates a
+native CPU optimized/reference execution-path sensitivity, not a particular
+single kernel: the switch disables several optimizations. It does not establish
+a correct or fast GPU-backbone verification path.
+Indeed, a matched native GPU-backbone/CPU-expert control with the same CPU
+reference switch still failed block2 gates (relative-L2 **0.093-0.121**).
+The all-CPU result therefore does not unblock speculative serving.
+The checker now supports bounded strided captures,
+all-layer inspection and the native CPU reference-mode hook; it propagates
+actual diagnostic failures. No thresholds were loosened and no speculative
+path was promoted.
+
+### Verified Primary Sources And What They Do Not Establish
+
+- [SpecMoE](https://arxiv.org/abs/2604.10152), **2026-04-11**, describes
+  training-free self-assisted drafting from resident experts followed by full
+  target verification. A weight-sharing, resident-only *proposal* context is
+  a promising architectural direction. It has not been implemented here;
+  approximate target expert pruning would not satisfy our goal.
+- [MoEpic](https://arxiv.org/abs/2509.08342), **2025-09-10**, studies partial
+  expert caching, prefetching and adaptive layer/split budgets. Its different
+  offload baseline is not a drop-in throughput prediction.
+- [Achieving Cloud-Grade SLOs on CPU-GPU Hybrid Systems](https://arxiv.org/abs/2606.10493),
+  **2026-06-09**, studies native FP8 and fine-grained parallelism on a different
+  dual-socket/consumer-GPU setup. It does not establish a gain on this
+  single-socket MXFP4 system.
+- [KTransformers expert scheduling](https://github.com/kvcache-ai/ktransformers/blob/main/doc/en/kt-kernel/experts-sched-Tutorial.md)
+  documents static/frequency/dynamic GPU masks. Its stated tutorial minimum
+  is 24 GB VRAM/256 GB RAM, with larger multi-GPU test hardware. No framework
+  installation or hardware-equivalent speed claim follows.
+- [Strata's implementation notes](https://github.com/Niko1221/Strata/blob/main/docs/DETAILS.md)
+  describe different Qwen models, quantizations and MTP, and acknowledge
+  batch/cache-state rounding differences. Those rates are not unchanged
+  GPT-OSS-120B comparisons.
+- [MoE-Infinity](https://github.com/EfficientMoE/MoE-Infinity) provides tracing,
+  cache/prefetch mechanisms and Hugging Face-native integration, not a direct
+  replacement for the current GGUF executor.
+
+Only verified primary sources are retained; unresolvable search placeholders
+are excluded. No external installer or new model download was run.
+
+A read-only **3,760,128-byte / 18-tensor** MXFP4 sample yielded a CPU zlib-1
+compression ratio of **1.03576** and an independent-symbol estimate of
+**3.959 bits/weight** versus raw **4.25**. This is limited compression headroom
+on small samples, not full-model compressibility. No GPU decoder exists and
+neither decompression overhead nor generation benefit was measured.
+
+Next prioritize numerical isolation of block verification, then a separately
+gated resident-expert proposal context with full-target verification if its
+correctness gates can pass. Shared CPU projection preparation and per-layer
+cache budgeting remain measurable alternatives; do not replace stalled
+progress with approximate-target or aggregate-batch throughput claims.
+
+## Cold-Work Split And A Second Trained Large MoE
+
+The follow-up uses Strata's scheduling lessons without copying its
+architecture-specific assumptions or approximate expert skipping. Original
+target weights and every selected expert contribution remain intact.
+
+### Transient CPU/GPU Cold Work
+
+The opt-in prototype offloads one remaining cold expert when a scalar layer
+has at least two misses. It reuses the extra slot already allocated in each
+cache group, leaves the residency map/history unchanged and computes the
+remaining cold experts on CPU. It copies every projection and optional bias
+from immutable registered sources, uses native expert math, and preserves
+pre/post-FFN weighting and shared-expert behavior.
+
+The shared slot is outside persistent residency. Same-stream ordering
+protects prior GPU readers and orders the new upload before its consumers.
+Teardown synchronizes before releasing registered sources. Multi-position
+dispatch does not use this slot. Bank views and asynchronous ID validation
+share the same exclusive slot limit; zero IDs remain distinct per active
+position.
+
+The initial 12,000 MiB reference attempt failed with CUDA OOM during prompt
+processing. A subsequent 11,264 MiB attempt caught a missing scratch-ID bound
+in asynchronous handoff; that defect was fixed and covered by helper tests.
+Both failures remain in private evidence, with the app restored afterward.
+Reusing an allocated bank slot does not eliminate CUDA module/workspace or
+registration resource requirements.
+
+After the fix, three 512-token technical samples at 11,264 MiB/hot880 measured:
+
+| Path | Samples, tok/s | Median |
+| --- | --- | ---: |
+| Existing engine | 51.01 / 45.79 / 48.42 | 48.42 |
+| Synchronous cold-copy reference | 41.24 / 40.09 / 40.93 | 40.93 |
+| Asynchronous cold copy | 44.53 / 42.31 / 42.96 | 42.96 |
+
+Matching-placement synchronous/asynchronous full-vocabulary gates passed at
+96 positions. Those gates establish copy-path equivalence, not equivalence
+to CPU-only placement. The asynchronous path reduced CPU expert selections
+64,277 -> 47,099, but made **252.54 GB** of extra logical transient uploads
+in addition to **93.09 GB** of adaptive admissions (control: **91.00 GB**).
+Fewer CPU calls and more GPU work did not produce faster generation.
+These are closed-loop generation counters, not fixed-route physical traffic
+measurements. The candidate remains off in the app.
+
+### Narrowing Batch-Dependent Numerics
+
+A second opt-in diagnostic projects each router input separately for small
+blocks, using the same native matrix helper and accumulation policy before
+concatenating columns. It is bounded to 2-32 positions and does not alter
+single-position serving or large prompt blocks.
+
+The CPU-only block2 screen still failed full-model gates; relative-L2 errors
+were **0.084-0.131** across three requests. The GPU-backed screen retained
+the same errors as its previous control. Logs confirm the diagnostic graph
+was active. Router matrix shape alone therefore does not resolve the batch
+discrepancy. The earlier full CPU reference-mode success does not justify
+claiming that a single optimized router kernel is the entire cause.
+No speculative serving mode or relaxed threshold was enabled.
+
+### Actual Qwen3.8 IQ3_S, No Reused GPT Plan
+
+The user's existing Strata data contains Qwen3.8-Flash-Next GSQ-RCO IQ3_S:
+48 layers, 512 experts/layer, top-10, embedding width 2,560 and expert FFN
+width 640. Its packed routed experts occupy **50,292,326,400 bytes**.
+Their selected logical weight size before caching/reuse is **982,272,000
+bytes/token**, versus about **1.91 GB/token** for the GPT expert tensors.
+These omit other model work and are not measured DRAM or PCIe traffic.
+
+The pinned backend already supports its `qwen4exp` architecture and lazy PLE
+table loading. Text-only runs use the downloaded first shard, not the image
+projector, with no conversion, new download, MTP, expert pruning or borrowed
+training plan.
+
+At 16K context, 8 generation/16 prompt threads and three exact 512-token
+technical segments:
+
+| Path | Samples, tok/s | Median |
+| --- | --- | ---: |
+| Native CPU experts / GPU backbone | 25.12 / 25.75 / 25.39 | 25.39 |
+| Generic causal direct-DMA bank, 8,192 MiB | 42.26 / 44.56 / 43.88 | 43.88 |
+
+This establishes a measured generic-engine benefit on a second trained large
+MoE, not universal MoE acceleration. The control explicitly uses CPU experts,
+not stock automatic placement. It is not a matched Strata comparison:
+Strata's documented defaults include MTP and newer versions can skip
+low-weight missed experts. Persistent cache history spans requests, and the
+forced output cap is not a complete-answer quality evaluation.
+
+The app now permits separate optional budget/transfer settings for unbound
+causal layouts. This preserves the trained GPT plan and budget while avoiding
+blind reuse of its larger bank for a model with a different GPU backbone.
+Defaults remain backward-compatible; direct transfers retain their existing
+source-registration and memory-safety guards.
+
+A separate paired Qwen transient-offload screen measured **44.85** without
+the option versus **44.41 tok/s** with it, three 512-token segments each.
+No repeatable benefit was established, so the app does not enable it.
+Across seven untrained layouts, all seven matching-placement cold-copy
+comparisons and all seven prior-hybrid regressions passed. The expanded
+matrix retains 86 executions, 28 reference creations, 44 passing comparisons
+and the same 14 native-reference failures. This is mechanical compatibility,
+not seven trained-model speedups or quality qualification.
+
+The [reviewed follow-up](../../benchmarks/results/moe-cold-work-and-qwen38-summary.json)
+retains source hashes, positive and negative timings, initial failures and
+separate app activation evidence. The local installation uses an 8,192 MiB
+direct causal policy while keeping GPT's 12,000 MiB trained policy. Other
+installations retain their previous defaults unless the new fields are set.
+
+## Shared CPU Preparation, Route Packets And Model-Specific Verification
+
+The [reviewed three-track exploration](../../benchmarks/results/moe-preparation-packet-verification-summary.json)
+retains positive component checks, negative performance screens and blocked
+speculation. No target weights, selected experts or diagnostic thresholds
+were changed. The working app keeps these new research switches off.
+
+### Exact CPU Preparation Reuse
+
+The native raw expert matmul can share activation conversion and row grouping
+when input/ID tensor identities, dot-input type and expert count match.
+Metadata is local to each worker's graph invocation. Graph entry resets it;
+only views and disjoint raw bias adds may intervene. Other operations,
+in-place input mutation and opaque extra-buffer handlers invalidate reuse.
+Masked outputs are zeroed again for each projection, and task counters reset
+on every call. CPU reference mode retains the original path.
+
+The initial conservative guard excluded tensors with any tiled reservation.
+That meant the first Qwen scalar comparison passed numerically but executed
+zero reuses; it was explicitly rejected as optimization validation. Source
+inspection established that native tiled *expert* kernels read the prepared
+prefix and write only their separate scratch suffix. Extending that contract
+preserves the same selected kernels, rather than disabling tiling or changing
+dot-product precision.
+
+Seven raw types at one/four threads cover strided/masked IDs, changing
+activations and IDs, graph-call resets, an in-place mutation, opaque repacking
+and a larger-row Q4_K tiled case. Matching scalar full-vocabulary comparisons
+passed all 96 positions, including actual Qwen IQ quantizations with **4,752**
+reuses. The process counter is modulo 2^32, not a per-token count.
+
+| Technical screen | Existing preparation median | Shared median | Actual reuse count |
+| --- | ---: | ---: | ---: |
+| GPT-OSS-120B / 12,000 MiB | 46.40 | 45.94 | 57,554 |
+| Qwen3.8 IQ3_S / 8,192 MiB | 43.14 | 43.50 | 79,958 |
+
+The Qwen result is under 1% with mixed paired samples. Neither screen
+establishes a repeatable deployment win. Preparation reuse reduces duplicate
+work, not weight traffic, and remains opt-in.
+
+### Complete Routing-Control Packet
+
+The packet uses existing native GPU cast/concatenation operations to combine
+selected IDs and probabilities. IDs are exact F32 integers within the
+validated range and decoded into bounded per-layer CPU I32 storage. The early
+hidden-input copy remains separate.
+
+The first version still let CPU bias operations read original GPU IDs, so GPT
+kept the same D2H call count and slowed **45.89 -> 40.52 tok/s**. That
+incomplete consumer wiring was fixed: the six-lane CPU output also provides
+original IDs and original probabilities for bias and pre-FFN consumers,
+alongside masked IDs/weights, GPU slots and masks. Token strides and slot-ID
+validation were updated consistently.
+
+The complete screen reduced filtered D2H calls **170,856 -> 113,904**, while
+logical D2H bytes stayed **657,909,504**. Its three-repeat technical median
+was **45.76 -> 46.31 tok/s**. All matching frozen comparisons passed.
+Fewer calls are not automatically lower critical-path latency: packet
+construction adds GPU operations and dependencies.
+
+A separate reverse-order natural screen ran packet first, then control,
+three exact 512-token segments per category with `ignore_eos=false`:
+
+| Workload | Existing handoff median | Packet median |
+| --- | ---: | ---: |
+| Coding | 46.11 | 43.09 |
+| Reasoning | 46.51 | 44.59 |
+| Prose | 65.83 | 62.54 |
+
+The technical suggestion did not generalize; the packet is not promoted.
+The earlier exact quantitative failure remains, and retrieval/allocation
+results are kept separately in the summary. Reversing profile order is not
+a randomized statistical study. These are new measurement windows, not a
+matched comparison with the older 50.06 technical result.
+
+### Qwen Verification And MTP Artifact Compatibility
+
+Rather than treating GPT's failure as an engine-wide verdict, Qwen was tested
+against its own scalar reference at 16K, using an empty frozen causal bank.
+Blocks two/three failed strict full-vocabulary gates; relative-L2 maxima over
+the three requests were **0.046-0.088** and **0.046-0.148**, respectively.
+A matched native CPU-expert/GPU-backbone block2 control also failed
+(**0.053-0.060**). This does not isolate either new prototype as the cause,
+nor establish correctness for a warmed adaptive verifier.
+
+The existing 889,017,216-byte draft declares `qwen4exp-mtp`. The pinned
+native architecture registry recognizes `qwen4exp`, not that custom format,
+and native MTP expects canonical block/nextn metadata and tensors. The
+separate draft needs a proper bridge, not an architecture-label rewrite.
+The backend does contain native Qwen MTP graph support, but no bridge or
+accepted-token speed benchmark was implemented while target verification
+remains blocked. Original drafter and target files were only inspected.
+
+### Final Validation And Retained Working Profile
+
+With both prototypes enabled together, the seven-layout matrix retained
+**86 executions: 28 reference creations, 44 passing comparisons and the same
+14 native-reference failures**. All seven prior-hybrid and all seven
+matching-placement cold-copy comparisons passed. These are untrained
+mechanical tests, not seven trained-model speedups.
+
+All **19 configured targets** passed. The final default-off GPT path was
+exact at 96 teacher-forced positions against its earlier matching-placement
+reference. GPT's 12,000 MiB trained profile and the generic 8,192 MiB/direct
+policy were retained; live 64-token activation passed with both new options
+off. The 60 tok/s cross-workload goal remains unmet.
+
+## Canonical Qwen Verification And Native MTP
+
+The [reviewed canonical/MTP investigation](../../benchmarks/results/moe-canonical-verification-mtp-summary.json)
+resolves the earlier short-window Qwen verification failure under explicit
+experimental execution conditions, not by relaxing the numerical gate.
+
+### Isolating And Matching Execution Shapes
+
+The first native difference appeared in the first HC gate, before attention
+or experts: maximum absolute activation error was about **0.095623** while
+its normalized input was exact. Actual HC/router weights are BF16. CUDA
+selected scalar MMVF for one column and small-batch tensor-core MMF for
+multiple columns. Forcing cuBLAS F32 did not change this earlier dispatch.
+
+Opt-in scalar-shaped BF16/F16 learned projections eliminated that initial
+divergence. The next difference was in full attention with exact Q/K/V inputs;
+per-query KQ/V products and matching plain-attention decode eliminated it.
+The KQ F32 policy is applied to leaf products, not concatenations.
+
+With no active tensor capture, native blocks2/3/4 then passed all three
+requests, **96 positions per block, with zero logit error**. Active capture
+could perturb later outputs, so diagnostic serialization is not the
+qualification control. Captures now identify repeated HC names by occurrence
+and expose all four dimensions; flattening a multi-head tensor's prefix is
+not a valid token-axis comparison.
+
+A metadata-derived prefix seed exposed a separate resident-expert difference.
+Disabling CUDA fusion alone did not fix it. Per-token GPU expert products
+did: seeded **blocks2/3/4 are exact**, with both CPU and GPU contributions
+actually exercised. CPU expert math, selected IDs, weighting and all target
+experts remain intact. These helpers use tensor properties, not checkpoint
+names, but their Qwen success does not establish every architecture's gates.
+
+A longer synthetic prompt exercises selection beyond the short prompt's
+eligible pooled blocks. The first canonical run exhausted host graph-tensor
+metadata, not VRAM; its ordinary native control passed. Model/tensor-derived
+metadata headroom for expanded view/product/concat graphs fixed the allocation.
+Native blocks2/3 and seeded hybrid blocks2/4 then pass their 16-position samples
+with zero error. This is not exhaustive long-context or rollback qualification.
+
+### Native Draft Bridge And Representative Residency
+
+The existing custom `qwen4exp-mtp` file cannot simply be renamed. A local
+experimental bridge instead uses the pinned native Qwen converter on the
+31 original BF16 tensor files, including EH projection concatenation, norm
+gamma folding, indexer splitting and expert layout handling. Native Qwen HC
+owns the output normalization; there is no ordinary output-norm tensor to
+borrow. Target embedding/output tensors are copied without requantization.
+The derived **2,469,565,120-byte, 34-tensor** file has canonical NextN metadata,
+one MTP block, Q4_0 draft experts and the correct **10,240-wide** hidden input.
+Original files are not modified or redistributed.
+
+An initial calibration attempt was rejected by the collector's unchanged
+greedy-sequence observer guard. With CUDA fusion and graphs disabled in both
+calibration/control passes, collection passes. No failed partial trace is
+used. Seeding uses only **192 training tokens**; the separately collected
+192 test tokens are excluded. The byte/layout-derived seven-group capacities
+produce **3,067 seeds** for a 6,144 MiB bank, not a global top-N that can overflow
+a heterogeneous group. Fusion/graphs are restored for the performance screen.
+The held-out block4 gate is exact at 96 positions and its execution reports
+**20,121 CPU / 25,989 GPU** expert contributions.
+
+### Accepted-Output Screens, Not A Default Promotion
+
+Native CPU-expert/GPU-backbone MTP first matched an ordinary 128-token coding
+output exactly: **21.17 -> 31.65 tok/s**, accepting **83/88** proposals at
+4/16 threads. A confidence-floor control still proposed/accepted two tokens;
+it is not mislabeled as a zero-draft baseline.
+
+At 16K and 8/16 threads, the matched frozen 6,144 MiB hybrid coding screen is:
+
+| Mode | Output tokens | Decode tok/s | Draft accepted/proposed |
+| --- | ---: | ---: | ---: |
+| Canonical scalar | 512 | 28.35 | Not applicable |
+| MTP, up to two | 512 | 32.13 | 335/350 |
+| MTP, up to three | 512 | 33.62 | 376/402 |
+
+All three output hashes match, including runs with rejected proposals.
+The three-proposal gain is about **18.6% against this matched control**,
+not against the prior 8 GiB adaptive result. Drafting, rejected work,
+verification and synchronization are included in generation timing.
+Cold request/prefill and total wall times are also retained separately.
+The target keeps its bank/plan; the MTP context executes natively without
+allocating another target-sized bank or applying an incompatible target seed.
+
+These are single coding samples. The smaller frozen bank, diagnostic
+scalar-shaped graphs and plain-completion workload differ from the earlier
+adaptive/chat screens. No sustained cross-workload improvement or 60 tok/s
+GPT milestone is claimed. App defaults remain unchanged; the bridge and
+accepted-token harness are still local research prototypes, not a packaged
+speculative app mode.
+
+The final historical GPT regression initially stopped at prompt alignment:
+the stored template date was October16 while wall time had advanced to
+October17. The pinned Jinja renderer had ignored its supplied `now` value.
+Honoring that API input and exposing a bounded `--template-epoch` in the
+checker permit explicit UTC replay of the original date. The alignment and
+numerical guards are retained; a calendar change is not classified as a
+model regression or bypassed by substituting stored prompt tokens.
+Final validation passes all **19 configured targets**, the unchanged
+matching-placement GPT regression at **96 positions with zero logit error**,
+and a 64-token live app smoke test. The exported patch passes pinned
+application, DFlash compatibility and reverse-application checks. The app
+is restored to its existing 12,000 MiB GPT profile with canonical/MTP options off.
+
+Next profile the accepted-token critical path: reduce canonical verifier
+overhead without changing its scalar-equivalent math, improve causal resident
+coverage without held-out/future-trace seeding, and then run repeated coding,
+reasoning, prose and retrieval/rollback checks. A trained Qwen MTP draft is not
+a GPT draft; other architectures need their own compatible proposal sources.
+
 ## Next Experiments
 
 The subsequent [downloaded-model matrix](../../benchmarks/RESULTS.md#october-16-model-aware-defaults-and-downloaded-model-matrix)
@@ -956,7 +1486,7 @@ the supported hybrid profile by default when installed, with warnings intact.
 
 1. Broaden paired numerical, AST-only coding, prose-smoke, and long-retrieval checks without discarding failed questions.
 2. Investigate reducing small cross-backend routing/input transfers and CPU projection overhead, measuring synchronization separately from transfer time; do not infer a win from fewer calls alone.
-3. If single-position execution remains below target, investigate exact multi-token verification rather than counting aggregate batching or approximate expert pruning as success.
+3. Build on the qualified Qwen small-window checks to reduce accepted-MTP verifier/residency overhead; separately qualify compatible proposal sources for GPT rather than counting aggregate batching or approximate expert pruning as success.
 4. Qualify any candidate across held-out coding, reasoning, and prose with at least three repeated 512-token runs, actual 16K context, and all synchronization/migration overhead included.
 
 Do not use the unverified FreeToken desktop distribution as a production dependency. Its design is useful as a research reference, but this baseline is produced entirely through the pinned, open llama.cpp checkout and local GGUF files.

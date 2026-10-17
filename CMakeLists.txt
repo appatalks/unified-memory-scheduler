@@ -188,7 +188,14 @@ if(BUILD_TESTING)
     endif()
     if(TARGET vrambridge-masked-matmul-test)
         add_test(NAME vrambridge-moe-admission COMMAND vrambridge-admission-test)
-        add_test(NAME vrambridge-masked-matmul COMMAND vrambridge-masked-matmul-test)
+        add_test(NAME vrambridge-masked-matmul COMMAND ${CMAKE_COMMAND} -E env
+            VRAMBRIDGE_HYBRID_CPU_EMPTY=0 $<TARGET_FILE:vrambridge-masked-matmul-test>)
+        add_test(NAME vrambridge-empty-expert COMMAND ${CMAKE_COMMAND} -E env
+            VRAMBRIDGE_HYBRID_CPU_EMPTY=1 $<TARGET_FILE:vrambridge-masked-matmul-test>)
+        add_test(NAME vrambridge-shared-prepare-off COMMAND ${CMAKE_COMMAND} -E env
+            VRAMBRIDGE_HYBRID_CPU_EMPTY=0 VRAMBRIDGE_HYBRID_CPU_PREPARE=0 $<TARGET_FILE:vrambridge-masked-matmul-test>)
+        add_test(NAME vrambridge-shared-prepare-on COMMAND ${CMAKE_COMMAND} -E env
+            VRAMBRIDGE_HYBRID_CPU_EMPTY=0 VRAMBRIDGE_HYBRID_CPU_PREPARE=1 $<TARGET_FILE:vrambridge-masked-matmul-test>)
         add_test(NAME vrambridge-logit-check-help COMMAND vrambridge-logit-check --help)
         add_test(NAME vrambridge-logit-check-inputs
             COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_logit_checker.py

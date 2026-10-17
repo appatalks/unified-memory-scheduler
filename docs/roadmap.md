@@ -205,6 +205,67 @@ in via `async_ids`; older installations remain unchanged. Next focus is CPU
 preparation/empty branches and time-priced residency, not arbitrary removal
 of producer/reconciliation waits.
 
+The raw CPU all-masked-operator experiment is now tested but not promoted:
+its matched Universe replay median was 46.60 versus 47.19 tok/s, with mixed
+paired results, despite 61,983 exercised operators and passing regression
+gates. The app retains the faster asynchronous-ID profile. Manual timing now
+separates prompt/generation durations and input tokens, and an explicit
+reasoning selector preserves Model default unless changed. The original
+41.6-versus52 observation is not causally attributed; controlled replay did
+not reproduce an asynchronous-ID regression. Shared CPU preparation and
+time-priced residency remain the next targets, not assumptions of a gain.
+
+Admission lifetime profiling now separates observed future reuse from censored
+live residency. Probation, ranked ties and protected training anchors were
+slower despite some traffic reductions; none is promoted. A fresh 4/8/12/16
+thread sweep retains eight. Increasing residency to 12,000 MiB/hot944 improved
+technical median 47.33 -> 50.06 tok/s and coding/reasoning/prose medians to
+46.71/49.26/65.99, with 12,852-token retrieval passing. This is an experimental
+app promotion only: exact quantitative and strict native-reference failures
+remain, and the general 60 tok/s goal is still unmet.
+
+Multi-position discrepancies also reproduce in native GPU-backbone and fully
+CPU controls; forcing Q8 MMQ did not change them. The next architectural route
+is separately gated resident-expert self-assisted proposals with full-target
+verification, informed by SpecMoE, but it is not implemented and requires
+numerical isolation first. See the [admission/capacity research](research/frontier-moe-feasibility.md#admission-lifetimes-larger-residency-and-current-research)
+for primary sources, negative results and remaining gates.
+
+The first transient cold-work split preserved all selected experts and reused
+an existing bank slot, but was slower on GPT (48.42 -> 42.96 tok/s) and
+nearly flat/slower on Qwen (44.85 -> 44.41). It stays off. Scalar-shaped router
+projections did not fix full-model batch verification either.
+
+The existing generic executor now has a second trained large-MoE result:
+Qwen3.8-Flash-Next IQ3_S, native CPU experts/GPU backbone versus an untrained
+8 GiB causal direct-DMA bank, 25.39 -> 43.88 tok/s. The app supports separate
+optional causal budget/transfer policies without changing a bound model's
+trained plan or budget. Selection remains descriptor-derived, not a Qwen
+allowlist. This is not universal acceleration, broad quality qualification,
+or the unchanged-GPT 60 tok/s milestone. See the [cold-work and cross-model
+record](research/frontier-moe-feasibility.md#cold-work-split-and-a-second-trained-large-moe).
+
+Shared CPU preparation and combined routing packets are now implemented behind
+research gates. Their primitive/frozen checks pass, but shared preparation is
+mixed/inconclusive and packet timing loses on held-out natural workloads despite
+one third fewer D2H calls. Neither is promoted. Qwen-specific block2/3 checks
+initially failed, including a native control; its custom MTP artifact needed
+a proper native-format bridge. No speculative app mode or approximate expert skipping
+is enabled. The final 19-target suite and matching default GPT regression pass;
+the same14 native-reference failures remain. See the [three-track record](research/frontier-moe-feasibility.md#shared-cpu-preparation-route-packets-and-model-specific-verification).
+
+The subsequent [canonical/MTP investigation](research/frontier-moe-feasibility.md#canonical-qwen-verification-and-native-mtp)
+makes native and seeded mixed-residency Qwen blocks2/3/4 exact under opt-in
+scalar-shaped learned/attention/expert products. Long-context samples and a
+training-only, group-capacity-aware frozen seed also pass. A proper local
+native MTP bridge now generates accepted output: a matched 512-token hybrid
+coding screen improves **28.35 -> 32.13/33.62 tok/s** for two/three proposals,
+with identical output hashes and real rejected proposals. These are not
+repeated cross-workload results or a win over the different adaptive profile.
+Next reduce verifier overhead and improve causal resident coverage, then
+qualify rejection/state behavior and natural workloads before exposing an
+app mode. GPT's original 60 tok/s milestone remains unmet.
+
 Extend only demonstrated mechanisms to prefill, decode, and concurrent-request
 objectives. Compare static, size-aware LRU, and measured/adaptive policies. Expose
 simple user goals rather than expert-cache parameters; keep ordinary upstream

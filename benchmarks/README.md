@@ -430,18 +430,35 @@ Optional environment switches, scoped to the private process:
 | `VRAMBRIDGE_HYBRID_DFLASH=1` | Allow the specifically selected `--spec-type draft-dflash` experiment; requires the separate attention-bias patch and a smaller resident bank to leave draft-model headroom |
 | `VRAMBRIDGE_HYBRID_PROFILE=1` | Host-side split/copy/submit counters; GPU submit time is launch latency, not GPU execution time |
 | `VRAMBRIDGE_HYBRID_COPY_PROFILE=1` | Requires `PROFILE=1`; separates copy directions and host intervals for destination waits, source synchronization, synchronous copy calls, asynchronous attempts and callbacks |
+| `VRAMBRIDGE_HYBRID_PAYBACK=1` | Bounded admission-lifetime accounting: future hits, evicted reuse and censored live entries; combined metadata cap 64 MiB |
 | `VRAMBRIDGE_HYBRID_ASYNC_IDS=1` | Experimental CUDA-only handoff using private per-layer GPU ID storage and bounded pinned staging; completion events protect host staging reuse |
+| `VRAMBRIDGE_HYBRID_CPU_EMPTY=1` | Raw CPU matmul experiment: all `-1` IDs clear output before conversion/row-map work; read once at CPU initialization, disabled by default after a negative speed screen |
+| `VRAMBRIDGE_HYBRID_CPU_PREPARE=1` | Research-only reuse of exact activation conversion and row grouping between compatible raw CPU expert projections within one graph |
+| `VRAMBRIDGE_HYBRID_ROUTE_PACKET=1` | Research-only combined GPU-to-CPU IDs/probabilities; CPU bias IDs and pre-FFN weights reuse the decoded packet too; hidden input retains its early copy |
+| `VRAMBRIDGE_HYBRID_COLD_GPU=1` | Research-only scalar dispatch: move one cold expert to an existing extra bank slot only when at least two misses remain; preserve residency and all selected contributions |
+| `VRAMBRIDGE_HYBRID_COLD_SYNC=1` | Matching-placement synchronous-copy reference for `COLD_GPU`; requires that option, not an app optimization |
+| `VRAMBRIDGE_HYBRID_SCALAR_ROUTER=1` | Diagnostic scalar-shaped router projections for blocks of 2-32 positions; does not fix the current full-model batch gates or enable speculation |
+| `VRAMBRIDGE_HYBRID_SCALAR_LINEAR=1` | Research-only scalar-shaped F16/BF16 learned 2D projections for 2-32 columns, preserving projection precision policies and adapter contributions |
+| `VRAMBRIDGE_HYBRID_SCALAR_ATTN=1` | Research-only per-query KQ/V products for windows up to 32 queries; use plain attention for scalar and small-window decode, retaining ordinary large prefill |
+| `VRAMBRIDGE_HYBRID_SCALAR_EXPERT=1` | Research-only per-token GPU expert products for 2-32 positions; preserve native CPU execution, expert IDs, scaling, precision and adapter contributions |
+| `VRAMBRIDGE_HYBRID_MTP=1` | Explicit research opt-in for native `draft-mtp`; the MTP context must not inherit the target's resident bank or seed plan |
 | `VRAMBRIDGE_HYBRID_STAGE_INPUT=1` | Prepare the exact CPU hidden-input view before resident GPU expert computation |
 | `VRAMBRIDGE_HYBRID_OVERLAP=1` | Overlap only proven device-only CUDA expert work and independent host-only CPU expert work; callbacks and unsupported graphs retain barriers |
 | `VRAMBRIDGE_HYBRID_BOUNDARY=gpu` | Reconcile the expert contributions on GPU; default remains CPU |
 | `VRAMBRIDGE_HYBRID_FUSE_GATE_UP=1` | Interleave eligible resident gate/up banks without increasing weight storage; reuse native fused projection math |
 | `VRAMBRIDGE_HYBRID_POLICY=ranked` | Prefer weaker training seeds only for zero-frequency eviction ties; active ties use recency; default is `classic` |
+| `VRAMBRIDGE_HYBRID_POLICY=probation` | Raise the causal admission margin after a prior low-reuse lifetime; experimental heuristic, slower in the current screen |
+| `VRAMBRIDGE_HYBRID_POLICY=anchored` | Protect the strongest initial seeds up to one quarter of usable group slots; remaining slots adapt; slower in the current screen |
 | `VRAMBRIDGE_HYBRID_WINDOW=32` | Recent-history window in routed-token rounds, derived using routed-layer count; allowed range 8-256, default 64 |
 
 The switches remain research options. An installation can opt into the tested
 overlap/fusion bundle using `decode_pipeline: true`; the updated experimental
 manual profile does so, while omission preserves the previous pipeline.
-Ranked-policy/window tuning is not part of that bundle.
+Admission-policy/window tuning and payback profiling are not part of that
+bundle; classic remains default. A live entry has an unfinished observation
+window, so zero future reuse is not reported as a wasted lifetime. Payback
+accounting includes initialization/partial-prefill observations, unlike the
+filtered scheduler counters.
 Pair input staging with guarded overlap and verify
 nonzero `overlap_splits` rather than treating an environment variable as proof.
 The scheduler fences pending asynchronous host-source reads before scratch
@@ -450,6 +467,38 @@ reuse; synchronous input copies need no redundant fence. Therefore a zero
 callbacks disable overlap. Unsupported operations, buffer domains, or
 multi-copy schedules preserve the ordinary barriers.
 
+Transient cold offload uses raw registered sources and the same GPU stream as
+its consumers. The extra slot is outside the residency map, never evicts a
+cached expert, and is exposed consistently to bank views and ID validation.
+It allocates no additional expert bank, but CUDA module/workspace and host
+registration resources still need headroom. Source registration keeps its
+64 GiB cap and 24 GiB RAM headroom. Adaptive use requires direct DMA; CPU
+repacked sources are rejected. Multi-position calls retain frozen residency
+and do not use transient offload. It was slower on the GPT screen and is
+disabled in the app.
+
+Shared CPU preparation is local to each worker's graph invocation, never
+reused across requests or graph calls. The input/ID tensor identities,
+dot-input type and expert count must match. Only views and disjoint raw
+`ADD_ID` operations may intervene; other operations, aliases and extra-buffer
+handlers invalidate or exclude reuse. Native tiled expert kernels read the
+prepared prefix and use a separately reserved scratch suffix; larger-row
+Q4_K controls cover this path without changing the selected math kernels.
+Masked destinations are cleared on every projection, and scheduling counters
+are reset even when immutable preparation is reused. CPU reference mode keeps
+its original path. The process reuse counter is modulo 2^32. This saves no
+weight reads and does not imply a speedup.
+
+Routing packets represent bounded expert IDs exactly as F32, then validate and
+decode them into per-layer CPU I32 storage capped at 64 MiB. Selected
+probabilities remain F32. CPU consumers use packet-derived original IDs and
+weights as well as masked IDs/weights; otherwise bias operations would cause
+a duplicate GPU-to-CPU copy. The host output has six lanes in packet mode
+versus four in the original protocol. Asynchronous slot-ID upload uses their
+actual token stride. Packet construction uses native GPU operations, so fewer
+copies can still cost more kernel/dependency time. Enable only for experiments
+until end-to-end comparisons qualify it.
+
 Copy breakdowns use host/device buffer domains (`H2H`, `H2D`, `D2H`, `D2D`,
 or `unknown`) and logical tensor bytes. They do not measure PCIe hardware
 counters. An event-wait call can enqueue a dependency without blocking the
@@ -457,6 +506,15 @@ host, and a synchronous copy call can include internal driver waits. Compare
 profiling-off, coarse-profile and detailed-profile controls before attributing
 changes to an optimization. Detailed timings retain the same unbatched hybrid
 graph filter as the coarse counters.
+
+CPU-empty primitive tests run with the option explicitly off/on, including
+seven storage types, one/four threads, mixed/empty/full selections and strided
+IDs with non-masked padding. An exposed process counter confirms the path ran
+(modulo 2^32). Partial or invalid non-`-1` IDs still take the existing path and
+validation; existing workspace/stride assertions remain. This does not skip a
+whole FFN or shared/residual work, and does not cover the separate CPU-repack
+kernel. The real-model screen did not establish a speed gain, so the app does
+not enable it. Changing the environment requires a new backend process.
 
 The asynchronous-ID prototype keeps an explicit graph dependency: a CPU
 custom operation enqueues the ID upload into its preallocated device output,
@@ -526,10 +584,37 @@ throughput benchmark. Native binary references contain token IDs and full
 logits; diagnostic outputs contain activations. Keep them private under the
 ignored results directory, with restrictive permissions.
 
+Use `TZ=UTC` and `--template-epoch UNIX_SECONDS` to pin date-bearing templates.
+The timestamp must be nonnegative and representable by the platform clock;
+the default is Unix epoch zero. The backend patch honors the requested
+template time, rather than silently using wall time. For a historical
+reference, select its original template date: prompt-token alignment remains
+mandatory, and the checker never substitutes or ignores a mismatched prompt.
+Reports record the selected timestamp. Date-free templates are unaffected.
+
 `--eval-callback-check` installs an inactive callback; it does **not** serialize
 execution. The old `--serialized-check` spelling is a deprecated alias with an
 explicit warning. `--debug-output` and `--sync-hybrid-gpu` are diagnostics,
 not optimized serving settings.
+`--debug-all-layers` requires `--debug-output` and extends the selected
+intermediate tensors to every layer. Capture remains bounded to one million
+elements and a 16 MiB raw span per tensor, with a 64 MiB cumulative raw-span
+limit. Strided F32/I32 views are gathered logically; unsupported types and
+capture failures are errors, not silently omitted tensors. Serialized JSON
+and its in-memory representation can be larger than these raw-byte limits.
+`--debug-layer-limit N` instead selects the first N layers (1-1024), requires
+`--debug-output`, and cannot be combined with `--debug-all-layers`.
+`--debug-attention` requires diagnostic output and includes Q/K/V, indexer,
+selection and attention intermediates. Captures retain the legacy `shape`
+and add full `shape4` and a per-name `occurrence` index for repeated HC names.
+Compare logical token axes, not a flat prefix of a multi-head tensor.
+Active capture can change graph materialization and fusion: use it to locate
+divergence, then repeat the numerical gate without capture callbacks.
+`--cpu-reference` selects the pinned CPU backend's existing reference-mode
+hook for diagnostic isolation; it does not change CUDA kernels or enable a
+serving optimization. References made in this mode carry an extra header
+field and cannot be silently compared with ordinary references. Missing
+backend support is an explicit error.
 
 `--batch-check 4` compares full teacher-forced logits from four-position decode
 blocks against a single-position reference; it is valid only in comparison
@@ -539,6 +624,17 @@ can still fail due to changed execution paths; do not treat a successfully
 executed block or its positions/second as accepted speculative tokens/second.
 Speculative timing must include drafting, verification, rejections, migration,
 and synchronization. No small-block/DFlash hybrid path is enabled in the app.
+The scalar-linear/attention/expert switches and native MTP opt-in are also
+off in the app. They reserve additional host graph metadata for the expanded
+small-window graphs; this is separate from tensor-capture limits. Use a
+model's own scalar reference, exercise both CPU and resident GPU contributions,
+and test real sparse/long-context behavior before treating block verification
+as qualified. Native MTP additionally needs canonical NextN metadata/tensors,
+compatible hidden width, rejection/rollback checks, and a residency bootstrap
+that does not train on held-out prompts. Set the hybrid batch limit to cover
+the maximum verification window (draft count plus one). An empty frozen bank,
+teacher-forced positions/s, or proposed draft tokens are not optimized accepted
+generation throughput.
 The non-speculative direct-DMA path can now be selected with the app's explicit
 [manual hybrid launch profile](../tools/vrambridge/README.md#manual-hybrid-direct-dma-trial),
 which verifies activation and fixes the measured configuration. It remains
@@ -550,9 +646,10 @@ selection on ordinary launches, with an explicit standard rollback.
 The repository-only `vrambridge-model-matrix.py` runner compares standard and
 automatically selected execution on models already on disk. It does not
 download or convert weights. Both profiles use identical context/thread
-settings; only supported GPT-OSS-120B MXFP4 selects custom direct-DMA dispatch.
-Other architectures must remain explicitly labeled standard, not credited
-with a nonexistent hybrid speedup. Vision projectors are not standalone models.
+settings. Automatic selection can use a bound training plan or a generic
+causal plan for other complete MoE descriptors. Record the actual selected
+profile: native fallback must not be credited with a nonexistent hybrid
+speedup. Vision projectors are not standalone models.
 
 ```bash
 python3 tools/benchmark/vrambridge-model-matrix.py \

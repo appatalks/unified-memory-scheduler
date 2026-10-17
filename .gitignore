@@ -67,3 +67,9 @@ htmlcov/
 !/benchmarks/results/gpt120-trained-hot880.txt
 !/benchmarks/results/gpt120-decode-optimization-summary.json
 !/benchmarks/results/gpt120-async-id-handoff-summary.json
+!/benchmarks/results/gpt120-universe-cpu-empty-summary.json
+!/benchmarks/results/gpt120-trained-hot944.txt
+!/benchmarks/results/gpt120-admission-capacity-research-summary.json
+!/benchmarks/results/moe-cold-work-and-qwen38-summary.json
+!/benchmarks/results/moe-preparation-packet-verification-summary.json
+!/benchmarks/results/moe-canonical-verification-mtp-summary.json
