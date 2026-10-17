@@ -165,10 +165,15 @@ if(BUILD_TESTING)
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/trace/make_moe_fixture.py
     )
     find_program(NODE_EXECUTABLE node)
+    add_test(NAME synapse-telemetry
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_telemetry.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/vrambridge/telemetry.py)
     if(NODE_EXECUTABLE)
         add_test(NAME vrambridge-chat-stream
             COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_chat_stream.mjs
         )
+        add_test(NAME synapse-monitor-navigation
+            COMMAND ${NODE_EXECUTABLE} --test ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_monitor.mjs)
     else()
         message(STATUS "Node.js not found; browser stream unit tests are unavailable")
     endif()

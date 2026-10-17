@@ -1,6 +1,8 @@
 "use strict";
 
 import { ChatStream } from "./chat-stream.mjs";
+import { navigate } from "./navigation.mjs";
+import { MonitorView } from "./monitor.mjs";
 
 const el = (id) => document.getElementById(id);
 let status = null;
@@ -80,8 +82,8 @@ function renderStatus() {
   el("execution-warning").hidden = !status.execution_warning;
   el("execution-warning").textContent = status.execution_warning || "";
   el("execution-footer").textContent = hybrid
-    ? `Local experiment - Hybrid CPU/GPU expert dispatch - Adaptive ${transfer}${pipeline} - Not quality-qualified`
-    : `Local preview - ${experimental ? "Experimental ik_llama.cpp" : "Standard llama.cpp"} execution - Hybrid scheduling is not enabled`;
+    ? `Experimental engine - Hybrid CPU/GPU dispatch - Adaptive ${transfer}${pipeline} - Not quality-qualified`
+    : `Release candidate - ${experimental ? "Experimental ik_llama.cpp" : "Standard llama.cpp"} execution - Local only`;
   el("placement-note").textContent = hybrid
     ? `Experimental MoE profile: ${hybridContext.toLocaleString()} context and ${hybridBudget.toLocaleString()} MiB resident expert bank from the installation policy. Fitting, repacking, and host-op offload are disabled. Unload releases resources.`
     : "Automatic uses llama.cpp fitting with the selected VRAM margin. It is not a RAM-fit guarantee. Larger contexts need more memory.";
@@ -98,6 +100,11 @@ function renderStatus() {
     ? `Experimental hybrid CPU / GPU (${transfer})` : "Automatic CPU / GPU placement";
   el("expert-cache").max = experimental ? "0" : "65536";
   el("state").textContent = labels[status.state] || status.state;
+  el("state").dataset.state = status.state;
+  el("app-version").textContent = `v${status.app_version || "0.1.0rc1"} · Release candidate`;
+  el("sidebar-model").textContent = status.model ? status.model.split(/[\\/]/).at(-1) : "No model loaded";
+  el("connection-state").textContent = status.state === "ready" ? "Ready. Your apps can connect now."
+    : "No model is ready. Load a model in Run a model before sending API requests.";
   el("model-status").textContent = status.model || "No model loaded.";
   el("run-status").textContent = status.model
     ? `${status.backend_kind}${experimental || hybrid ? " (experimental)" : ""} · ${hybrid ? `Hybrid ${transfer}${status.hybrid_verified ? " (activation verified)" : " (verifying activation)"}` : status.placement === "cpu" ? "CPU only" : "Automatic placement"} · ${status.context.toLocaleString()} context · ${status.cpu_threads} generation / ${status.batch_threads} prompt threads · ${status.load_mode} loading · ${status.expert_cache_mib} MiB ${hybrid ? "resident expert bank · fitting off" : `expert cache · ${status.fit_target_mib} MiB reserve`} · polling ${status.cpu_poll} · host-op offload ${status.host_op_offload ? "on" : "off"} (min batch ${status.op_offload_min_batch})${status.draft_model ? ` · DFlash (${status.draft_tokens} draft tokens)` : ""}`
@@ -107,7 +114,7 @@ function renderStatus() {
   if (status.resource_error) {
     el("resources").textContent = status.resource_error;
   } else if (resources) {
-    const gib = (bytes) => (bytes / 1024 ** 3).toFixed(1);
+    const gib = (bytes) => typeof bytes === "number" ? (bytes / 1024 ** 3).toFixed(1) : "unavailable";
     const cpu = resources.cpu_logical_cores === null ? "sampling"
       : `${resources.cpu_logical_cores.toFixed(1)} logical cores (${(100 * resources.cpu_logical_cores / status.logical_cpus).toFixed(0)}% of machine)`;
     el("resources").textContent = `CPU: ${cpu}. Resident RAM: ${gib(resources.rss_bytes)} GiB `
@@ -140,7 +147,7 @@ function renderStatus() {
     settingsInitialized = true;
   }
   el("backend-help").hidden = status.backend_available;
-  el("backend-help").textContent = "Backend missing. Install llama.cpp, then restart with: python3 tools/vrambridge/app.py --llama-server /path/to/llama-server";
+  el("backend-help").textContent = "Backend missing. Install llama.cpp, then start SYNAPSE with: synapse --llama-server /path/to/llama-server (llama-server.exe on Windows). No backend or model is downloaded automatically.";
   if (status.error) notice(status.error);
   else if (status.context_warning) notice(status.context_warning);
   contextNote();
@@ -182,6 +189,7 @@ async function poll() {
   } catch (error) {
     status = null;
     el("state").textContent = "Disconnected";
+    el("state").dataset.state = "error";
     notice(`Cannot reach the local service: ${error.message}`);
     controls();
   } finally {
@@ -190,6 +198,28 @@ async function poll() {
 }
 
 el("endpoint").value = `${window.location.origin}/v1`;
+el("connect-example").textContent = `import json
+from urllib.request import Request, urlopen
+
+request = Request(
+    "${window.location.origin}/v1/chat/completions",
+    data=json.dumps({
+        "model": "local-model",
+        "messages": [{"role": "user", "content": "Hello!"}]
+    }).encode(),
+    headers={"Content-Type": "application/json"}
+)
+with urlopen(request) as response:
+    print(json.load(response)["choices"][0]["message"]["content"])`;
+el("copy-example").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(el("connect-example").textContent);
+    el("copy-example").textContent = "Copied";
+    window.setTimeout(() => { el("copy-example").textContent = "Copy Python"; }, 1500);
+  } catch (error) {
+    notice(`Clipboard unavailable. Select and copy the Python example manually. ${error.message}`);
+  }
+});
 el("copy").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(el("endpoint").value);
@@ -389,4 +419,7 @@ el("chat-form").addEventListener("submit", async (event) => {
   }
 });
 
+window.addEventListener("hashchange", () => navigate());
+navigate();
+new MonitorView(request).poll();
 poll();

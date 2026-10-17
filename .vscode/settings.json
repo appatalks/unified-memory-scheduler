@@ -1,0 +1,6 @@
+{
+    "github.copilot.chat.terminalChatLocation": "terminal",
+    "chat.tools.terminal.outputLocation": "terminal",
+    "chat.agent.thinking.terminalTools": false,
+    "chat.agentHost.customTerminalTool.enabled": true
+}

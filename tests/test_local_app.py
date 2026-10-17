@@ -45,8 +45,8 @@ def write_metadata(path, metadata):
 class LocalAppTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
-        self.root = Path(self.temporary.name)
-        self.backend = self.root / "llama-server"
+        self.root = Path(self.temporary.name).resolve()
+        self.backend = self.root / "llama-server.py"
         shutil.copyfile(Path(__file__).with_name("fake_llama_server.py"), self.backend)
         self.backend.chmod(0o755)
         self.model = self.root / "model with spaces.gguf"
@@ -93,8 +93,10 @@ class LocalAppTests(unittest.TestCase):
         return self.wait_state("ready")
 
     def test_static_assets_status_and_unknown_routes(self):
-        for path, expected in (("/", b"VRAMBridge"), ("/app.js", b"textContent"),
+        for path, expected in (("/", b"SYNAPSE"), ("/app.js", b"textContent"),
                                ("/chat-stream.mjs", b"class ChatStream"),
+                               ("/monitor.mjs", b"class MonitorView"), ("/navigation.mjs", b"viewForHash"),
+                               ("/icon.svg", b"<svg"),
                                ("/style.css", b"@media")):
             code, headers, body = self.request("GET", path)
             self.assertEqual(code, 200)
@@ -286,8 +288,35 @@ class LocalAppTests(unittest.TestCase):
                 self.assertEqual(code, 400, body)
                 self.assertIsNone(self.runtime.process)
 
+    def test_monitor_cursor_validation_and_bounded_endpoint(self):
+        for query in ("after=-1", "after=1.5", "after=abc", "after=", "after=1&after=2",
+                      "after=99999999999999999", "unknown=0"):
+            with self.subTest(query=query):
+                self.assertEqual(self.request("GET", "/api/v1/monitor?" + query)[0], 400)
+        self.runtime.monitor.stop_event.set()
+        self.assertEqual(self.request("GET", "/api/v1/monitor?after=0")[0], 200)
+
+    def test_proxy_observes_actual_timings_without_retaining_content(self):
+        self.load()
+        code, _, _ = self.request("POST", "/v1/chat/completions", {
+            "messages": [{"role": "user", "content": "reasoning"}], "stream": True,
+            "stream_options": {"include_usage": True}})
+        self.assertEqual(code, 200)
+        metrics = self.runtime._monitor_backend()
+        self.assertEqual(metrics["last_tokens_per_second"], 123.5)
+        self.assertEqual(metrics["tokens_per_second"], 123.5)
+        self.assertEqual(metrics["speed_source"], "backend_final_timings")
+        self.assertEqual(self.runtime._monitor_backend()["tokens_per_second"], 0)
+        self.assertEqual(metrics["output_tokens"], 730)
+        self.assertFalse(metrics["generation_active"])
+        self.assertEqual(metrics["context_source"], "backend_slot")
+        self.assertNotIn("Working on the answer", json.dumps(metrics))
+        self.assertNotIn("not executable", json.dumps(metrics))
+        self.runtime.stop()
+        self.assertIsNone(self.runtime._monitor_backend()["last_tokens_per_second"])
+
     def test_automatic_profile_selects_supported_layout_and_standard_for_other_models(self):
-                patched = self.root / "patched-server"
+                patched = self.root / "patched-server.py"
                 shutil.copyfile(self.backend, patched)
                 patched.chmod(0o755)
                 self.hybrid_runtime(execution_mode="auto", hybrid_executable=str(patched))
@@ -370,7 +399,7 @@ class LocalAppTests(unittest.TestCase):
                                          "--hybrid-profile", str(path)], capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 2)
         self.assertIn("Invalid pinned hybrid installation profile", result.stderr)
-        self.assertNotIn("VRAMBridge: http", result.stdout)
+        self.assertNotIn("SYNAPSE: http", result.stdout)
 
     def test_persistent_profile_requires_pinned_identity_and_absolute_paths(self):
                 self.hybrid_runtime()
@@ -643,9 +672,16 @@ class LocalAppTests(unittest.TestCase):
         def topology(path, *args, **kwargs):
             cpu = int(path.parent.parent.name.removeprefix("cpu"))
             return "0" if path.name == "physical_package_id" else str(cpu % 2)
-        with mock.patch.object(app.os, "sched_getaffinity", return_value={0, 1, 2, 3}):
+        with mock.patch.object(app, "available_cpus", return_value={0, 1, 2, 3}), \
+                mock.patch.object(app.sys, "platform", "linux"):
             with mock.patch.object(Path, "read_text", autospec=True, side_effect=topology):
                 self.assertEqual(app.default_cpu_threads(), 2)
+
+    def test_portable_thread_default_does_not_read_linux_topology(self):
+        with mock.patch.object(app, "available_cpus", return_value={0, 1, 2, 3}), \
+                mock.patch.object(app.sys, "platform", "darwin"), \
+                mock.patch.object(Path, "read_text", side_effect=AssertionError("Linux topology read")):
+            self.assertEqual(app.default_cpu_threads(), 4)
 
     def test_explicit_experimental_backend_adapter(self):
         self.runtime.backend_kind = "ik_llama.cpp"
@@ -722,8 +758,9 @@ class LocalAppTests(unittest.TestCase):
             time.sleep(0.05)
         self.assertIsNotNone(resources)
         self.assertGreater(resources["rss_bytes"], 0)
-        self.assertGreaterEqual(resources["anonymous_bytes"], 0)
-        self.assertGreaterEqual(resources["file_backed_bytes"], 0)
+        for key in ("anonymous_bytes", "file_backed_bytes"):
+            if resources[key] is not None:
+                self.assertGreaterEqual(resources[key], 0)
         self.assertGreater(resources["system_available_ram_bytes"], 0)
         self.assertGreaterEqual(resources["cpu_logical_cores"], 0)
         self.assertIsNone(status["resource_error"])
@@ -732,7 +769,7 @@ class LocalAppTests(unittest.TestCase):
 
     def test_resource_sampling_failure_is_visible(self):
         self.load()
-        with mock.patch.object(Path, "read_text", side_effect=PermissionError("test denied")):
+        with mock.patch.object(app.system_probe(), "process", side_effect=PermissionError("test denied")):
             self.runtime._sample_resources(self.runtime.process)
             self.assertIn("test denied", self.runtime.status()["resource_error"])
             self.assertIsNone(self.runtime.status()["resources"])
@@ -879,11 +916,36 @@ class LocalAppTests(unittest.TestCase):
                                      {"Content-Type": "text/plain"})[0], 415)
         self.assertEqual(self.request("POST", "/api/v1/model/load", {},
                                      {"Transfer-Encoding": "chunked"})[0], 400)
-        self.assertEqual(self.request("POST", "/api/v1/model/load", {"model": "x" * app.BODY_LIMIT})[0], 413)
         self.assertEqual(self.request("POST", "/v1/chat/completions", {"messages": []})[0], 400)
         self.assertEqual(self.request("POST", "/v1/chat/completions",
                                      {"messages": [{}], "stream": "yes"})[0], 400)
 
+    def test_request_size_boundary_is_checked_before_reading_oversized_body(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.putrequest("POST", "/api/v1/model/load")
+            connection.putheader("Content-Type", "application/json")
+            connection.putheader("Content-Length", str(app.BODY_LIMIT + 1))
+            connection.endheaders()
+            response = connection.getresponse()
+            self.assertEqual(response.status, 413)
+            self.assertIn(b"1 MiB", response.read())
+        finally:
+            connection.close()
+        base = json.dumps({"model": 3, "padding": ""})
+        body = json.dumps({"model": 3, "padding": "x" * (app.BODY_LIMIT - len(base))})
+        self.assertEqual(len(body.encode()), app.BODY_LIMIT)
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request("POST", "/api/v1/model/load", body, {"Content-Type": "application/json"})
+            response = connection.getresponse()
+            self.assertEqual(response.status, 400)
+            self.assertIn(b"local GGUF", response.read())
+        finally:
+            connection.close()
+        self.assertIsNone(self.runtime.process)
+
+    @unittest.skipIf(sys.platform == "win32", "Windows TerminateProcess does not deliver a Python SIGTERM")
     def test_launcher_shuts_down_on_sigterm(self):
         process = subprocess.Popen(
             [sys.executable, str(APP_PATH), "--port", "0", "--no-browser",

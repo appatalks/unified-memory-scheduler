@@ -1,5 +1,11 @@
 # VRAMBridge
 
+**The user-facing application is now [SYNAPSE](https://github.com/appatalks/synapse).**
+This repository retains the full inference research, native backend patches,
+benchmarks and experimental history. SYNAPSE has a clean application snapshot,
+cross-platform release-candidate packaging, sidebar navigation and live monitoring.
+Its standard app does not bundle or production-qualify the experimental engine.
+
 VRAMBridge explores **LLM-aware heterogeneous memory tiering for discrete GPUs**. The project asks whether GPU VRAM can act as a high-speed working set for a much larger pool of system RAM while running GGUF language models through llama.cpp/ggml.
 
 VRAMBridge does not convert RAM into VRAM and does not assume coherent, Apple-style unified memory. On a PCIe-attached NVIDIA GPU, host memory has different latency, bandwidth, allocation, and migration behavior. Those costs are the subject of the experiment.

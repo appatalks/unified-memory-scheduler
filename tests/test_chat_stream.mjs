@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ChatStream } from "../tools/vrambridge/web/chat-stream.mjs";
+import { existsSync } from "node:fs";
+const web = existsSync(new URL("../synapse_app/web/", import.meta.url))
+  ? "../synapse_app/web/" : "../tools/vrambridge/web/";
+const { ChatStream } = await import(new URL(`${web}chat-stream.mjs`, import.meta.url));
 
 const encode = (data) => new TextEncoder().encode(data);
 const event = (data) => `data: ${JSON.stringify(data)}\n\n`;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch the Linux-first VRAMBridge local browser app."""
+"""SYNAPSE: local models, a local API, and live hardware monitoring."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ from collections import deque
 import hashlib
 import http.client
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from importlib import import_module
+from importlib.resources import files
 import json
 import logging
 import os
@@ -20,13 +22,21 @@ import signal
 import socket
 import struct
 import subprocess
+import sys
 import threading
 import time
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 import webbrowser
 
+APP_PACKAGE = __package__ or Path(__file__).resolve().parent.name
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+__version__ = import_module(APP_PACKAGE).__version__
+_telemetry = import_module(f"{APP_PACKAGE}.telemetry")
+HardwareMonitor, number, rate, system_probe = (
+    _telemetry.HardwareMonitor, _telemetry.number, _telemetry.rate, _telemetry.system_probe)
 
-LOG = logging.getLogger("vrambridge")
+LOG = logging.getLogger("synapse")
 WEB_ROOT = Path(__file__).with_name("web")
 BODY_LIMIT = 1024 * 1024
 RESPONSE_LIMIT = 8 * 1024 * 1024
@@ -41,11 +51,15 @@ HYBRID_WARNING = (
 
 
 def available_cpus() -> set[int]:
-    return set(os.sched_getaffinity(0))
+    if hasattr(os, "sched_getaffinity"):
+        return set(os.sched_getaffinity(0))
+    return set(range(os.cpu_count() or 1))
 
 
 def default_cpu_threads() -> int:
     cpus = available_cpus()
+    if sys.platform != "linux":
+        return min(8, len(cpus))
     try:
         physical = set()
         for cpu in cpus:
@@ -56,6 +70,13 @@ def default_cpu_threads() -> int:
     except OSError as exc:
         LOG.warning("Physical CPU topology unavailable; using affinity-based thread count: %s", exc)
         return max(1, len(cpus) - 2)
+
+
+def backend_executable(value: str) -> str | None:
+    path = Path(value).expanduser()
+    if path.suffix.lower() == ".py" and path.is_file():
+        return str(path.resolve())
+    return shutil.which(value)
 
 
 class AppError(Exception):
@@ -335,10 +356,10 @@ class Runtime:
         self.hybrid_markers: set[str] = set()
         self.backend_kind = backend_kind
         self.enable_speculation = enable_speculation
-        self.executable = shutil.which(executable)
+        self.executable = backend_executable(executable)
         self.requested_executable = executable
         self.standard_executable = self.executable
-        self.hybrid_executable = shutil.which(hybrid_executable or executable) if hybrid_plan is not None else None
+        self.hybrid_executable = backend_executable(hybrid_executable or executable) if hybrid_plan is not None else None
         if hybrid_plan is not None and not self.hybrid_executable:
             raise ValueError("The configured patched hybrid executable was not found.")
         if self.hybrid_active:
@@ -350,6 +371,7 @@ class Runtime:
         self.state = "stopped"
         self.model: str | None = None
         self.error: str | None = None
+        self.readiness_error: str | None = None
         self.logs: deque[str] = deque(maxlen=80)
         self.port = 0
         self.key = ""
@@ -377,14 +399,120 @@ class Runtime:
             self.host_op_offload = False
         self.requested_context = self.context
         self.context_warning: str | None = None
+        self.generation_serial = 0
+        self.generation = {}
+        self.slot_sample: tuple[int, float, float] | None = None
+        self.monitor = HardwareMonitor(self._monitor_backend)
+
+    def begin_generation(self) -> int:
+        with self.lock:
+            self.generation_serial += 1
+            self.generation = {"active": True, "tokens_per_second": None, "output_tokens": None,
+                               "prompt_tokens": None, "error": None}
+            self.slot_sample = None
+            return self.generation_serial
+
+    def observe_generation(self, serial: int, data: object) -> None:
+        if not isinstance(data, dict):
+            return
+        with self.lock:
+            if serial != self.generation_serial:
+                return
+            timings, usage = data.get("timings", {}), data.get("usage", {})
+            if isinstance(timings, dict):
+                for source, target in (("predicted_per_second", "tokens_per_second"),
+                                       ("predicted_n", "output_tokens"), ("prompt_n", "prompt_tokens")):
+                    if source in timings:
+                        self.generation[target] = number(timings[source])
+                        if self.generation[target] is None:
+                            self.generation["error"] = f"Backend timing {source} is invalid"
+            if isinstance(usage, dict):
+                for source, target in (("completion_tokens", "output_tokens"), ("prompt_tokens", "prompt_tokens")):
+                    if source in usage:
+                        self.generation[target] = number(usage[source])
+                        if self.generation[target] is None:
+                            self.generation["error"] = f"Backend usage {source} is invalid"
+
+    def end_generation(self, serial: int) -> None:
+        with self.lock:
+            if serial == self.generation_serial:
+                self.generation["active"] = False
+                self.generation["final_pending"] = self.generation.get("tokens_per_second") is not None
+
+    def _monitor_backend(self) -> dict:
+        with self.lock:
+            process = self.process
+            running = process is not None and process.poll() is None
+            resources = dict(self.resources or {}) if running else {}
+            state, context, port, key = self.state, self.context, self.port, self.key
+            generation = dict(self.generation)
+            if generation.get("final_pending"):
+                self.generation["final_pending"] = False
+            serial = self.generation_serial
+            resource_error = self.resource_error
+        result = {"state": state, "generation_active": generation.get("active", False),
+                  "tokens_per_second": generation.get("tokens_per_second")
+                  if generation.get("active") or generation.get("final_pending") else 0,
+                  "last_tokens_per_second": generation.get("tokens_per_second"),
+                  "output_tokens": generation.get("output_tokens"), "context_used": None,
+                  "context_total": context if running else None, "context_source": None,
+                  "speed_source": "backend_final_timings" if generation.get("final_pending") else
+                  "backend_timings" if generation.get("tokens_per_second") is not None else None,
+                  "rss_bytes": resources.get("rss_bytes"), "cpu_logical_cores": resources.get("cpu_logical_cores"),
+                  "pid": process.pid if running else None, "read_bytes": resources.get("read_bytes"),
+                  "errors": {}}
+        if resource_error:
+            result["errors"]["process"] = resource_error
+        if generation.get("error"):
+            result["errors"]["generation"] = generation["error"]
+        if state == "ready" and running:
+            connection = http.client.HTTPConnection("127.0.0.1", port, timeout=0.5)
+            try:
+                connection.request("GET", "/slots", headers={"Authorization": f"Bearer {key}"})
+                response = connection.getresponse()
+                body = response.read(1024 * 1024 + 1)
+                if response.status != 200 or len(body) > 1024 * 1024:
+                    raise ValueError(f"Slot counters unavailable (HTTP {response.status})")
+                slots = json.loads(body)
+                if not isinstance(slots, list) or not slots or not isinstance(slots[0], dict):
+                    raise ValueError("Backend did not provide slot counters")
+                slot = slots[0]
+                result["context_used"] = number(slot.get("n_prompt_tokens"))
+                if result["context_used"] is not None:
+                    result["context_source"] = "backend_slot"
+                decoded = slot.get("next_token", [])
+                count = number(decoded[0].get("n_decoded")) if decoded and isinstance(decoded[0], dict) else None
+                now = time.monotonic()
+                with self.lock:
+                    if count is not None and generation.get("active") and serial == self.generation_serial:
+                        if result["tokens_per_second"] is None and self.slot_sample and self.slot_sample[0] == serial:
+                            result["tokens_per_second"] = rate(count, self.slot_sample[2], now - self.slot_sample[1])
+                            result["speed_source"] = "backend_slot_counter"
+                        self.slot_sample = serial, now, count
+            except (OSError, http.client.HTTPException, ValueError, TypeError) as exc:
+                result["errors"]["context"] = str(exc)
+            finally:
+                connection.close()
+        if result["context_used"] is None and running:
+            prompt, output = generation.get("prompt_tokens"), generation.get("output_tokens")
+            if prompt is not None:
+                result["context_used"] = prompt + (output or 0)
+                result["context_source"] = "reported_usage"
+        with self.lock:
+            if process is not self.process:
+                return {"state": self.state, "generation_active": False, "errors": {"context": "Model changed during sample"}}
+        return result
 
     def status(self) -> dict:
         with self.lock:
             return {
                 "api_version": 1,
+                "app_name": "SYNAPSE",
+                "app_version": __version__,
                 "state": self.state,
                 "model": self.model,
                 "error": self.error,
+                "readiness_error": self.readiness_error,
                 "logs": list(self.logs),
                 "backend_available": self.executable is not None or self.hybrid_executable is not None,
                 "backend": self.executable or self.requested_executable,
@@ -565,6 +693,10 @@ class Runtime:
                 "--api-key", self.key, "--ctx-size", str(context), "--parallel", "1",
                 "--threads", str(cpu_threads), "--threads-batch", str(batch_threads),
             ]
+            if selected_executable.lower().endswith(".py"):
+                command.insert(0, sys.executable)
+            if self.backend_kind == "llama.cpp":
+                command += ["--slots"]
             if hybrid:
                 command += ["--n-gpu-layers", "all", "--cpu-moe", "--fit", "off",
                             "--no-repack", "--no-host", "--moe-cache-mib", str(expert_cache_mib)]
@@ -631,6 +763,7 @@ class Runtime:
             self.execution_mode = mode
             self.selection_reason = reason
             self.error = None
+            self.readiness_error = None
             self.model = str(model)
             self.context = context
             self.requested_context = context
@@ -649,11 +782,15 @@ class Runtime:
             self.resources = None
             self.resource_error = None
             self.cpu_sample = None
+            self.generation_serial += 1
+            self.generation = {}
+            self.slot_sample = None
             try:
                 process = subprocess.Popen(
                     command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                     stdin=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
                     env=environment,
+                    creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform == "win32" else 0,
                 )
             except OSError as exc:
                 self.state = "error"
@@ -748,13 +885,19 @@ class Runtime:
                     response = connection.getresponse()
                     if response.status == 200:
                         with self.lock:
+                            self.readiness_error = None
                             if (self.process is process and self.state == "loading" and
                                     (not self.hybrid_active or
                                      self.required_hybrid_markers <= self.hybrid_markers)):
                                 self.state = "ready"
-                except (OSError, http.client.HTTPException):
-                    # A backend that is still starting need not have opened its socket yet.
-                    pass
+                    else:
+                        with self.lock:
+                            if self.process is process:
+                                self.readiness_error = f"Backend readiness returned HTTP {response.status}"
+                except (OSError, http.client.HTTPException) as exc:
+                    with self.lock:
+                        if self.process is process:
+                            self.readiness_error = f"Backend readiness is unavailable: {exc}"
                 finally:
                     connection.close()
                 with self.lock:
@@ -768,24 +911,18 @@ class Runtime:
                                       f"Unconfirmed: {missing or 'backend readiness response'}. "
                                       "Check the patched backend, plan and matching CUDA plugin."
                                       if self.hybrid_active else
-                                      "Model loading timed out. See backend output; try a smaller model or CPU mode.")
+                                      "Model loading timed out. See backend output; try a smaller model or CPU mode. "
+                                      + (self.readiness_error or ""))
                         LOG.error("%s", self.error)
                         return
             time.sleep(0.2)
 
     def _sample_resources(self, process: subprocess.Popen[str]) -> None:
-        root = Path("/proc") / str(process.pid)
         try:
-            fields = (root / "stat").read_text().rsplit(")", 1)[1].split()
-            cpu_seconds = (int(fields[11]) + int(fields[12])) / os.sysconf("SC_CLK_TCK")
-            memory = {}
-            for line in (root / "status").read_text().splitlines():
-                name, _, value = line.partition(":")
-                if name in ("VmRSS", "RssAnon", "RssFile"):
-                    memory[name] = int(value.split()[0]) * 1024
-            available = next(int(line.split()[1]) * 1024
-                             for line in Path("/proc/meminfo").read_text().splitlines()
-                             if line.startswith("MemAvailable:"))
+            probe = system_probe()
+            resources = probe.process(process.pid)
+            cpu_seconds = resources.pop("cpu_seconds")
+            _, available = probe.memory()
             now = time.monotonic()
             with self.lock:
                 if self.process is not process:
@@ -796,13 +933,8 @@ class Runtime:
                     if now > previous_time:
                         cores = max(0.0, (cpu_seconds - previous_cpu) / (now - previous_time))
                 self.cpu_sample = now, cpu_seconds
-                self.resources = {
-                    "cpu_logical_cores": cores,
-                    "rss_bytes": memory["VmRSS"],
-                    "anonymous_bytes": memory["RssAnon"],
-                    "file_backed_bytes": memory["RssFile"],
-                    "system_available_ram_bytes": available,
-                }
+                self.resources = {**resources, "cpu_logical_cores": cores,
+                                  "system_available_ram_bytes": available}
                 self.resource_error = None
         except FileNotFoundError:
             # The exit monitor handles a process that ended during sampling.
@@ -838,11 +970,17 @@ class Runtime:
                 self.process = None
                 self.state = "stopped"
                 self.error = None
+                self.readiness_error = None
                 self.model = None
                 self.resources = None
                 self.resource_error = None
                 self.cpu_sample = None
                 self.hybrid_markers.clear()
+                self.generation_serial += 1
+                self.generation = {}
+                self.slot_sample = None
+        if closing:
+            self.monitor.close()
 
     def connection(self) -> tuple[http.client.HTTPConnection, str]:
         with self.lock:
@@ -858,6 +996,10 @@ class AppServer(ThreadingHTTPServer):
     def __init__(self, address: tuple[str, int], runtime: Runtime):
         self.runtime = runtime
         super().__init__(address, Handler)
+
+    def server_close(self) -> None:
+        self.runtime.monitor.close()
+        super().server_close()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -936,6 +1078,14 @@ class Handler(BaseHTTPRequestHandler):
             path = urlsplit(self.path).path
             if method == "GET" and path == "/api/v1/status":
                 self._json(200, self.server.runtime.status())
+            elif method == "GET" and path == "/api/v1/monitor":
+                query = parse_qs(urlsplit(self.path).query, keep_blank_values=True)
+                values = query.get("after", ["0"])
+                if set(query) - {"after"} or len(values) != 1 or not values[0].isascii() or not values[0].isdigit():
+                    raise AppError(400, "Use a single nonnegative integer monitor cursor.")
+                if len(values[0]) > 16:
+                    raise AppError(400, "Monitor cursor is too large.")
+                self._json(200, self.server.runtime.monitor.snapshot(int(values[0])))
             elif method == "POST" and path == "/api/v1/model/load":
                 self.server.runtime.load(self._body())
                 self._json(202, self.server.runtime.status())
@@ -953,14 +1103,18 @@ class Handler(BaseHTTPRequestHandler):
                 if "stream" in data and not isinstance(data["stream"], bool):
                     raise AppError(400, "stream must be a boolean.")
                 self._proxy(method, path, data)
-            elif method == "GET" and path in ("/", "/app.js", "/chat-stream.mjs", "/style.css"):
+            elif method == "GET" and path in ("/", "/app.js", "/chat-stream.mjs", "/monitor.mjs", "/navigation.mjs",
+                                             "/style.css", "/icon.svg"):
                 name, mime = {
                     "/": ("index.html", "text/html; charset=utf-8"),
                     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
                     "/chat-stream.mjs": ("chat-stream.mjs", "text/javascript; charset=utf-8"),
+                    "/monitor.mjs": ("monitor.mjs", "text/javascript; charset=utf-8"),
+                    "/navigation.mjs": ("navigation.mjs", "text/javascript; charset=utf-8"),
+                    "/icon.svg": ("icon.svg", "image/svg+xml"),
                     "/style.css": ("style.css", "text/css; charset=utf-8"),
                 }[path]
-                self._send(200, (WEB_ROOT / name).read_bytes(), mime)
+                self._send(200, files(APP_PACKAGE).joinpath("web", name).read_bytes(), mime)
             else:
                 raise AppError(404, "Endpoint not found.")
         except AppError as exc:
@@ -983,6 +1137,17 @@ class Handler(BaseHTTPRequestHandler):
         streaming_started = False
         finished = threading.Event()
         disconnected = threading.Event()
+        serial = runtime.begin_generation() if chat else None
+        event_lines: list[bytes] = []
+        event_bytes = 0
+
+        def observe(payload: bytes) -> None:
+            if serial is None or not payload or payload.strip() == b"[DONE]":
+                return
+            try:
+                runtime.observe_generation(serial, json.loads(payload))
+            except (ValueError, UnicodeDecodeError) as exc:
+                LOG.warning("Backend telemetry event unavailable: %s", exc)
         try:
             connection, key = runtime.connection()
             if data is not None:
@@ -1014,6 +1179,8 @@ class Handler(BaseHTTPRequestHandler):
                 body = response.read(RESPONSE_LIMIT + 1)
                 if len(body) > RESPONSE_LIMIT:
                     raise AppError(502, "Backend response exceeded the 8 MiB limit.")
+                if chat and response.status == 200:
+                    observe(body)
                 self._send(response.status, body, "application/json; charset=utf-8")
                 return
             self.send_response(200)
@@ -1026,6 +1193,16 @@ class Handler(BaseHTTPRequestHandler):
                 line = response.readline(1024 * 1024)
                 if not line:
                     break
+                if line.startswith(b"data:"):
+                    event_bytes += len(line)
+                    if event_bytes <= 1024 * 1024:
+                        event_lines.append(line[5:].strip())
+                elif not line.strip():
+                    if event_bytes <= 1024 * 1024:
+                        observe(b"\n".join(event_lines))
+                    else:
+                        LOG.warning("Backend telemetry event exceeded the 1 MiB capture limit.")
+                    event_lines, event_bytes = [], 0
                 self.wfile.write(line)
                 self.wfile.flush()
             if not disconnected.is_set():
@@ -1046,11 +1223,13 @@ class Handler(BaseHTTPRequestHandler):
             if connection is not None:
                 connection.close()
             if chat:
+                runtime.end_generation(serial)
                 runtime.chat_lock.release()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", action="version", version=f"SYNAPSE {__version__}")
     parser.add_argument("--llama-server", default=os.environ.get("LLAMA_SERVER", "llama-server"),
                         help="llama-server executable or path (also LLAMA_SERVER)")
     parser.add_argument("--backend-kind", choices=("llama.cpp", "ik_llama.cpp"), default="llama.cpp",
@@ -1064,7 +1243,7 @@ def main() -> None:
     parser.add_argument("--execution-mode", choices=("auto", "standard", "hybrid"), default="auto",
                         help="default model selection policy; auto uses an installed hybrid profile only for matching models")
     parser.add_argument("--hybrid-profile", type=Path,
-                        help="pinned installation JSON; default: ~/.local/share/vrambridge/hybrid-profile.json if installed")
+                        help="optional Linux/CUDA experimental installation JSON; legacy VRAMBridge profiles are supported")
     parser.add_argument("--port", type=int, default=8080, help="local app port; 0 chooses a free port")
     parser.add_argument("--no-browser", action="store_true", help="do not open a browser")
     args = parser.parse_args()
@@ -1077,9 +1256,18 @@ def main() -> None:
         if explicit:
             profile = {"hybrid_plan": args.experimental_hybrid_plan, "hybrid_cuda_plugin": args.hybrid_cuda_plugin}
         elif args.execution_mode != "standard":
-            path = args.hybrid_profile or Path.home() / ".local/share/vrambridge/hybrid-profile.json"
+            config = (Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData/Local")) / "SYNAPSE"
+                      if sys.platform == "win32" else Path.home() / "Library/Application Support/SYNAPSE"
+                      if sys.platform == "darwin" else
+                      Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "synapse")
+            legacy = Path.home() / ".local/share/vrambridge/hybrid-profile.json"
+            path = args.hybrid_profile or config / "hybrid-profile.json"
+            if not path.exists() and args.hybrid_profile is None and sys.platform == "linux" and legacy.exists():
+                path = legacy
             if args.hybrid_profile is not None or path.exists():
                 profile = read_hybrid_profile(path)
+        if profile and sys.platform != "linux":
+            raise ValueError("The experimental hybrid engine is Linux/CUDA-only in this release. Use --execution-mode standard.")
         mode = "hybrid" if explicit and args.execution_mode == "auto" else args.execution_mode
         runtime = Runtime(args.llama_server, backend_kind=args.backend_kind,
                           enable_speculation=args.experimental_speculation,
@@ -1099,7 +1287,9 @@ def main() -> None:
 
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
-    print(f"VRAMBridge: {url}", flush=True)
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, shutdown)
+    print(f"SYNAPSE: {url}", flush=True)
     if not runtime.executable:
         LOG.warning("llama-server not found. The UI will show backend setup instructions.")
     if not args.no_browser and not webbrowser.open(url):

@@ -35,6 +35,7 @@ parser.add_argument("--spec-type")
 parser.add_argument("--spec-draft-n-max")
 parser.add_argument("--gpu-layers-draft")
 args, _ = parser.parse_known_args()
+stats = {"tokens": 0, "decoded": 0}
 if Path(args.model).stem == "fail":
     print("Unsupported model architecture (test fixture).", flush=True)
     sys.exit(7)
@@ -126,13 +127,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.authorized():
-            self.send_json(200, {"object": "list", "data": [{"id": "local-model"}]})
+            if self.path == "/slots":
+                self.send_json(200, [{"id": 0, "n_ctx": int(args.ctx_size), "n_prompt_tokens": stats["tokens"],
+                                     "next_token": [{"n_decoded": stats["decoded"]}]}])
+            else:
+                self.send_json(200, {"object": "list", "data": [{"id": "local-model"}]})
 
     def do_POST(self):
         if not self.authorized():
             return
         data = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         prompt = data["messages"][-1]["content"]
+        stats.update(tokens=18, decoded=0)
         if prompt == "backend-error":
             self.send_json(400, {"error": {"message": "Context limit exceeded."}})
             return
@@ -154,6 +160,8 @@ class Handler(BaseHTTPRequestHandler):
                     if prompt == "wait":
                         time.sleep(0.5)
                     send_event({"choices": [{"delta": {"content": text}}]})
+                    stats["tokens"] += 1
+                    stats["decoded"] += 1
                 if prompt != "incomplete":
                     send_event({
                         "choices": [{"delta": {}, "finish_reason": "length" if prompt == "reasoning-limit" else "stop"}],
