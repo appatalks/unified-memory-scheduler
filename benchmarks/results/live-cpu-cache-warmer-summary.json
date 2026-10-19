@@ -1,0 +1,2595 @@
+{
+  "schema_version": 1,
+  "study": "live_current_route_cpu_cache_warmer",
+  "date": "2026-10-19",
+  "generated_at_utc": "2026-10-19T12:59:12.563942+00:00",
+  "status": "implemented_and_numerically_preserving_no_demonstrated_request_speedup",
+  "research_repository": "https://github.com/appatalks/unified-memory-scheduler",
+  "downstream_repository": "https://github.com/appatalks/Synapse",
+  "downstream_revision_read_only": "545a7ebf4a6dea3dd4a1ac04760057eed2de1b15",
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "research_base_commit": "1c7dc36d2f6429b99c3591824c22661ca4df47a6",
+  "changes_uncommitted": true,
+  "live_warmer_implemented": true,
+  "full_model_acceleration_claim": false,
+  "qualified_end_to_end_speedup": false,
+  "strict_gpu_activity_gate": false,
+  "predictor_implemented": false,
+  "installed_backends_changed": false,
+  "synapse_changed": false,
+  "app_defaults_changed": false,
+  "weights_changed": false,
+  "routing_changed": false,
+  "new_quantization": false,
+  "implementation": {
+    "form": "Opt-in LD_PRELOAD CPU graph and native buffer-release interposer; matching native CPU plugin is reused.",
+    "modes": [
+      "off",
+      "noop",
+      "read"
+    ],
+    "source_discovery": "Bounded native original-projection descriptors learned from CPU MUL_MAT_ID nodes; no extra model copy.",
+    "trigger": "Current exact pre-admission router IDs/slot map at native CPU dispatcher entry.",
+    "warming": "Read one byte per64-byte cacheline, bounded gate/up/down prefix, original per-rank order.",
+    "queue": "At most one pending job and one active reader, latest-only replacement.",
+    "deadline": "Cancel at any CPU expert graph entry; check generation and wall budget between<=64KiB chunks. Not hard real time.",
+    "expert_compute_waits_for_warmer": false,
+    "buffer_release": "Cancel and drain outstanding readers before original owner-buffer release.",
+    "mmap_lifetime_verified": "Pinned llama_model::impl declares mappings before ctxs_bufs; reverse member destruction releases owner buffers before unmapping.",
+    "read_snapshot": "Completed chunks sampled at next CPU expert entry, classified by actual native cold IDs versus newly GPU-admitted IDs.",
+    "raw_ids_addresses_or_prompts_recorded": false,
+    "missing_first_use_sources": "Explicit skip counter; one initial source miss per matched process, not silently labeled warm."
+  },
+  "configuration": {
+    "model": "gpt-oss-120b-MXFP4",
+    "cpu": "Ryzen9 9950X",
+    "gpu": "RTX5070Ti16GB",
+    "context": 16384,
+    "expert_cache_mib": 12000,
+    "generation_threads": 8,
+    "batch_threads": 16,
+    "logical_batch": 2048,
+    "physical_batch": 512,
+    "transfer": "direct",
+    "decode_pipeline": true,
+    "async_ids": true,
+    "normal_cuda_fusion": true,
+    "wait_policy": "Native fastest OpenMP behavior; no GOMP override.",
+    "plan_sha256": "6a679bec76f1a410ed65fa79c186d164a388fc76419d96dcad5978782343949c",
+    "timezone": "UTC",
+    "output_tokens": 512,
+    "temperature": 0,
+    "seed": 42,
+    "reasoning_effort": "low",
+    "ignore_eos": true,
+    "cache_prompt": false,
+    "matched_compute_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "helper_cpu": 16,
+    "helper_core_note": "Logical16 shares physicalcore0, not extra physical compute capacity.",
+    "warm_budget_bytes": 1048576,
+    "maximum_job_us": 200,
+    "helper_chunk_bytes": 65536,
+    "affinity_scope": "One32MiB CCD,16 logicalCPUs so16 batch threads remain valid. Both baseline and candidate share this mask.",
+    "pair_order": [
+      [
+        "native",
+        "noop",
+        "read"
+      ],
+      [
+        "read",
+        "noop",
+        "native"
+      ],
+      [
+        "native",
+        "noop",
+        "read"
+      ]
+    ],
+    "backend_library_set_sha256": {
+      "libggml-base.so.0.27.0": "7a431e4ddf3aad3963b6c6c709789dbf81b6f288aa2e6f33e951a6aadc600776",
+      "libggml-cpu-zen4.so": "155a87103fdc442b309b656862bb2ea9b9f77be88f3434f9c044b71a572279e4",
+      "libggml.so.0.27.0": "fdf214fa9242da2b397b040183928d742f94c902e9ba2fd77e6af112cf7ccbd9",
+      "libllama-common.so.0.7.0": "86a923a9f337741357f28bab440c1e7051eb98e41dead6fe95b39ce896a86c87",
+      "libllama-server-impl.so": "3ecc6a2b6f49f3abf02303cb409e87eae5b3dff6e30cf2fa1cb06f84f81faab1",
+      "libllama.so.0.7.0": "148c134928fce83224465faddde52febed9d4f4c6da8e6b159ac88448b2f9eb4",
+      "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e"
+    },
+    "native_runtime_mapping_attested": true
+  },
+  "matched_request_results": {
+    "requests": 27,
+    "output_tokens": 13824,
+    "categories": [
+      "coding",
+      "reasoning",
+      "prose"
+    ],
+    "triplets_per_category": 3,
+    "all_output_hashes_match_within_workload": true,
+    "all_counts_exact": true,
+    "all_owned_backends_stopped": true,
+    "zero_generation_physical_reads_and_major_faults": true,
+    "no_endpoint_process_swap": true,
+    "workloads": [
+      {
+        "category": "coding",
+        "variants": {
+          "native": {
+            "samples": [
+              {
+                "pair": 0,
+                "request_file": "live-warmer-20261019/native-libs-coding-pair0-native-request.json",
+                "backend_decode_tok_s": 52.10578228368733,
+                "request_wall_seconds": 12.400123819999862,
+                "prompt_ms": 2582.893,
+                "first_text_seconds": 2.7106686560000526,
+                "load_to_ready_seconds": 4.117667270999846,
+                "generation_window_process_cpu_seconds": 77.34,
+                "request_process_cpu_seconds": 118.72,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+              },
+              {
+                "pair": 1,
+                "request_file": "live-warmer-20261019/native-libs-coding-pair1-native-request.json",
+                "backend_decode_tok_s": 51.58027945609958,
+                "request_wall_seconds": 12.52094665200002,
+                "prompt_ms": 2604.833,
+                "first_text_seconds": 2.7332239789993764,
+                "load_to_ready_seconds": 3.916224329000215,
+                "generation_window_process_cpu_seconds": 78.11000000000001,
+                "request_process_cpu_seconds": 119.71000000000001,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+              },
+              {
+                "pair": 2,
+                "request_file": "live-warmer-20261019/native-libs-coding-pair2-native-request.json",
+                "backend_decode_tok_s": 51.73908636873526,
+                "request_wall_seconds": 12.494882618000702,
+                "prompt_ms": 2609.342,
+                "first_text_seconds": 2.7354431280000426,
+                "load_to_ready_seconds": 3.925191755999549,
+                "generation_window_process_cpu_seconds": 77.8,
+                "request_process_cpu_seconds": 119.44,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+              }
+            ],
+            "medians": {
+              "backend_decode_tok_s": 51.73908636873526,
+              "request_wall_seconds": 12.494882618000702,
+              "prompt_ms": 2604.833,
+              "first_text_seconds": 2.7332239789993764,
+              "load_to_ready_seconds": 3.925191755999549,
+              "generation_window_process_cpu_seconds": 77.8,
+              "request_process_cpu_seconds": 119.44
+            }
+          },
+          "noop": {
+            "samples": [
+              {
+                "pair": 0,
+                "request_file": "live-warmer-20261019/native-libs-coding-pair0-noop-request.json",
+                "backend_decode_tok_s": 51.117206051556956,
+                "request_wall_seconds": 12.580431852999936,
+                "prompt_ms": 2574.206,
+                "first_text_seconds": 2.701798920999863,
+                "load_to_ready_seconds": 3.919045829999959,
+                "generation_window_process_cpu_seconds": 78.86,
+                "request_process_cpu_seconds": 120.08,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                "helper_metrics": {
+                  "jobs_submitted": 12274,
+                  "jobs_started": 12254,
+                  "jobs_canceled": 9,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 20,
+                  "read_payload_bytes": 0,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                  "cancellation_tail_payload_bytes": 0,
+                  "expert_calls_with_active_reader_at_entry": 0,
+                  "reader_ns": 3729021,
+                  "queue_ns": 40563504,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 1,
+                "request_file": "live-warmer-20261019/native-libs-coding-pair1-noop-request.json",
+                "backend_decode_tok_s": 51.77505874848031,
+                "request_wall_seconds": 12.48093901899938,
+                "prompt_ms": 2602.137,
+                "first_text_seconds": 2.7313916550001522,
+                "load_to_ready_seconds": 4.012818981000237,
+                "generation_window_process_cpu_seconds": 77.78,
+                "request_process_cpu_seconds": 119.39,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                "helper_metrics": {
+                  "jobs_submitted": 12274,
+                  "jobs_started": 12256,
+                  "jobs_canceled": 7,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 18,
+                  "read_payload_bytes": 0,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                  "cancellation_tail_payload_bytes": 0,
+                  "expert_calls_with_active_reader_at_entry": 0,
+                  "reader_ns": 3798944,
+                  "queue_ns": 33952427,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 2,
+                "request_file": "live-warmer-20261019/native-libs-coding-pair2-noop-request.json",
+                "backend_decode_tok_s": 51.470246068066025,
+                "request_wall_seconds": 12.539405903999977,
+                "prompt_ms": 2602.148,
+                "first_text_seconds": 2.7283427859993026,
+                "load_to_ready_seconds": 4.022181234000527,
+                "generation_window_process_cpu_seconds": 78.34,
+                "request_process_cpu_seconds": 119.99,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                "helper_metrics": {
+                  "jobs_submitted": 12274,
+                  "jobs_started": 12247,
+                  "jobs_canceled": 17,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 27,
+                  "read_payload_bytes": 0,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                  "cancellation_tail_payload_bytes": 0,
+                  "expert_calls_with_active_reader_at_entry": 0,
+                  "reader_ns": 3813374,
+                  "queue_ns": 37138229,
+                  "dispatches_without_sources": 1
+                }
+              }
+            ],
+            "medians": {
+              "backend_decode_tok_s": 51.470246068066025,
+              "request_wall_seconds": 12.539405903999977,
+              "prompt_ms": 2602.137,
+              "first_text_seconds": 2.7283427859993026,
+              "load_to_ready_seconds": 4.012818981000237,
+              "generation_window_process_cpu_seconds": 78.34,
+              "request_process_cpu_seconds": 119.99
+            }
+          },
+          "read": {
+            "samples": [
+              {
+                "pair": 0,
+                "request_file": "live-warmer-20261019/native-libs-coding-pair0-read-request.json",
+                "backend_decode_tok_s": 51.68026080023901,
+                "request_wall_seconds": 12.5013897179997,
+                "prompt_ms": 2604.774,
+                "first_text_seconds": 2.7314285250004104,
+                "load_to_ready_seconds": 4.022040677999939,
+                "generation_window_process_cpu_seconds": 78.24000000000001,
+                "request_process_cpu_seconds": 119.9,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                "helper_metrics": {
+                  "jobs_submitted": 12274,
+                  "jobs_started": 12239,
+                  "jobs_canceled": 6940,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 35,
+                  "read_payload_bytes": 10662051840,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 8575975424,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 1590689792,
+                  "cancellation_tail_payload_bytes": 495386624,
+                  "expert_calls_with_active_reader_at_entry": 7583,
+                  "reader_ns": 244625611,
+                  "queue_ns": 45424197,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 1,
+                "request_file": "live-warmer-20261019/native-libs-coding-pair1-read-request.json",
+                "backend_decode_tok_s": 51.35592712724592,
+                "request_wall_seconds": 12.535379844999625,
+                "prompt_ms": 2575.955,
+                "first_text_seconds": 2.712073521000093,
+                "load_to_ready_seconds": 3.9197902980004073,
+                "generation_window_process_cpu_seconds": 78.58000000000001,
+                "request_process_cpu_seconds": 119.95,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                "helper_metrics": {
+                  "jobs_submitted": 12274,
+                  "jobs_started": 12225,
+                  "jobs_canceled": 6760,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 49,
+                  "read_payload_bytes": 10704257024,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 8626307072,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 1593311232,
+                  "cancellation_tail_payload_bytes": 484638720,
+                  "expert_calls_with_active_reader_at_entry": 7411,
+                  "reader_ns": 245545664,
+                  "queue_ns": 46054270,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 2,
+                "request_file": "live-warmer-20261019/native-libs-coding-pair2-read-request.json",
+                "backend_decode_tok_s": 51.47556054215954,
+                "request_wall_seconds": 12.575862358999984,
+                "prompt_ms": 2639.234,
+                "first_text_seconds": 2.766173695999896,
+                "load_to_ready_seconds": 3.9240056860007826,
+                "generation_window_process_cpu_seconds": 78.38,
+                "request_process_cpu_seconds": 120.55000000000001,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                "helper_metrics": {
+                  "jobs_submitted": 12274,
+                  "jobs_started": 12218,
+                  "jobs_canceled": 4342,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 56,
+                  "read_payload_bytes": 11482759168,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 9554690048,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 1616117760,
+                  "cancellation_tail_payload_bytes": 311951360,
+                  "expert_calls_with_active_reader_at_entry": 4773,
+                  "reader_ns": 253592580,
+                  "queue_ns": 37059648,
+                  "dispatches_without_sources": 1
+                }
+              }
+            ],
+            "medians": {
+              "backend_decode_tok_s": 51.47556054215954,
+              "request_wall_seconds": 12.535379844999625,
+              "prompt_ms": 2604.774,
+              "first_text_seconds": 2.7314285250004104,
+              "load_to_ready_seconds": 3.9240056860007826,
+              "generation_window_process_cpu_seconds": 78.38,
+              "request_process_cpu_seconds": 119.95
+            }
+          }
+        },
+        "read_vs_native_decode_percent": -0.5093360649966128,
+        "read_vs_noop_decode_percent": 0.010325332594085523,
+        "read_vs_native_request_wall_percent": 0.32411050377201267
+      },
+      {
+        "category": "reasoning",
+        "variants": {
+          "native": {
+            "samples": [
+              {
+                "pair": 0,
+                "request_file": "live-warmer-20261019/native-libs-reasoning-pair0-native-request.json",
+                "backend_decode_tok_s": 51.5098016802074,
+                "request_wall_seconds": 12.708444116000464,
+                "prompt_ms": 2777.85,
+                "first_text_seconds": 2.90569817100004,
+                "load_to_ready_seconds": 4.220888288999959,
+                "generation_window_process_cpu_seconds": 78.21000000000001,
+                "request_process_cpu_seconds": 122.65000000000002,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+              },
+              {
+                "pair": 1,
+                "request_file": "live-warmer-20261019/native-libs-reasoning-pair1-native-request.json",
+                "backend_decode_tok_s": 51.91702338877143,
+                "request_wall_seconds": 12.62149881699952,
+                "prompt_ms": 2769.142,
+                "first_text_seconds": 2.896091711999361,
+                "load_to_ready_seconds": 3.9252078810004605,
+                "generation_window_process_cpu_seconds": 77.57999999999998,
+                "request_process_cpu_seconds": 121.96,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+              },
+              {
+                "pair": 2,
+                "request_file": "live-warmer-20261019/native-libs-reasoning-pair2-native-request.json",
+                "backend_decode_tok_s": 52.03017465032872,
+                "request_wall_seconds": 12.628357493000294,
+                "prompt_ms": 2797.565,
+                "first_text_seconds": 2.9251129699996454,
+                "load_to_ready_seconds": 3.9318530589998772,
+                "generation_window_process_cpu_seconds": 77.41,
+                "request_process_cpu_seconds": 122.07,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+              }
+            ],
+            "medians": {
+              "backend_decode_tok_s": 51.91702338877143,
+              "request_wall_seconds": 12.628357493000294,
+              "prompt_ms": 2777.85,
+              "first_text_seconds": 2.90569817100004,
+              "load_to_ready_seconds": 3.9318530589998772,
+              "generation_window_process_cpu_seconds": 77.57999999999998,
+              "request_process_cpu_seconds": 122.07
+            }
+          },
+          "noop": {
+            "samples": [
+              {
+                "pair": 0,
+                "request_file": "live-warmer-20261019/native-libs-reasoning-pair0-noop-request.json",
+                "backend_decode_tok_s": 51.917260751851344,
+                "request_wall_seconds": 12.623483915000179,
+                "prompt_ms": 2770.884,
+                "first_text_seconds": 2.899120674000187,
+                "load_to_ready_seconds": 4.026855327999328,
+                "generation_window_process_cpu_seconds": 77.57,
+                "request_process_cpu_seconds": 121.97,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                "helper_metrics": {
+                  "jobs_submitted": 12325,
+                  "jobs_started": 12298,
+                  "jobs_canceled": 9,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 27,
+                  "read_payload_bytes": 0,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                  "cancellation_tail_payload_bytes": 0,
+                  "expert_calls_with_active_reader_at_entry": 0,
+                  "reader_ns": 3686734,
+                  "queue_ns": 37532452,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 1,
+                "request_file": "live-warmer-20261019/native-libs-reasoning-pair1-noop-request.json",
+                "backend_decode_tok_s": 51.82423855133099,
+                "request_wall_seconds": 12.657947589999822,
+                "prompt_ms": 2788.83,
+                "first_text_seconds": 2.9165451039998516,
+                "load_to_ready_seconds": 4.030898254999556,
+                "generation_window_process_cpu_seconds": 77.69999999999999,
+                "request_process_cpu_seconds": 122.32,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                "helper_metrics": {
+                  "jobs_submitted": 12325,
+                  "jobs_started": 12312,
+                  "jobs_canceled": 4,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 13,
+                  "read_payload_bytes": 0,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                  "cancellation_tail_payload_bytes": 0,
+                  "expert_calls_with_active_reader_at_entry": 0,
+                  "reader_ns": 3751948,
+                  "queue_ns": 28730140,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 2,
+                "request_file": "live-warmer-20261019/native-libs-reasoning-pair2-noop-request.json",
+                "backend_decode_tok_s": 51.71589493597148,
+                "request_wall_seconds": 12.672757578000528,
+                "prompt_ms": 2781.965,
+                "first_text_seconds": 2.9096838860004937,
+                "load_to_ready_seconds": 4.020044935999977,
+                "generation_window_process_cpu_seconds": 77.89,
+                "request_process_cpu_seconds": 122.35,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                "helper_metrics": {
+                  "jobs_submitted": 12325,
+                  "jobs_started": 12291,
+                  "jobs_canceled": 9,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 34,
+                  "read_payload_bytes": 0,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                  "cancellation_tail_payload_bytes": 0,
+                  "expert_calls_with_active_reader_at_entry": 0,
+                  "reader_ns": 3752881,
+                  "queue_ns": 31298783,
+                  "dispatches_without_sources": 1
+                }
+              }
+            ],
+            "medians": {
+              "backend_decode_tok_s": 51.82423855133099,
+              "request_wall_seconds": 12.657947589999822,
+              "prompt_ms": 2781.965,
+              "first_text_seconds": 2.9096838860004937,
+              "load_to_ready_seconds": 4.026855327999328,
+              "generation_window_process_cpu_seconds": 77.69999999999999,
+              "request_process_cpu_seconds": 122.32
+            }
+          },
+          "read": {
+            "samples": [
+              {
+                "pair": 0,
+                "request_file": "live-warmer-20261019/native-libs-reasoning-pair0-read-request.json",
+                "backend_decode_tok_s": 51.69543316878134,
+                "request_wall_seconds": 12.677797583000029,
+                "prompt_ms": 2783.592,
+                "first_text_seconds": 2.91107097099939,
+                "load_to_ready_seconds": 3.9212783170005423,
+                "generation_window_process_cpu_seconds": 78.10000000000001,
+                "request_process_cpu_seconds": 122.56000000000002,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                "helper_metrics": {
+                  "jobs_submitted": 12325,
+                  "jobs_started": 12243,
+                  "jobs_canceled": 3887,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 82,
+                  "read_payload_bytes": 11771314176,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 10057220096,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 1420558336,
+                  "cancellation_tail_payload_bytes": 293535744,
+                  "expert_calls_with_active_reader_at_entry": 4497,
+                  "reader_ns": 275394599,
+                  "queue_ns": 59661102,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 1,
+                "request_file": "live-warmer-20261019/native-libs-reasoning-pair1-read-request.json",
+                "backend_decode_tok_s": 51.86601435257461,
+                "request_wall_seconds": 12.639337081999656,
+                "prompt_ms": 2777.831,
+                "first_text_seconds": 2.9061548379995656,
+                "load_to_ready_seconds": 4.021945247000076,
+                "generation_window_process_cpu_seconds": 77.93,
+                "request_process_cpu_seconds": 122.46,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                "helper_metrics": {
+                  "jobs_submitted": 12325,
+                  "jobs_started": 12302,
+                  "jobs_canceled": 7053,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 23,
+                  "read_payload_bytes": 10703273984,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 8789295104,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 1410465792,
+                  "cancellation_tail_payload_bytes": 503513088,
+                  "expert_calls_with_active_reader_at_entry": 7706,
+                  "reader_ns": 245253039,
+                  "queue_ns": 42459386,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 2,
+                "request_file": "live-warmer-20261019/native-libs-reasoning-pair2-read-request.json",
+                "backend_decode_tok_s": 51.79570436228287,
+                "request_wall_seconds": 12.652679339000315,
+                "prompt_ms": 2776.832,
+                "first_text_seconds": 2.9035819640002956,
+                "load_to_ready_seconds": 3.92807051499949,
+                "generation_window_process_cpu_seconds": 78.03,
+                "request_process_cpu_seconds": 122.47000000000001,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                "helper_metrics": {
+                  "jobs_submitted": 12325,
+                  "jobs_started": 12280,
+                  "jobs_canceled": 6970,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 45,
+                  "read_payload_bytes": 10803675136,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 8881176576,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 1417084928,
+                  "cancellation_tail_payload_bytes": 505413632,
+                  "expert_calls_with_active_reader_at_entry": 7726,
+                  "reader_ns": 246658579,
+                  "queue_ns": 42998723,
+                  "dispatches_without_sources": 1
+                }
+              }
+            ],
+            "medians": {
+              "backend_decode_tok_s": 51.79570436228287,
+              "request_wall_seconds": 12.652679339000315,
+              "prompt_ms": 2777.831,
+              "first_text_seconds": 2.9061548379995656,
+              "load_to_ready_seconds": 3.92807051499949,
+              "generation_window_process_cpu_seconds": 78.03,
+              "request_process_cpu_seconds": 122.47000000000001
+            }
+          }
+        },
+        "read_vs_native_decode_percent": -0.23367870222468223,
+        "read_vs_noop_decode_percent": -0.05505954326731066,
+        "read_vs_native_request_wall_percent": 0.19259706587735348
+      },
+      {
+        "category": "prose",
+        "variants": {
+          "native": {
+            "samples": [
+              {
+                "pair": 0,
+                "request_file": "live-warmer-20261019/native-libs-prose-pair0-native-request.json",
+                "backend_decode_tok_s": 57.60225809869713,
+                "request_wall_seconds": 11.426504250000107,
+                "prompt_ms": 2545.363,
+                "first_text_seconds": 2.6711052860000564,
+                "load_to_ready_seconds": 4.023356614000477,
+                "generation_window_process_cpu_seconds": 69.82,
+                "request_process_cpu_seconds": 110.63,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+              },
+              {
+                "pair": 1,
+                "request_file": "live-warmer-20261019/native-libs-prose-pair1-native-request.json",
+                "backend_decode_tok_s": 57.53181531904488,
+                "request_wall_seconds": 11.444530439999653,
+                "prompt_ms": 2552.963,
+                "first_text_seconds": 2.679501270000401,
+                "load_to_ready_seconds": 4.0285547089997635,
+                "generation_window_process_cpu_seconds": 69.86999999999999,
+                "request_process_cpu_seconds": 110.78999999999999,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+              },
+              {
+                "pair": 2,
+                "request_file": "live-warmer-20261019/native-libs-prose-pair2-native-request.json",
+                "backend_decode_tok_s": 57.641308626907325,
+                "request_wall_seconds": 11.429632474000755,
+                "prompt_ms": 2555.042,
+                "first_text_seconds": 2.6806651719998627,
+                "load_to_ready_seconds": 3.917816128000595,
+                "generation_window_process_cpu_seconds": 69.75999999999999,
+                "request_process_cpu_seconds": 110.67999999999999,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+              }
+            ],
+            "medians": {
+              "backend_decode_tok_s": 57.60225809869713,
+              "request_wall_seconds": 11.429632474000755,
+              "prompt_ms": 2552.963,
+              "first_text_seconds": 2.679501270000401,
+              "load_to_ready_seconds": 4.023356614000477,
+              "generation_window_process_cpu_seconds": 69.82,
+              "request_process_cpu_seconds": 110.67999999999999
+            }
+          },
+          "noop": {
+            "samples": [
+              {
+                "pair": 0,
+                "request_file": "live-warmer-20261019/native-libs-prose-pair0-noop-request.json",
+                "backend_decode_tok_s": 57.0867566768045,
+                "request_wall_seconds": 11.506693363000522,
+                "prompt_ms": 2546.02,
+                "first_text_seconds": 2.6711565400000836,
+                "load_to_ready_seconds": 4.019725707999896,
+                "generation_window_process_cpu_seconds": 70.48,
+                "request_process_cpu_seconds": 111.17,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                "helper_metrics": {
+                  "jobs_submitted": 11067,
+                  "jobs_started": 11046,
+                  "jobs_canceled": 7,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 21,
+                  "read_payload_bytes": 0,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                  "cancellation_tail_payload_bytes": 0,
+                  "expert_calls_with_active_reader_at_entry": 0,
+                  "reader_ns": 3331661,
+                  "queue_ns": 33580612,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 1,
+                "request_file": "live-warmer-20261019/native-libs-prose-pair1-noop-request.json",
+                "backend_decode_tok_s": 57.20286497918588,
+                "request_wall_seconds": 11.498533766000037,
+                "prompt_ms": 2556.247,
+                "first_text_seconds": 2.680930071000148,
+                "load_to_ready_seconds": 3.927904316999957,
+                "generation_window_process_cpu_seconds": 70.29,
+                "request_process_cpu_seconds": 111.17,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                "helper_metrics": {
+                  "jobs_submitted": 11067,
+                  "jobs_started": 11023,
+                  "jobs_canceled": 77,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 44,
+                  "read_payload_bytes": 0,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                  "cancellation_tail_payload_bytes": 0,
+                  "expert_calls_with_active_reader_at_entry": 0,
+                  "reader_ns": 3421200,
+                  "queue_ns": 61061107,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 2,
+                "request_file": "live-warmer-20261019/native-libs-prose-pair2-noop-request.json",
+                "backend_decode_tok_s": 57.64796093747091,
+                "request_wall_seconds": 11.431103033999534,
+                "prompt_ms": 2557.166,
+                "first_text_seconds": 2.6821284939996985,
+                "load_to_ready_seconds": 3.925222369000039,
+                "generation_window_process_cpu_seconds": 69.82,
+                "request_process_cpu_seconds": 110.69,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                "helper_metrics": {
+                  "jobs_submitted": 11067,
+                  "jobs_started": 11038,
+                  "jobs_canceled": 9,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 29,
+                  "read_payload_bytes": 0,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                  "cancellation_tail_payload_bytes": 0,
+                  "expert_calls_with_active_reader_at_entry": 0,
+                  "reader_ns": 3432616,
+                  "queue_ns": 31720841,
+                  "dispatches_without_sources": 1
+                }
+              }
+            ],
+            "medians": {
+              "backend_decode_tok_s": 57.20286497918588,
+              "request_wall_seconds": 11.498533766000037,
+              "prompt_ms": 2556.247,
+              "first_text_seconds": 2.680930071000148,
+              "load_to_ready_seconds": 3.927904316999957,
+              "generation_window_process_cpu_seconds": 70.29,
+              "request_process_cpu_seconds": 111.17
+            }
+          },
+          "read": {
+            "samples": [
+              {
+                "pair": 0,
+                "request_file": "live-warmer-20261019/native-libs-prose-pair0-read-request.json",
+                "backend_decode_tok_s": 57.17126856220189,
+                "request_wall_seconds": 11.513756903000285,
+                "prompt_ms": 2565.69,
+                "first_text_seconds": 2.6931898590000856,
+                "load_to_ready_seconds": 4.021945541000605,
+                "generation_window_process_cpu_seconds": 70.53999999999999,
+                "request_process_cpu_seconds": 111.6,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                "helper_metrics": {
+                  "jobs_submitted": 11067,
+                  "jobs_started": 11010,
+                  "jobs_canceled": 4619,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 57,
+                  "read_payload_bytes": 10176495616,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 8617328640,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 1224081408,
+                  "cancellation_tail_payload_bytes": 335085568,
+                  "expert_calls_with_active_reader_at_entry": 5136,
+                  "reader_ns": 239885696,
+                  "queue_ns": 47405710,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 1,
+                "request_file": "live-warmer-20261019/native-libs-prose-pair1-read-request.json",
+                "backend_decode_tok_s": 56.97235736897863,
+                "request_wall_seconds": 11.522511594000207,
+                "prompt_ms": 2544.049,
+                "first_text_seconds": 2.672485477999544,
+                "load_to_ready_seconds": 4.025410862000172,
+                "generation_window_process_cpu_seconds": 70.81,
+                "request_process_cpu_seconds": 111.57,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                "helper_metrics": {
+                  "jobs_submitted": 11067,
+                  "jobs_started": 11011,
+                  "jobs_canceled": 5393,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 56,
+                  "read_payload_bytes": 9866182656,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 8257470464,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 1217724416,
+                  "cancellation_tail_payload_bytes": 390987776,
+                  "expert_calls_with_active_reader_at_entry": 5987,
+                  "reader_ns": 234519933,
+                  "queue_ns": 49783962,
+                  "dispatches_without_sources": 1
+                }
+              },
+              {
+                "pair": 2,
+                "request_file": "live-warmer-20261019/native-libs-prose-pair2-read-request.json",
+                "backend_decode_tok_s": 56.72145967070917,
+                "request_wall_seconds": 11.575853199999983,
+                "prompt_ms": 2557.23,
+                "first_text_seconds": 2.6837937540003622,
+                "load_to_ready_seconds": 4.025225381999917,
+                "generation_window_process_cpu_seconds": 71.10999999999999,
+                "request_process_cpu_seconds": 112.05,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                "helper_metrics": {
+                  "jobs_submitted": 11067,
+                  "jobs_started": 11011,
+                  "jobs_canceled": 4692,
+                  "jobs_expired": 0,
+                  "pending_jobs_overwritten": 56,
+                  "read_payload_bytes": 10121641984,
+                  "read_snapshot_bytes_for_actual_cpu_experts": 8558411776,
+                  "read_snapshot_bytes_for_admitted_gpu_experts": 1222311936,
+                  "cancellation_tail_payload_bytes": 340918272,
+                  "expert_calls_with_active_reader_at_entry": 5230,
+                  "reader_ns": 242544151,
+                  "queue_ns": 55707520,
+                  "dispatches_without_sources": 1
+                }
+              }
+            ],
+            "medians": {
+              "backend_decode_tok_s": 56.97235736897863,
+              "request_wall_seconds": 11.522511594000207,
+              "prompt_ms": 2557.23,
+              "first_text_seconds": 2.6837937540003622,
+              "load_to_ready_seconds": 4.025225381999917,
+              "generation_window_process_cpu_seconds": 70.81,
+              "request_process_cpu_seconds": 111.6
+            }
+          }
+        },
+        "read_vs_native_decode_percent": -1.093534785805117,
+        "read_vs_noop_decode_percent": -0.4029651491951114,
+        "read_vs_native_request_wall_percent": 0.8126168554476898
+      }
+    ],
+    "confidence_note": "Three triplets, no confidence interval; small subpercent deltas are not a precise universal regression.",
+    "library_sets_identical_across_all27": true,
+    "cohort": "native-libs-*; no research GGML base in any runtime mapping"
+  },
+  "work_accounting": {
+    "whole_process_read_payload_bytes": 96291651584,
+    "cpu_needed_snapshot_bytes": 79917875200,
+    "gpu_admitted_snapshot_bytes": 12712345600,
+    "scope": "Includes any scalar warmup/prefill as well as generation. Logical cacheline payload, not physical DRAM traffic or cache hits.",
+    "actual_tail_and_entry_contention_retained_in_each_run": true,
+    "no_saved_time_claim_from_byte_counters": true
+  },
+  "actual_cuda_overlap": {
+    "diagnostic_only": true,
+    "nvtx_binary_separate_from_performance_binary": true,
+    "measurement": {
+      "schema_version": 1,
+      "study": "live_warmer_actual_cuda_overlap",
+      "performance_measurement": false,
+      "full_model_acceleration_claim": false,
+      "whole_process_scope": true,
+      "jobs": 3445,
+      "helper_job_ms": 86.668436,
+      "helper_job_kernel_overlap_ms": 0.009996,
+      "helper_job_copy_overlap_ms": 3.942086,
+      "helper_job_any_gpu_overlap_ms": 3.952082,
+      "helper_job_cpu_expert_overlap_ms": 0.023134,
+      "helper_job_cpu_control_overlap_ms": 18.270255,
+      "job_duration_us_median": 23.644,
+      "limitation": "NVTX job intervals include checks/no-read cancellations, not per-cacheline timestamps. Whole process includes any scalar warmup/prefill. Categories overlap. Instrumented run excluded from performance matrix.",
+      "algorithm": "Union interval labels with cache-window helper and intersect process-scoped CUDA and CPU ranges.",
+      "input_sha256": {
+        "native-libs-nvtx-read-warm.json": "27be7c3fe79284dcf940626e56fa6c5f5148c287a8eee1b094e9619f98b9609f",
+        "private-native-libs-live-timeline.sqlite": "b187daafc95a5785269ffe39ff7204c09f3a3a3924515299b3353502bccc9e8b"
+      }
+    },
+    "helper_job_time_fractions": {
+      "helper_job_kernel_overlap_ms": 0.00011533610690747897,
+      "helper_job_any_gpu_overlap_ms": 0.04560001521199713,
+      "helper_job_cpu_control_overlap_ms": 0.21080633092305945
+    },
+    "conclusion": "Most helper activity is not inside GPU compute; trigger precedes GPU expert launch and much work overlaps CPU dispatcher/control or host gaps.",
+    "whole_process_not_exact_decode_boundary": true,
+    "job_intervals_not_per_cacheline_timestamps": true,
+    "output_hash_matches_fresh_native128_control": true
+  },
+  "unrestricted_coding_screen": {
+    "triplets": 1,
+    "scope": "Native process affinity, helper fixed16; no CCD locality guarantee. Not a repeated affinity optimization study.",
+    "samples": [
+      {
+        "variant": "native",
+        "decode_tok_s": 51.195459052950135,
+        "request_wall_seconds": 11.982396594999955,
+        "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+      },
+      {
+        "variant": "noop",
+        "decode_tok_s": 50.91487859292398,
+        "request_wall_seconds": 12.03541852499984,
+        "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+        "initial_compute_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ]
+      },
+      {
+        "variant": "read",
+        "decode_tok_s": 50.35030907305672,
+        "request_wall_seconds": 12.158276707000368,
+        "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+        "initial_compute_affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ]
+      }
+    ],
+    "not_a_speedup": true
+  },
+  "preliminary_screens": [
+    {
+      "file": "live-warmer-20261019/screen0-native-k1024-c16-request.json",
+      "decode_tok_s": 50.95091253483183,
+      "scope": "single-sample preliminary V1; not a qualified selected winner"
+    },
+    {
+      "file": "live-warmer-20261019/screen1-noop-k1024-c16-request.json",
+      "decode_tok_s": 50.79435007784159,
+      "scope": "single-sample preliminary V1; not a qualified selected winner",
+      "source_sha256": "bbf59d092d809cf1013067209f98723555c16266a81b7ae9eb9fb0f66c7f996b",
+      "mode": "noop",
+      "warm_budget_bytes": 1048576,
+      "helper_cpu": 16,
+      "read_payload_bytes": 0
+    },
+    {
+      "file": "live-warmer-20261019/screen2-read-k1024-c16-request.json",
+      "decode_tok_s": 50.4048167671475,
+      "scope": "single-sample preliminary V1; not a qualified selected winner",
+      "source_sha256": "bbf59d092d809cf1013067209f98723555c16266a81b7ae9eb9fb0f66c7f996b",
+      "mode": "read",
+      "warm_budget_bytes": 1048576,
+      "helper_cpu": 16,
+      "read_payload_bytes": 11508973568
+    },
+    {
+      "file": "live-warmer-20261019/screen3-off-k1024-c16-request.json",
+      "decode_tok_s": 50.57042148912375,
+      "scope": "single-sample preliminary V1; not a qualified selected winner"
+    },
+    {
+      "file": "live-warmer-20261019/screen4-read-k256-c16-request.json",
+      "decode_tok_s": 50.69630532073103,
+      "scope": "single-sample preliminary V1; not a qualified selected winner",
+      "source_sha256": "bbf59d092d809cf1013067209f98723555c16266a81b7ae9eb9fb0f66c7f996b",
+      "mode": "read",
+      "warm_budget_bytes": 262144,
+      "helper_cpu": 16,
+      "read_payload_bytes": 3293052928
+    },
+    {
+      "file": "live-warmer-20261019/screen5-read-k4096-c16-request.json",
+      "decode_tok_s": 50.471184558701594,
+      "scope": "single-sample preliminary V1; not a qualified selected winner",
+      "source_sha256": "bbf59d092d809cf1013067209f98723555c16266a81b7ae9eb9fb0f66c7f996b",
+      "mode": "read",
+      "warm_budget_bytes": 4194304,
+      "helper_cpu": 16,
+      "read_payload_bytes": 19577372672
+    },
+    {
+      "file": "live-warmer-20261019/screen6-read-k8192-c16-request.json",
+      "decode_tok_s": 50.206204052357904,
+      "scope": "single-sample preliminary V1; not a qualified selected winner",
+      "source_sha256": "bbf59d092d809cf1013067209f98723555c16266a81b7ae9eb9fb0f66c7f996b",
+      "mode": "read",
+      "warm_budget_bytes": 8388608,
+      "helper_cpu": 16,
+      "read_payload_bytes": 17107320704
+    },
+    {
+      "file": "live-warmer-20261019/screen7-read-k1024-c0-request.json",
+      "decode_tok_s": 50.48660292049684,
+      "scope": "single-sample preliminary V1; not a qualified selected winner",
+      "source_sha256": "bbf59d092d809cf1013067209f98723555c16266a81b7ae9eb9fb0f66c7f996b",
+      "mode": "read",
+      "warm_budget_bytes": 1048576,
+      "helper_cpu": 0,
+      "read_payload_bytes": 11202920448
+    },
+    {
+      "file": "live-warmer-20261019/screen8-read-k1024-c8-request.json",
+      "decode_tok_s": 49.981166587815096,
+      "scope": "single-sample preliminary V1; not a qualified selected winner",
+      "source_sha256": "bbf59d092d809cf1013067209f98723555c16266a81b7ae9eb9fb0f66c7f996b",
+      "mode": "read",
+      "warm_budget_bytes": 1048576,
+      "helper_cpu": 8,
+      "read_payload_bytes": 9142009856
+    }
+  ],
+  "numerical_qualification": {
+    "original_gate": "max_abs<=0.01; relative_l2<=0.001",
+    "comparisons": [
+      {
+        "file": "live-warmer-20261019/native-libs-read-long96.json",
+        "scope": "Exact installed library set; original long held-out corpus.",
+        "positions": 96,
+        "max_abs_logit_error": 0,
+        "max_relative_l2": 0,
+        "top1_matches": 96
+      }
+    ],
+    "final_long_corpus_passed": true,
+    "general_model_quality_established": false,
+    "unchanged_tolerances": true,
+    "earlier_comparisons": [
+      {
+        "file": "live-warmer-20261019/off-short96.json",
+        "scope": "earlier short held-out corpus",
+        "positions": 96,
+        "max_abs_logit_error": 0,
+        "max_relative_l2": 0,
+        "top1_matches": 96
+      },
+      {
+        "file": "live-warmer-20261019/noop-short96.json",
+        "scope": "earlier short held-out corpus",
+        "positions": 96,
+        "max_abs_logit_error": 0,
+        "max_relative_l2": 0,
+        "top1_matches": 96
+      },
+      {
+        "file": "live-warmer-20261019/read-short96.json",
+        "scope": "earlier short held-out corpus",
+        "positions": 96,
+        "max_abs_logit_error": 0,
+        "max_relative_l2": 0,
+        "top1_matches": 96
+      },
+      {
+        "file": "live-warmer-20261019/read-v2-long96.json",
+        "scope": "original long held-out corpus",
+        "positions": 96,
+        "max_abs_logit_error": 0,
+        "max_relative_l2": 0,
+        "top1_matches": 96
+      }
+    ]
+  },
+  "validation": {
+    "live_helper_fixture_methods": 4,
+    "study_runner_methods": 5,
+    "fixtures": "Three model unload/reload rounds, native output bits, no-op/zero/expiry, queued immediate release, bad config, GPU-admission snapshot accounting.",
+    "asan_ubsan": {
+      "results": [
+        {
+          "case": "normal",
+          "exit_code": 0,
+          "source_invalidations": 9,
+          "buffer_drains": 3
+        },
+        {
+          "case": "immediate-unload",
+          "exit_code": 0,
+          "source_invalidations": 9,
+          "buffer_drains": 3
+        },
+        {
+          "case": "idle",
+          "exit_code": 0,
+          "source_invalidations": 9,
+          "buffer_drains": 3
+        }
+      ],
+      "leak_detection": false,
+      "scope": "Fixture/helper instrumented, exact installed native CPU/base reused uninstrumented."
+    },
+    "sanitizer_scope": "Fixture and helper only; native plugins uninstrumented, leak detectionoff, no TSAN claim.",
+    "driver_timeout": "Own process group terminated on timeout; tested without touching external processes.",
+    "model_loader_guard_retained": "Initial8-logicalCPU/16batch-thread request rejected safely, not fixed by loosening app limits.",
+    "io_study_methods": 9,
+    "mismatched_backend_library_sets_rejected": true
+  },
+  "decision": {
+    "ship_or_enable_as_throughput_feature": false,
+    "keep_research_implementation": true,
+    "next_gate": "A different early-hint or execution-order mechanism must demonstrate real GPU overlap and matched request gains; merely increasing read volume did not win.",
+    "goal60tok_s_unchanged_gpt_met": false,
+    "no_new_configuration_promoted": true
+  },
+  "limitations": [
+    "One host/model; pinned singleCCD main matrix is not a universal placement recommendation.",
+    "No active GPU-query gate; this tests a causal dispatch-triggered cache warmer, not an oracle predictor or persistent GPU scheduler.",
+    "Counter chunks completed before sampled cancellation are not guaranteed retained/useful cachelines.",
+    "Current hints can include experts subsequently admitted to GPU; wasted read snapshots remain charged.",
+    "No concurrent-request qualification, no energy measurement and no general model-quality claim.",
+    "Original weight SHA identity is historical evidence; this study did not rehash all59GiB."
+  ],
+  "tooling": {
+    "source_sha256": {
+      "CMakeLists.txt": "7511ac43bc3a6116a2177b7834fb2666e18d853c3e400b0987087dfb6cfeb45b",
+      "tools/trace/cpu_live_warmer.cpp": "c0b708a1d9f174b6d514806509df5cc082639f2f90baa741880ddf48f063f2b6",
+      "tests/test_live_warmer.cpp": "fa5a3bf372693cbda301e3a967f99a1754a1a6bce8562eb42bf666e50af9350b",
+      "tests/test_live_warmer.py": "fd0ca1f1b860f3500ea00b3493472e6d415ed90c12980d984bee93d469b2ae17",
+      "tools/benchmark/vrambridge-live-warmer-study.py": "c1b97381294fabdd75ce9c75dcd19046f57945f38f371926d5d21f789e0d8dab",
+      "tests/test_live_warmer_study.py": "425f7ee539b892d543fd95df42bfdb3ee5a9df5b7bc3c7ecdce5b07a01a42654",
+      "tools/benchmark/vrambridge-io-study.py": "0368d04ef04042f0d9343fd8f61a31e2e9ab66779c14abc4074d2c9f7a70b2f8",
+      "tests/test_io_study.py": "7f025859b1f9af17ea6b06bc6d62f1afc8d8a9add09d716eab5ab40a37cee387"
+    },
+    "release_warmer_sha256": "0e6901531a4f059ab3e675e03376b7ce96bff1960713876dbf4d376457078e0b",
+    "nvtx_warmer_sha256": "83fe4ebc787c93a4585b2c8ffe3095f2dfd535494a8f3f34e9216f5f373abcf8",
+    "installed_plugin_sha256": {
+      "libggml-cpu-zen4.so": "155a87103fdc442b309b656862bb2ea9b9f77be88f3434f9c044b71a572279e4",
+      "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e"
+    },
+    "measured_source_versions": [
+      "0d109483c0785fdf90a79687b8b9b75417ee28a2c48c5b27cc54106b2dc26f29",
+      "bbf59d092d809cf1013067209f98723555c16266a81b7ae9eb9fb0f66c7f996b",
+      "c0b708a1d9f174b6d514806509df5cc082639f2f90baa741880ddf48f063f2b6"
+    ],
+    "provenance_note": "Clean cohort uses installed base/CPU/backend paths attested identically. Older ABI-compatible research-base runs are retained but excluded; earlier source/binary hashes are never relabeled.",
+    "installed_ggml_base_sha256": "7a431e4ddf3aad3963b6c6c709789dbf81b6f288aa2e6f33e951a6aadc600776"
+  },
+  "public_evidence_index": [
+    {
+      "path": "live-warmer-20261019/asan-native-status.json",
+      "sha256": "4758b681150507e1234d2144eb7fdcbd83821417a98bbb647d52e3e0eb9ba189"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair0-native-request.json",
+      "sha256": "7eacc63eab4ab91171b6b999176b02f4974abcb767e61f0f87d9637fe00268ba"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair0-noop-request.json",
+      "sha256": "9e1868a943aeb1fa2c48d2652c74496abc80006b96629cce8f41a91d4545a653"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair0-noop-warm.json",
+      "sha256": "750c95ff37d0ddd299f7dc314a0ec3337c52bf30421a207bad72978e94d29b3b"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair0-read-request.json",
+      "sha256": "730313fc92b8386475907cf2f5153b0abb80766b957c919a8c57de49b441a908"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair0-read-warm.json",
+      "sha256": "b59be21d0f57192629bee64aea11c6a19a686fa9e059c766429cc37e464f7ec5"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair1-native-request.json",
+      "sha256": "ee8c54e567f60db157483a4183bfe01749e14773c170c913b18b8e809916f306"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair1-noop-request.json",
+      "sha256": "e12feafd169c5d42705af42881a53f937c64d8bb0679dfe6d9cedcf90ecbea37"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair1-noop-warm.json",
+      "sha256": "7ef2656272f449a9796f7896b506806b48a482484664b38ffe9d57ae317e5c27"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair1-read-request.json",
+      "sha256": "1f759e2bedabf0ba03e0e41c59be28d03f51cb92da8828f00cac6ebb78d88551"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair1-read-warm.json",
+      "sha256": "852128874824ef0af8c8d1fb6c4b98d94cf1cc2dc65f797d0c36cb009001add7"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair2-native-request.json",
+      "sha256": "1b8f103b9a7d2f33d1b9e65e9132b75604ed18799556b44e4bc0835749324b59"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair2-noop-request.json",
+      "sha256": "7b1f9455f84e0eb4963406084e6c2b9eec38ec18d68c7cc4dc3250c4c45b8dcc"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair2-noop-warm.json",
+      "sha256": "d896dea9b4f3aec68a9f5d0a7745447b9f12ec0b6db72e66a9c11c1648067ef6"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair2-read-request.json",
+      "sha256": "2e4ab9940e3340094326fd642738c0492374331bfde63900a93f50f507c046f6"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-coding-pair2-read-warm.json",
+      "sha256": "8b794ed214f4c225a59ef755b19c45cec98a79cc0f9a073658e41c9f3c0d45c8"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-live-overlap-summary.json",
+      "sha256": "693d13c58082055dc258d9581b3cbd4a4878b171759a30590722b4f3dd75fab6"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-nvtx-read-request.json",
+      "sha256": "0cc600dfa1f0ea4ec564f62df4c683d75a2a3d381aa3f01a9606520380750444"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-nvtx-read-warm.json",
+      "sha256": "27be7c3fe79284dcf940626e56fa6c5f5148c287a8eee1b094e9619f98b9609f"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair0-native-request.json",
+      "sha256": "fd36b48e97abf4253d4b7f93bbb0bb786787079c4dd2d04e9784b4ede9cc1c75"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair0-noop-request.json",
+      "sha256": "564e6cb0ab1eed640803392b8c52c6563ae37810b3e1c99a00761ac776d4bcb9"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair0-noop-warm.json",
+      "sha256": "b8dfd4b977884dab7354fe5b1fb45946a3c2d4192fa33e52dd4b268d04703dbb"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair0-read-request.json",
+      "sha256": "df3da25857ee2a6c4332d67c95ad58a264d64475ec13310bc883afd30116fd13"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair0-read-warm.json",
+      "sha256": "dc4df3519ad6f8f93385e16963d02468db2dfee2c0a6565411e3786f1303323c"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair1-native-request.json",
+      "sha256": "44b940d1bc36242aa457fa4a7129990e7660ee61844c800bb7643237eaf02371"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair1-noop-request.json",
+      "sha256": "c687948fe82975002c8800f5ae2b88024f14efc56ec11475a9c0ee13adaadb25"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair1-noop-warm.json",
+      "sha256": "5ab4c767c5c8d14f49255f306cf89ac27b94828411c0af490bc66e9e885b127f"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair1-read-request.json",
+      "sha256": "9b13725b772a5e89d74e1fc4fc60ba7bd3730f906377f0fb1b68ed6d0acdfeb3"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair1-read-warm.json",
+      "sha256": "1e8c1893938751f1af48aadf20446c149f15ef443c0debec8345782618518c3d"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair2-native-request.json",
+      "sha256": "9164a7da2d001f7e1b88a11f5ebfe198dbb5143457c6fb94ae5cd457f5773db3"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair2-noop-request.json",
+      "sha256": "75a7723c9bc2985711b96daf1e94a55d0ccdba7a4188081521c957e443ace76d"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair2-noop-warm.json",
+      "sha256": "9ec07072a7055d1b3de68081629ef2a561800dade0bf085721f25f2c8b8ea305"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair2-read-request.json",
+      "sha256": "8b1a8f679d9b286be1cfb19d708a89a46d323393cf1d0bac96409bed7ed47374"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-prose-pair2-read-warm.json",
+      "sha256": "5f874f909c25fccc2a161d1bffde2eed196e117c7a43393845f7cd7f69ebe780"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-read-long96-warm.json",
+      "sha256": "7b94a4a8785b271a3b53f3aa0fd74318a4e154d588986a9b756a9e021793126d"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-read-long96.json",
+      "sha256": "88a4bdb26e3c70ff586c016de3d1a170f34e6d82178e74c77e92f1f246193b9e"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair0-native-request.json",
+      "sha256": "155c60612046a68eefab08ced7e91b1826ef4f6e4c4dd94f2bd05501be43dbf4"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair0-noop-request.json",
+      "sha256": "c9c7a01165c02e93b5ee76c462b2ad0fa5d099cfcae35d3b23ee5beda0eaf99a"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair0-noop-warm.json",
+      "sha256": "b6304409dff80c49562d51c13b90025c138dc6abdfc03f5cf3a7bf2b7ff6611d"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair0-read-request.json",
+      "sha256": "7dab182fefc759998e3f82b8edf5e8e11275d0b2fc52bcb7d5a67a0acd4b01d9"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair0-read-warm.json",
+      "sha256": "59ff725e8f2058618d5428f3d638020ece49ff7a6fe16258cfa2c6b13dc839a6"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair1-native-request.json",
+      "sha256": "5ce95556a11b66087e9a82d2d1f180f080629100bf83a6a1258a18e02c62ec58"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair1-noop-request.json",
+      "sha256": "f06a3adeb880202c0aeb7b122c9d34a5c15bbd7a68ace3c235ad72cf3afc8d6c"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair1-noop-warm.json",
+      "sha256": "a32f2eb9e1656a54a87a7395533e42859574033b962f5a5440f098834a04c5bc"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair1-read-request.json",
+      "sha256": "acab1f0539bcff756db783f02701d89c50fdc22bf6ae87beb9179db2476d9cd7"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair1-read-warm.json",
+      "sha256": "7110379e9293a7c07f824b2ee0fe18eb7777357214c709a085031e2c50ed4869"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair2-native-request.json",
+      "sha256": "debb100e574bb4bb36527f47be2b4e8aa8ceb6b4b938bd671ecda5842d8365c8"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair2-noop-request.json",
+      "sha256": "5500b0867f50b867a9c25c5e132013b86c5db05a8ca74c54c2252e261237fa1f"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair2-noop-warm.json",
+      "sha256": "4f87d1490184f01768f030dec4523a533110dfabef2f96e283ad89185bc881fc"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair2-read-request.json",
+      "sha256": "44a533f3722b34f4ac86394510b851b2e1902d71593f70b98a7b8038b7ef62c4"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-reasoning-pair2-read-warm.json",
+      "sha256": "559093ae25163dfa0b4d399629c710eb6ebd145e379a20441665758b59510809"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-unpinned-coding-pair0-native-request.json",
+      "sha256": "a8a63c6b84d703f97d8094d19250ed913311311a19c45e1122bbb676b754b7de"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-unpinned-coding-pair0-noop-request.json",
+      "sha256": "6144aff62f7238f07f149fe625029df0aaeae8875bb08adf9bc25ada6bd69808"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-unpinned-coding-pair0-noop-warm.json",
+      "sha256": "516d684b19dc3bbba063f1d318c6023ac90105f5f6a93dc234b4db7b0c160f3b"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-unpinned-coding-pair0-read-request.json",
+      "sha256": "df64f47e6ec41c1a073e964cbc474f49d492206675324af4747e1ed12b2fe0ee"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-unpinned-coding-pair0-read-warm.json",
+      "sha256": "e0f013e3e5dcd761a12ce53100dddc38fb3e25a8fe17c7f989163d5004b68550"
+    },
+    {
+      "path": "live-warmer-20261019/provenance-link-audit.json",
+      "sha256": "3e6114038d4b3bb59738f082e61ce66a65bf563450685ab38f4f71af0c8259f9"
+    },
+    {
+      "path": "live-warmer-20261019/native-libs-nvtx-control128.json",
+      "sha256": "8fea028694a7649bab70cd3c67e238f1c08861bda79180b8e90a0f6677a02b56"
+    }
+  ],
+  "private_evidence_metadata": [
+    {
+      "path": "live-warmer-20261019/private-native-libs-live-timeline.nsys-rep",
+      "sha256": "27e0e3e1a82b64da06d98c259cfd2e98ba98c57f296011e686a22a7119ea159e",
+      "bytes": 9910631,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "live-warmer-20261019/private-native-libs-live-timeline.sqlite",
+      "sha256": "b187daafc95a5785269ffe39ff7204c09f3a3a3924515299b3353502bccc9e8b",
+      "bytes": 28127232,
+      "permissions": "0o600",
+      "publish": false
+    }
+  ],
+  "retained_setup_failure": {
+    "file": "live-warmer-20261019/pilot-read-request.json",
+    "sha256": "170fd565fb241c5a9b5c331cb88ed3f5a8f8577baff7a420a4a07d3ccdf126ce",
+    "reason": "Batch threads16 exceed available logicalCPU count8; rejected before model launch. Subsequent postprocessor also attempted to index the empty failed sample list; not a numerical failure."
+  },
+  "provenance_correction": {
+    "audit": {
+      "status": "earlier_matrix_excluded_from_clean_performance_claims",
+      "reason": "Preload RUNPATH pulled research GGML base into candidate; native no-preload used installed base. Library hashes differ.",
+      "preliminary_release_warmer_sha256": "1cd3918245ba1f8dd3159dffd0595420de5d0e0a33945abcc371bd9f70cae705",
+      "preliminary_nvtx_warmer_sha256": "cea965ee83dc3f49ab9135ca98aef55c3aca3b49f228ffa10ba4b7d8de922801",
+      "research_ggml_base_sha256": "7162196429d539d0f5f0d4874b1a0b948934bf48b762f8e71f3d36aed29c2545",
+      "installed_ggml_base_sha256": "7a431e4ddf3aad3963b6c6c709789dbf81b6f288aa2e6f33e951a6aadc600776",
+      "excluded_request_prefixes": [
+        "matched-",
+        "screen",
+        "unpinned-"
+      ],
+      "retained_not_deleted": true
+    },
+    "earlier_matrix_excluded_from_clean_timing_claims": true,
+    "earlier_matrix": {
+      "requests": 27,
+      "output_tokens": 13824,
+      "categories": [
+        "coding",
+        "reasoning",
+        "prose"
+      ],
+      "triplets_per_category": 3,
+      "all_output_hashes_match_within_workload": true,
+      "all_counts_exact": true,
+      "all_owned_backends_stopped": true,
+      "zero_generation_physical_reads_and_major_faults": true,
+      "no_endpoint_process_swap": true,
+      "workloads": [
+        {
+          "category": "coding",
+          "variants": {
+            "native": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "request_file": "live-warmer-20261019/native-libs-coding-pair0-native-request.json",
+                  "backend_decode_tok_s": 52.10578228368733,
+                  "request_wall_seconds": 12.400123819999862,
+                  "prompt_ms": 2582.893,
+                  "first_text_seconds": 2.7106686560000526,
+                  "load_to_ready_seconds": 4.117667270999846,
+                  "generation_window_process_cpu_seconds": 77.34,
+                  "request_process_cpu_seconds": 118.72,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+                },
+                {
+                  "pair": 1,
+                  "request_file": "live-warmer-20261019/native-libs-coding-pair1-native-request.json",
+                  "backend_decode_tok_s": 51.58027945609958,
+                  "request_wall_seconds": 12.52094665200002,
+                  "prompt_ms": 2604.833,
+                  "first_text_seconds": 2.7332239789993764,
+                  "load_to_ready_seconds": 3.916224329000215,
+                  "generation_window_process_cpu_seconds": 78.11000000000001,
+                  "request_process_cpu_seconds": 119.71000000000001,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+                },
+                {
+                  "pair": 2,
+                  "request_file": "live-warmer-20261019/native-libs-coding-pair2-native-request.json",
+                  "backend_decode_tok_s": 51.73908636873526,
+                  "request_wall_seconds": 12.494882618000702,
+                  "prompt_ms": 2609.342,
+                  "first_text_seconds": 2.7354431280000426,
+                  "load_to_ready_seconds": 3.925191755999549,
+                  "generation_window_process_cpu_seconds": 77.8,
+                  "request_process_cpu_seconds": 119.44,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.73908636873526,
+                "request_wall_seconds": 12.494882618000702,
+                "prompt_ms": 2604.833,
+                "first_text_seconds": 2.7332239789993764,
+                "load_to_ready_seconds": 3.925191755999549,
+                "generation_window_process_cpu_seconds": 77.8,
+                "request_process_cpu_seconds": 119.44
+              }
+            },
+            "noop": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "request_file": "live-warmer-20261019/native-libs-coding-pair0-noop-request.json",
+                  "backend_decode_tok_s": 51.117206051556956,
+                  "request_wall_seconds": 12.580431852999936,
+                  "prompt_ms": 2574.206,
+                  "first_text_seconds": 2.701798920999863,
+                  "load_to_ready_seconds": 3.919045829999959,
+                  "generation_window_process_cpu_seconds": 78.86,
+                  "request_process_cpu_seconds": 120.08,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                  "helper_metrics": {
+                    "jobs_submitted": 12274,
+                    "jobs_started": 12254,
+                    "jobs_canceled": 9,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 20,
+                    "read_payload_bytes": 0,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                    "cancellation_tail_payload_bytes": 0,
+                    "expert_calls_with_active_reader_at_entry": 0,
+                    "reader_ns": 3729021,
+                    "queue_ns": 40563504,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 1,
+                  "request_file": "live-warmer-20261019/native-libs-coding-pair1-noop-request.json",
+                  "backend_decode_tok_s": 51.77505874848031,
+                  "request_wall_seconds": 12.48093901899938,
+                  "prompt_ms": 2602.137,
+                  "first_text_seconds": 2.7313916550001522,
+                  "load_to_ready_seconds": 4.012818981000237,
+                  "generation_window_process_cpu_seconds": 77.78,
+                  "request_process_cpu_seconds": 119.39,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                  "helper_metrics": {
+                    "jobs_submitted": 12274,
+                    "jobs_started": 12256,
+                    "jobs_canceled": 7,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 18,
+                    "read_payload_bytes": 0,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                    "cancellation_tail_payload_bytes": 0,
+                    "expert_calls_with_active_reader_at_entry": 0,
+                    "reader_ns": 3798944,
+                    "queue_ns": 33952427,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 2,
+                  "request_file": "live-warmer-20261019/native-libs-coding-pair2-noop-request.json",
+                  "backend_decode_tok_s": 51.470246068066025,
+                  "request_wall_seconds": 12.539405903999977,
+                  "prompt_ms": 2602.148,
+                  "first_text_seconds": 2.7283427859993026,
+                  "load_to_ready_seconds": 4.022181234000527,
+                  "generation_window_process_cpu_seconds": 78.34,
+                  "request_process_cpu_seconds": 119.99,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                  "helper_metrics": {
+                    "jobs_submitted": 12274,
+                    "jobs_started": 12247,
+                    "jobs_canceled": 17,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 27,
+                    "read_payload_bytes": 0,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                    "cancellation_tail_payload_bytes": 0,
+                    "expert_calls_with_active_reader_at_entry": 0,
+                    "reader_ns": 3813374,
+                    "queue_ns": 37138229,
+                    "dispatches_without_sources": 1
+                  }
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.470246068066025,
+                "request_wall_seconds": 12.539405903999977,
+                "prompt_ms": 2602.137,
+                "first_text_seconds": 2.7283427859993026,
+                "load_to_ready_seconds": 4.012818981000237,
+                "generation_window_process_cpu_seconds": 78.34,
+                "request_process_cpu_seconds": 119.99
+              }
+            },
+            "read": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "request_file": "live-warmer-20261019/native-libs-coding-pair0-read-request.json",
+                  "backend_decode_tok_s": 51.68026080023901,
+                  "request_wall_seconds": 12.5013897179997,
+                  "prompt_ms": 2604.774,
+                  "first_text_seconds": 2.7314285250004104,
+                  "load_to_ready_seconds": 4.022040677999939,
+                  "generation_window_process_cpu_seconds": 78.24000000000001,
+                  "request_process_cpu_seconds": 119.9,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                  "helper_metrics": {
+                    "jobs_submitted": 12274,
+                    "jobs_started": 12239,
+                    "jobs_canceled": 6940,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 35,
+                    "read_payload_bytes": 10662051840,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 8575975424,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 1590689792,
+                    "cancellation_tail_payload_bytes": 495386624,
+                    "expert_calls_with_active_reader_at_entry": 7583,
+                    "reader_ns": 244625611,
+                    "queue_ns": 45424197,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 1,
+                  "request_file": "live-warmer-20261019/native-libs-coding-pair1-read-request.json",
+                  "backend_decode_tok_s": 51.35592712724592,
+                  "request_wall_seconds": 12.535379844999625,
+                  "prompt_ms": 2575.955,
+                  "first_text_seconds": 2.712073521000093,
+                  "load_to_ready_seconds": 3.9197902980004073,
+                  "generation_window_process_cpu_seconds": 78.58000000000001,
+                  "request_process_cpu_seconds": 119.95,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                  "helper_metrics": {
+                    "jobs_submitted": 12274,
+                    "jobs_started": 12225,
+                    "jobs_canceled": 6760,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 49,
+                    "read_payload_bytes": 10704257024,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 8626307072,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 1593311232,
+                    "cancellation_tail_payload_bytes": 484638720,
+                    "expert_calls_with_active_reader_at_entry": 7411,
+                    "reader_ns": 245545664,
+                    "queue_ns": 46054270,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 2,
+                  "request_file": "live-warmer-20261019/native-libs-coding-pair2-read-request.json",
+                  "backend_decode_tok_s": 51.47556054215954,
+                  "request_wall_seconds": 12.575862358999984,
+                  "prompt_ms": 2639.234,
+                  "first_text_seconds": 2.766173695999896,
+                  "load_to_ready_seconds": 3.9240056860007826,
+                  "generation_window_process_cpu_seconds": 78.38,
+                  "request_process_cpu_seconds": 120.55000000000001,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                  "helper_metrics": {
+                    "jobs_submitted": 12274,
+                    "jobs_started": 12218,
+                    "jobs_canceled": 4342,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 56,
+                    "read_payload_bytes": 11482759168,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 9554690048,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 1616117760,
+                    "cancellation_tail_payload_bytes": 311951360,
+                    "expert_calls_with_active_reader_at_entry": 4773,
+                    "reader_ns": 253592580,
+                    "queue_ns": 37059648,
+                    "dispatches_without_sources": 1
+                  }
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.47556054215954,
+                "request_wall_seconds": 12.535379844999625,
+                "prompt_ms": 2604.774,
+                "first_text_seconds": 2.7314285250004104,
+                "load_to_ready_seconds": 3.9240056860007826,
+                "generation_window_process_cpu_seconds": 78.38,
+                "request_process_cpu_seconds": 119.95
+              }
+            }
+          },
+          "read_vs_native_decode_percent": -0.5093360649966128,
+          "read_vs_noop_decode_percent": 0.010325332594085523,
+          "read_vs_native_request_wall_percent": 0.32411050377201267
+        },
+        {
+          "category": "reasoning",
+          "variants": {
+            "native": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "request_file": "live-warmer-20261019/native-libs-reasoning-pair0-native-request.json",
+                  "backend_decode_tok_s": 51.5098016802074,
+                  "request_wall_seconds": 12.708444116000464,
+                  "prompt_ms": 2777.85,
+                  "first_text_seconds": 2.90569817100004,
+                  "load_to_ready_seconds": 4.220888288999959,
+                  "generation_window_process_cpu_seconds": 78.21000000000001,
+                  "request_process_cpu_seconds": 122.65000000000002,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+                },
+                {
+                  "pair": 1,
+                  "request_file": "live-warmer-20261019/native-libs-reasoning-pair1-native-request.json",
+                  "backend_decode_tok_s": 51.91702338877143,
+                  "request_wall_seconds": 12.62149881699952,
+                  "prompt_ms": 2769.142,
+                  "first_text_seconds": 2.896091711999361,
+                  "load_to_ready_seconds": 3.9252078810004605,
+                  "generation_window_process_cpu_seconds": 77.57999999999998,
+                  "request_process_cpu_seconds": 121.96,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+                },
+                {
+                  "pair": 2,
+                  "request_file": "live-warmer-20261019/native-libs-reasoning-pair2-native-request.json",
+                  "backend_decode_tok_s": 52.03017465032872,
+                  "request_wall_seconds": 12.628357493000294,
+                  "prompt_ms": 2797.565,
+                  "first_text_seconds": 2.9251129699996454,
+                  "load_to_ready_seconds": 3.9318530589998772,
+                  "generation_window_process_cpu_seconds": 77.41,
+                  "request_process_cpu_seconds": 122.07,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.91702338877143,
+                "request_wall_seconds": 12.628357493000294,
+                "prompt_ms": 2777.85,
+                "first_text_seconds": 2.90569817100004,
+                "load_to_ready_seconds": 3.9318530589998772,
+                "generation_window_process_cpu_seconds": 77.57999999999998,
+                "request_process_cpu_seconds": 122.07
+              }
+            },
+            "noop": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "request_file": "live-warmer-20261019/native-libs-reasoning-pair0-noop-request.json",
+                  "backend_decode_tok_s": 51.917260751851344,
+                  "request_wall_seconds": 12.623483915000179,
+                  "prompt_ms": 2770.884,
+                  "first_text_seconds": 2.899120674000187,
+                  "load_to_ready_seconds": 4.026855327999328,
+                  "generation_window_process_cpu_seconds": 77.57,
+                  "request_process_cpu_seconds": 121.97,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                  "helper_metrics": {
+                    "jobs_submitted": 12325,
+                    "jobs_started": 12298,
+                    "jobs_canceled": 9,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 27,
+                    "read_payload_bytes": 0,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                    "cancellation_tail_payload_bytes": 0,
+                    "expert_calls_with_active_reader_at_entry": 0,
+                    "reader_ns": 3686734,
+                    "queue_ns": 37532452,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 1,
+                  "request_file": "live-warmer-20261019/native-libs-reasoning-pair1-noop-request.json",
+                  "backend_decode_tok_s": 51.82423855133099,
+                  "request_wall_seconds": 12.657947589999822,
+                  "prompt_ms": 2788.83,
+                  "first_text_seconds": 2.9165451039998516,
+                  "load_to_ready_seconds": 4.030898254999556,
+                  "generation_window_process_cpu_seconds": 77.69999999999999,
+                  "request_process_cpu_seconds": 122.32,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                  "helper_metrics": {
+                    "jobs_submitted": 12325,
+                    "jobs_started": 12312,
+                    "jobs_canceled": 4,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 13,
+                    "read_payload_bytes": 0,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                    "cancellation_tail_payload_bytes": 0,
+                    "expert_calls_with_active_reader_at_entry": 0,
+                    "reader_ns": 3751948,
+                    "queue_ns": 28730140,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 2,
+                  "request_file": "live-warmer-20261019/native-libs-reasoning-pair2-noop-request.json",
+                  "backend_decode_tok_s": 51.71589493597148,
+                  "request_wall_seconds": 12.672757578000528,
+                  "prompt_ms": 2781.965,
+                  "first_text_seconds": 2.9096838860004937,
+                  "load_to_ready_seconds": 4.020044935999977,
+                  "generation_window_process_cpu_seconds": 77.89,
+                  "request_process_cpu_seconds": 122.35,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                  "helper_metrics": {
+                    "jobs_submitted": 12325,
+                    "jobs_started": 12291,
+                    "jobs_canceled": 9,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 34,
+                    "read_payload_bytes": 0,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                    "cancellation_tail_payload_bytes": 0,
+                    "expert_calls_with_active_reader_at_entry": 0,
+                    "reader_ns": 3752881,
+                    "queue_ns": 31298783,
+                    "dispatches_without_sources": 1
+                  }
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.82423855133099,
+                "request_wall_seconds": 12.657947589999822,
+                "prompt_ms": 2781.965,
+                "first_text_seconds": 2.9096838860004937,
+                "load_to_ready_seconds": 4.026855327999328,
+                "generation_window_process_cpu_seconds": 77.69999999999999,
+                "request_process_cpu_seconds": 122.32
+              }
+            },
+            "read": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "request_file": "live-warmer-20261019/native-libs-reasoning-pair0-read-request.json",
+                  "backend_decode_tok_s": 51.69543316878134,
+                  "request_wall_seconds": 12.677797583000029,
+                  "prompt_ms": 2783.592,
+                  "first_text_seconds": 2.91107097099939,
+                  "load_to_ready_seconds": 3.9212783170005423,
+                  "generation_window_process_cpu_seconds": 78.10000000000001,
+                  "request_process_cpu_seconds": 122.56000000000002,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                  "helper_metrics": {
+                    "jobs_submitted": 12325,
+                    "jobs_started": 12243,
+                    "jobs_canceled": 3887,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 82,
+                    "read_payload_bytes": 11771314176,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 10057220096,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 1420558336,
+                    "cancellation_tail_payload_bytes": 293535744,
+                    "expert_calls_with_active_reader_at_entry": 4497,
+                    "reader_ns": 275394599,
+                    "queue_ns": 59661102,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 1,
+                  "request_file": "live-warmer-20261019/native-libs-reasoning-pair1-read-request.json",
+                  "backend_decode_tok_s": 51.86601435257461,
+                  "request_wall_seconds": 12.639337081999656,
+                  "prompt_ms": 2777.831,
+                  "first_text_seconds": 2.9061548379995656,
+                  "load_to_ready_seconds": 4.021945247000076,
+                  "generation_window_process_cpu_seconds": 77.93,
+                  "request_process_cpu_seconds": 122.46,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                  "helper_metrics": {
+                    "jobs_submitted": 12325,
+                    "jobs_started": 12302,
+                    "jobs_canceled": 7053,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 23,
+                    "read_payload_bytes": 10703273984,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 8789295104,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 1410465792,
+                    "cancellation_tail_payload_bytes": 503513088,
+                    "expert_calls_with_active_reader_at_entry": 7706,
+                    "reader_ns": 245253039,
+                    "queue_ns": 42459386,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 2,
+                  "request_file": "live-warmer-20261019/native-libs-reasoning-pair2-read-request.json",
+                  "backend_decode_tok_s": 51.79570436228287,
+                  "request_wall_seconds": 12.652679339000315,
+                  "prompt_ms": 2776.832,
+                  "first_text_seconds": 2.9035819640002956,
+                  "load_to_ready_seconds": 3.92807051499949,
+                  "generation_window_process_cpu_seconds": 78.03,
+                  "request_process_cpu_seconds": 122.47000000000001,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                  "helper_metrics": {
+                    "jobs_submitted": 12325,
+                    "jobs_started": 12280,
+                    "jobs_canceled": 6970,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 45,
+                    "read_payload_bytes": 10803675136,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 8881176576,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 1417084928,
+                    "cancellation_tail_payload_bytes": 505413632,
+                    "expert_calls_with_active_reader_at_entry": 7726,
+                    "reader_ns": 246658579,
+                    "queue_ns": 42998723,
+                    "dispatches_without_sources": 1
+                  }
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.79570436228287,
+                "request_wall_seconds": 12.652679339000315,
+                "prompt_ms": 2777.831,
+                "first_text_seconds": 2.9061548379995656,
+                "load_to_ready_seconds": 3.92807051499949,
+                "generation_window_process_cpu_seconds": 78.03,
+                "request_process_cpu_seconds": 122.47000000000001
+              }
+            }
+          },
+          "read_vs_native_decode_percent": -0.23367870222468223,
+          "read_vs_noop_decode_percent": -0.05505954326731066,
+          "read_vs_native_request_wall_percent": 0.19259706587735348
+        },
+        {
+          "category": "prose",
+          "variants": {
+            "native": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "request_file": "live-warmer-20261019/native-libs-prose-pair0-native-request.json",
+                  "backend_decode_tok_s": 57.60225809869713,
+                  "request_wall_seconds": 11.426504250000107,
+                  "prompt_ms": 2545.363,
+                  "first_text_seconds": 2.6711052860000564,
+                  "load_to_ready_seconds": 4.023356614000477,
+                  "generation_window_process_cpu_seconds": 69.82,
+                  "request_process_cpu_seconds": 110.63,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+                },
+                {
+                  "pair": 1,
+                  "request_file": "live-warmer-20261019/native-libs-prose-pair1-native-request.json",
+                  "backend_decode_tok_s": 57.53181531904488,
+                  "request_wall_seconds": 11.444530439999653,
+                  "prompt_ms": 2552.963,
+                  "first_text_seconds": 2.679501270000401,
+                  "load_to_ready_seconds": 4.0285547089997635,
+                  "generation_window_process_cpu_seconds": 69.86999999999999,
+                  "request_process_cpu_seconds": 110.78999999999999,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+                },
+                {
+                  "pair": 2,
+                  "request_file": "live-warmer-20261019/native-libs-prose-pair2-native-request.json",
+                  "backend_decode_tok_s": 57.641308626907325,
+                  "request_wall_seconds": 11.429632474000755,
+                  "prompt_ms": 2555.042,
+                  "first_text_seconds": 2.6806651719998627,
+                  "load_to_ready_seconds": 3.917816128000595,
+                  "generation_window_process_cpu_seconds": 69.75999999999999,
+                  "request_process_cpu_seconds": 110.67999999999999,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 57.60225809869713,
+                "request_wall_seconds": 11.429632474000755,
+                "prompt_ms": 2552.963,
+                "first_text_seconds": 2.679501270000401,
+                "load_to_ready_seconds": 4.023356614000477,
+                "generation_window_process_cpu_seconds": 69.82,
+                "request_process_cpu_seconds": 110.67999999999999
+              }
+            },
+            "noop": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "request_file": "live-warmer-20261019/native-libs-prose-pair0-noop-request.json",
+                  "backend_decode_tok_s": 57.0867566768045,
+                  "request_wall_seconds": 11.506693363000522,
+                  "prompt_ms": 2546.02,
+                  "first_text_seconds": 2.6711565400000836,
+                  "load_to_ready_seconds": 4.019725707999896,
+                  "generation_window_process_cpu_seconds": 70.48,
+                  "request_process_cpu_seconds": 111.17,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                  "helper_metrics": {
+                    "jobs_submitted": 11067,
+                    "jobs_started": 11046,
+                    "jobs_canceled": 7,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 21,
+                    "read_payload_bytes": 0,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                    "cancellation_tail_payload_bytes": 0,
+                    "expert_calls_with_active_reader_at_entry": 0,
+                    "reader_ns": 3331661,
+                    "queue_ns": 33580612,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 1,
+                  "request_file": "live-warmer-20261019/native-libs-prose-pair1-noop-request.json",
+                  "backend_decode_tok_s": 57.20286497918588,
+                  "request_wall_seconds": 11.498533766000037,
+                  "prompt_ms": 2556.247,
+                  "first_text_seconds": 2.680930071000148,
+                  "load_to_ready_seconds": 3.927904316999957,
+                  "generation_window_process_cpu_seconds": 70.29,
+                  "request_process_cpu_seconds": 111.17,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                  "helper_metrics": {
+                    "jobs_submitted": 11067,
+                    "jobs_started": 11023,
+                    "jobs_canceled": 77,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 44,
+                    "read_payload_bytes": 0,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                    "cancellation_tail_payload_bytes": 0,
+                    "expert_calls_with_active_reader_at_entry": 0,
+                    "reader_ns": 3421200,
+                    "queue_ns": 61061107,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 2,
+                  "request_file": "live-warmer-20261019/native-libs-prose-pair2-noop-request.json",
+                  "backend_decode_tok_s": 57.64796093747091,
+                  "request_wall_seconds": 11.431103033999534,
+                  "prompt_ms": 2557.166,
+                  "first_text_seconds": 2.6821284939996985,
+                  "load_to_ready_seconds": 3.925222369000039,
+                  "generation_window_process_cpu_seconds": 69.82,
+                  "request_process_cpu_seconds": 110.69,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                  "helper_metrics": {
+                    "jobs_submitted": 11067,
+                    "jobs_started": 11038,
+                    "jobs_canceled": 9,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 29,
+                    "read_payload_bytes": 0,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 0,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 0,
+                    "cancellation_tail_payload_bytes": 0,
+                    "expert_calls_with_active_reader_at_entry": 0,
+                    "reader_ns": 3432616,
+                    "queue_ns": 31720841,
+                    "dispatches_without_sources": 1
+                  }
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 57.20286497918588,
+                "request_wall_seconds": 11.498533766000037,
+                "prompt_ms": 2556.247,
+                "first_text_seconds": 2.680930071000148,
+                "load_to_ready_seconds": 3.927904316999957,
+                "generation_window_process_cpu_seconds": 70.29,
+                "request_process_cpu_seconds": 111.17
+              }
+            },
+            "read": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "request_file": "live-warmer-20261019/native-libs-prose-pair0-read-request.json",
+                  "backend_decode_tok_s": 57.17126856220189,
+                  "request_wall_seconds": 11.513756903000285,
+                  "prompt_ms": 2565.69,
+                  "first_text_seconds": 2.6931898590000856,
+                  "load_to_ready_seconds": 4.021945541000605,
+                  "generation_window_process_cpu_seconds": 70.53999999999999,
+                  "request_process_cpu_seconds": 111.6,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                  "helper_metrics": {
+                    "jobs_submitted": 11067,
+                    "jobs_started": 11010,
+                    "jobs_canceled": 4619,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 57,
+                    "read_payload_bytes": 10176495616,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 8617328640,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 1224081408,
+                    "cancellation_tail_payload_bytes": 335085568,
+                    "expert_calls_with_active_reader_at_entry": 5136,
+                    "reader_ns": 239885696,
+                    "queue_ns": 47405710,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 1,
+                  "request_file": "live-warmer-20261019/native-libs-prose-pair1-read-request.json",
+                  "backend_decode_tok_s": 56.97235736897863,
+                  "request_wall_seconds": 11.522511594000207,
+                  "prompt_ms": 2544.049,
+                  "first_text_seconds": 2.672485477999544,
+                  "load_to_ready_seconds": 4.025410862000172,
+                  "generation_window_process_cpu_seconds": 70.81,
+                  "request_process_cpu_seconds": 111.57,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                  "helper_metrics": {
+                    "jobs_submitted": 11067,
+                    "jobs_started": 11011,
+                    "jobs_canceled": 5393,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 56,
+                    "read_payload_bytes": 9866182656,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 8257470464,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 1217724416,
+                    "cancellation_tail_payload_bytes": 390987776,
+                    "expert_calls_with_active_reader_at_entry": 5987,
+                    "reader_ns": 234519933,
+                    "queue_ns": 49783962,
+                    "dispatches_without_sources": 1
+                  }
+                },
+                {
+                  "pair": 2,
+                  "request_file": "live-warmer-20261019/native-libs-prose-pair2-read-request.json",
+                  "backend_decode_tok_s": 56.72145967070917,
+                  "request_wall_seconds": 11.575853199999983,
+                  "prompt_ms": 2557.23,
+                  "first_text_seconds": 2.6837937540003622,
+                  "load_to_ready_seconds": 4.025225381999917,
+                  "generation_window_process_cpu_seconds": 71.10999999999999,
+                  "request_process_cpu_seconds": 112.05,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                  "helper_metrics": {
+                    "jobs_submitted": 11067,
+                    "jobs_started": 11011,
+                    "jobs_canceled": 4692,
+                    "jobs_expired": 0,
+                    "pending_jobs_overwritten": 56,
+                    "read_payload_bytes": 10121641984,
+                    "read_snapshot_bytes_for_actual_cpu_experts": 8558411776,
+                    "read_snapshot_bytes_for_admitted_gpu_experts": 1222311936,
+                    "cancellation_tail_payload_bytes": 340918272,
+                    "expert_calls_with_active_reader_at_entry": 5230,
+                    "reader_ns": 242544151,
+                    "queue_ns": 55707520,
+                    "dispatches_without_sources": 1
+                  }
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 56.97235736897863,
+                "request_wall_seconds": 11.522511594000207,
+                "prompt_ms": 2557.23,
+                "first_text_seconds": 2.6837937540003622,
+                "load_to_ready_seconds": 4.025225381999917,
+                "generation_window_process_cpu_seconds": 70.81,
+                "request_process_cpu_seconds": 111.6
+              }
+            }
+          },
+          "read_vs_native_decode_percent": -1.093534785805117,
+          "read_vs_noop_decode_percent": -0.4029651491951114,
+          "read_vs_native_request_wall_percent": 0.8126168554476898
+        }
+      ],
+      "confidence_note": "Three triplets, no confidence interval; small subpercent deltas are not a precise universal regression.",
+      "library_sets_identical_across_all27": true,
+      "cohort": "native-libs-*; no research GGML base in any runtime mapping"
+    },
+    "earlier_tooling": {
+      "source_sha256": {
+        "CMakeLists.txt": "7511ac43bc3a6116a2177b7834fb2666e18d853c3e400b0987087dfb6cfeb45b",
+        "tools/trace/cpu_live_warmer.cpp": "c0b708a1d9f174b6d514806509df5cc082639f2f90baa741880ddf48f063f2b6",
+        "tests/test_live_warmer.cpp": "fa5a3bf372693cbda301e3a967f99a1754a1a6bce8562eb42bf666e50af9350b",
+        "tests/test_live_warmer.py": "fd0ca1f1b860f3500ea00b3493472e6d415ed90c12980d984bee93d469b2ae17",
+        "tools/benchmark/vrambridge-live-warmer-study.py": "c1b97381294fabdd75ce9c75dcd19046f57945f38f371926d5d21f789e0d8dab",
+        "tests/test_live_warmer_study.py": "425f7ee539b892d543fd95df42bfdb3ee5a9df5b7bc3c7ecdce5b07a01a42654",
+        "tools/benchmark/vrambridge-io-study.py": "0368d04ef04042f0d9343fd8f61a31e2e9ab66779c14abc4074d2c9f7a70b2f8",
+        "tests/test_io_study.py": "7f025859b1f9af17ea6b06bc6d62f1afc8d8a9add09d716eab5ab40a37cee387"
+      },
+      "release_warmer_sha256": "0e6901531a4f059ab3e675e03376b7ce96bff1960713876dbf4d376457078e0b",
+      "nvtx_warmer_sha256": "83fe4ebc787c93a4585b2c8ffe3095f2dfd535494a8f3f34e9216f5f373abcf8",
+      "installed_plugin_sha256": {
+        "libggml-cpu-zen4.so": "155a87103fdc442b309b656862bb2ea9b9f77be88f3434f9c044b71a572279e4",
+        "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e"
+      },
+      "measured_source_versions": [
+        "0d109483c0785fdf90a79687b8b9b75417ee28a2c48c5b27cc54106b2dc26f29",
+        "bbf59d092d809cf1013067209f98723555c16266a81b7ae9eb9fb0f66c7f996b",
+        "c0b708a1d9f174b6d514806509df5cc082639f2f90baa741880ddf48f063f2b6"
+      ],
+      "provenance_note": "Clean cohort uses installed base/CPU/backend paths attested identically. Older ABI-compatible research-base runs are retained but excluded; earlier source/binary hashes are never relabeled.",
+      "installed_ggml_base_sha256": "7a431e4ddf3aad3963b6c6c709789dbf81b6f288aa2e6f33e951a6aadc600776"
+    },
+    "earlier_evidence_index": [
+      {
+        "path": "live-warmer-20261019/asan-ubsan-status.json",
+        "sha256": "83c09f44ddef5d34a04f4f7c75b03bd829f06e4788941e8d6068f74f95ece70e"
+      },
+      {
+        "path": "live-warmer-20261019/live-overlap-summary.json",
+        "sha256": "3fb5dde96ed9433756ac7dc60f7f86b4d6b3d3d25793d15f2d7376663fd49271"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair0-native-request.json",
+        "sha256": "db9ecb3b6f91d77bdd7745b545dd5043a48f80a31fbdd7d546afc7fb7935f164"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair0-noop-request.json",
+        "sha256": "5e82c21c74b7af3bc976a155b8beaff46df339060dd2426a85d643553827a414"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair0-noop-warm.json",
+        "sha256": "d1ac2c738d7da3af728c858bfc9cabb1bf27fdea4a5f84823cf6473cbf939875"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair0-read-request.json",
+        "sha256": "b3e49cab0ea5ce81c366867c76375866711c8f7ffbe8e6a418febdceb21c9c2e"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair0-read-warm.json",
+        "sha256": "32ef6fdff8f49ffb6833eb72252aee7dc3c9e8d209077928d82e4f29c6c41127"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair1-native-request.json",
+        "sha256": "e1b543d331de721d81c7e7d4b960d13abb593556ca044c14774847b1ad440e9d"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair1-noop-request.json",
+        "sha256": "2502a2e9f6275b39117a1ab75f80929e66f9c76f49e89b05880a267ca08dba14"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair1-noop-warm.json",
+        "sha256": "9ef1c80d90ab50b15f071d38aa754e8918d254cc70b92a9d20288836c5e0bb06"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair1-read-request.json",
+        "sha256": "479427a02bdbecc58e364df963e5aed0017a1b90e0ba3927ab1551735e43d24c"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair1-read-warm.json",
+        "sha256": "64ce0904b251082b6b909f063c1ca7b73ec1a34a8bcdc8e4c66654d522664f94"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair2-native-request.json",
+        "sha256": "b271737f664adc0fe2417a3a03354d22275109dec244274dcd6efa7d4e00572c"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair2-noop-request.json",
+        "sha256": "d03bbddb2eee98a18d244b6a2c01bc7b82a3790257752bece0aade177bcc5791"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair2-noop-warm.json",
+        "sha256": "37043dbff6396d0e3b66ba575836e344fc8b6b109e56faeab234ac7ae75cbb44"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair2-read-request.json",
+        "sha256": "3ef216a648b63a2c30288d6792eb2ccf24d124d8bbe48cf6fc3c6192ba03678d"
+      },
+      {
+        "path": "live-warmer-20261019/matched-coding-pair2-read-warm.json",
+        "sha256": "6e49fbd7110df875e92c0f042f15342ad343938a8ac1e5c0cbd0f67c59dc3594"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair0-native-request.json",
+        "sha256": "e601495c5e514ec5e6d7c5b12f2426230b7474b2775f22443497a8f88ac7e070"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair0-noop-request.json",
+        "sha256": "502b4ebf65484a43ece8ff76defaf3b9f11a570471e06fe34fe24df8c25c3a30"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair0-noop-warm.json",
+        "sha256": "303555045fcf044339a25b855c64001efa2ebf6d9516f58a4bc075348dbb20e6"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair0-read-request.json",
+        "sha256": "273e03ce7ae0ea124e9ce517ea68855826c8daa2b387926dcca1ea64f0d1929d"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair0-read-warm.json",
+        "sha256": "25348d4c5eee2a48847cf4e11b5f5c93a3b9d4e98ea87b6c01c39194a11b4a53"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair1-native-request.json",
+        "sha256": "8fa3cd8c7f1ae6b9057095d618a13a389aecd9024b2903d562bb8580471315cd"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair1-noop-request.json",
+        "sha256": "729f6a88a30d45a615f310e4e765edd7c2c08402b7ec05284f4cd7310c38dd01"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair1-noop-warm.json",
+        "sha256": "3b8dc178fa5df24551bad1797229d3e471f653879370510468a9a3f27d52072e"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair1-read-request.json",
+        "sha256": "a01896162640ec8165fe5d5476e708afe54e3f3eef1f914cf6abed2b467c9b3e"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair1-read-warm.json",
+        "sha256": "b3657a3e61638b537e9ea5c55fb9eb73995d06014b73c239f7605f8538435e8c"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair2-native-request.json",
+        "sha256": "471e9a34366acfaca67f6cb940dc5962cb52fdc004d603c621c11615faa8778a"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair2-noop-request.json",
+        "sha256": "84e38ddfa93d3255328eec591b13d071ef9b54d9f5c3597cd626480d393a26b3"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair2-noop-warm.json",
+        "sha256": "1c4d4a759d35b6056d934a907ebc4762929b32047a3349443fd51cfd6aa78e14"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair2-read-request.json",
+        "sha256": "05bb228999598bad61b5ed908f053bcebba6092af99b345d4ecb069d84f8dce9"
+      },
+      {
+        "path": "live-warmer-20261019/matched-prose-pair2-read-warm.json",
+        "sha256": "24419fd01b489e247af440fabe6c0c3e82b112aaa4afd59e3933f4d8f3dac4e7"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair0-native-request.json",
+        "sha256": "1761fcb2447f8293a01fa4f5f7db9aa58cad1f228a99615585c610dcc610416e"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair0-noop-request.json",
+        "sha256": "3f0ba1d25d0ba638578044a1b65561922d389861adc8ca40dbea5585d87cd860"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair0-noop-warm.json",
+        "sha256": "589bcecd4d1ea3813df534c0ff9c526f50d1cccf4e7b5fa9e073e2c0cef63eb8"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair0-read-request.json",
+        "sha256": "90169012c7671bf5f9115ab312d8d51f64c714598d93761e51bbc8f6fa3ecf02"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair0-read-warm.json",
+        "sha256": "466cf711bb1d774a783083967e11d357d564024917b04e32a66767c79455da5d"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair1-native-request.json",
+        "sha256": "fa3874c8b9fb5e016dd2b27da7fca3ccbd8b6e4d504ee2bfab77c12b1c142cc4"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair1-noop-request.json",
+        "sha256": "a34f38deb4e647d04bdb7f2517ba4157b85500ea290fae5b5fc5e803081f984a"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair1-noop-warm.json",
+        "sha256": "00f73b713e14df5f2f39b2e4efa4783c8bd97752e4b1e00cd8c095f982168ffd"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair1-read-request.json",
+        "sha256": "58811fe9206debef2c974ad15d4c87d3a5363aa52c61bfebee4a3788cb63457b"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair1-read-warm.json",
+        "sha256": "843b91e548e85a5f79590b6e7231faf9eef0ce2937aa8c7b81c9790d4ff1f169"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair2-native-request.json",
+        "sha256": "e46c5efef1785fe24ffd1c21027881134dd5951483e812fc478173e6a00667d0"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair2-noop-request.json",
+        "sha256": "63ea9784db566d6c98f30ae3836a09ea596f1a6982a8b96c3cc452b4375a5059"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair2-noop-warm.json",
+        "sha256": "eac9ab481fc6a6d372734e553f68abd5dd6b9b0d51c92d765fe6b3d78c0950f1"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair2-read-request.json",
+        "sha256": "362e1ab5c2097156a56a9333558046ebb810557d80cb73997cb4e87ae68d2516"
+      },
+      {
+        "path": "live-warmer-20261019/matched-reasoning-pair2-read-warm.json",
+        "sha256": "b26b8f59896273f3a2ab3761c265100ff221fa3b1b252449024d28683f43cfe2"
+      },
+      {
+        "path": "live-warmer-20261019/noop-short96-warm.json",
+        "sha256": "b92302cdeff8ea2598fc329c6a4dca520cab6ef6cb3468caf6120a6debe84ffd"
+      },
+      {
+        "path": "live-warmer-20261019/noop-short96.json",
+        "sha256": "4176f36312e8fe09dcaad1bf1367d7f95ae5a57e60075eaafeefa5c8696c9b59"
+      },
+      {
+        "path": "live-warmer-20261019/nvtx-read-request.json",
+        "sha256": "02320462d218746a6c929f04fa4d96d61e88376bcc42e08ae076289ee63930e0"
+      },
+      {
+        "path": "live-warmer-20261019/nvtx-read-warm.json",
+        "sha256": "666ff435416d2a2f9985754708424dae797382833c2f2c2f207008ea2e43f570"
+      },
+      {
+        "path": "live-warmer-20261019/off-short96.json",
+        "sha256": "4176f36312e8fe09dcaad1bf1367d7f95ae5a57e60075eaafeefa5c8696c9b59"
+      },
+      {
+        "path": "live-warmer-20261019/pilot-read-ccd-request.json",
+        "sha256": "bced7b1087b561af4cf837cd86c472ebea7189c58cfb3eee93ff40e1132b638f"
+      },
+      {
+        "path": "live-warmer-20261019/pilot-read-ccd-warm.json",
+        "sha256": "230dadd23b2fa40add00a1de981a2f2c7f09f2defabf572f5ff5da885bb343a8"
+      },
+      {
+        "path": "live-warmer-20261019/read-short96-warm.json",
+        "sha256": "974d16e280ce073d7dc14b11cb423daabebdb6da9771fccb529fcb585a07eab5"
+      },
+      {
+        "path": "live-warmer-20261019/read-short96.json",
+        "sha256": "4176f36312e8fe09dcaad1bf1367d7f95ae5a57e60075eaafeefa5c8696c9b59"
+      },
+      {
+        "path": "live-warmer-20261019/read-v2-long96-warm.json",
+        "sha256": "4d6751e20534f11d155c3b28405fb8db67e3e26e8b084c855239f2f23e4838aa"
+      },
+      {
+        "path": "live-warmer-20261019/read-v2-long96.json",
+        "sha256": "88a4bdb26e3c70ff586c016de3d1a170f34e6d82178e74c77e92f1f246193b9e"
+      },
+      {
+        "path": "live-warmer-20261019/screen0-native-k1024-c16-request.json",
+        "sha256": "032117ebdc88f8172ccbb7430fd2284ad9711b7dd99bc1c41be7c93bed5a00b0"
+      },
+      {
+        "path": "live-warmer-20261019/screen1-noop-k1024-c16-request.json",
+        "sha256": "c42504ebb8e588de41ebdcf2bd1881712eda59b485e09d2e3e26ae88443e5d43"
+      },
+      {
+        "path": "live-warmer-20261019/screen1-noop-k1024-c16-warm.json",
+        "sha256": "dd01af3b8b79170cfb7afd1d8636799053fada00d83f0eb3792d4ba32b2811bb"
+      },
+      {
+        "path": "live-warmer-20261019/screen2-read-k1024-c16-request.json",
+        "sha256": "a03b67ae5650b381cd3cac5bdec9e3d28583055bd3dddb80361b01dc998cac0a"
+      },
+      {
+        "path": "live-warmer-20261019/screen2-read-k1024-c16-warm.json",
+        "sha256": "cba5f00df12729da27d0cf86b08b8e112d36668527848b68a8a47f8e320e7700"
+      },
+      {
+        "path": "live-warmer-20261019/screen3-off-k1024-c16-request.json",
+        "sha256": "6ba58497012b6362111b3d19c7a618dab05f31dca9579aeb2f695200711a7845"
+      },
+      {
+        "path": "live-warmer-20261019/screen4-read-k256-c16-request.json",
+        "sha256": "1efdc0658bf1860f7b8e0a9a8570fbc0f1b60a20f6a4605747c4b13ecbe06cb1"
+      },
+      {
+        "path": "live-warmer-20261019/screen4-read-k256-c16-warm.json",
+        "sha256": "cfc75ca2751c514848a795d37747978e94c9c3186acec5b06e2405f77599730e"
+      },
+      {
+        "path": "live-warmer-20261019/screen5-read-k4096-c16-request.json",
+        "sha256": "afa5fd2adcad5f6398790af316d306a862cd624e5ff6be88f88525d9d9808073"
+      },
+      {
+        "path": "live-warmer-20261019/screen5-read-k4096-c16-warm.json",
+        "sha256": "d2056cc6a87ca82fc2734cff41884fe02b85175e0367cd798d0a7bbbaf799dc1"
+      },
+      {
+        "path": "live-warmer-20261019/screen6-read-k8192-c16-request.json",
+        "sha256": "34edb656a6aa23fb343e473b965d3636a433e024e5e41fcf09759af64e423f2a"
+      },
+      {
+        "path": "live-warmer-20261019/screen6-read-k8192-c16-warm.json",
+        "sha256": "7b93c3085dd87ffe14465d4c1e07902c5168a1c82e24c583d2fcd8073a695a6f"
+      },
+      {
+        "path": "live-warmer-20261019/screen7-read-k1024-c0-request.json",
+        "sha256": "0a24e9d966eaafdf471c9603813dfc6ed7cbbc0410252fddf9d260c6a3d630a1"
+      },
+      {
+        "path": "live-warmer-20261019/screen7-read-k1024-c0-warm.json",
+        "sha256": "d91f218f6273e60df669ccc58aed49177fc21276173de6aa65c06893f548e62c"
+      },
+      {
+        "path": "live-warmer-20261019/screen8-read-k1024-c8-request.json",
+        "sha256": "8f5a2715876b2e0ce4aa7f6ee85280b95bbd0e2ee32fc5ce4153c0869c5c3069"
+      },
+      {
+        "path": "live-warmer-20261019/screen8-read-k1024-c8-warm.json",
+        "sha256": "ca4c6cf3a13e10e18e2624f30d84c23c0bc0445c176196468eac651bdf456147"
+      },
+      {
+        "path": "live-warmer-20261019/unpinned-coding-pair0-native-request.json",
+        "sha256": "578811c0090c2f46caa1689d18ed0cec553e90a19f9ec4a789e97738c4ff00f3"
+      },
+      {
+        "path": "live-warmer-20261019/unpinned-coding-pair0-noop-request.json",
+        "sha256": "46d0425fef3e933dfa64d066441a696d9640ce643e94717d1d95fff941d2eb7b"
+      },
+      {
+        "path": "live-warmer-20261019/unpinned-coding-pair0-noop-warm.json",
+        "sha256": "b6e5d1c85d4594f55cefc1476b7dccb4631a6ae76a2cb09e5187feb9f503678f"
+      },
+      {
+        "path": "live-warmer-20261019/unpinned-coding-pair0-read-request.json",
+        "sha256": "8d48171f4e5170d972b09b2eab31d1d4b8097658db423683ba6db5302153d7ad"
+      },
+      {
+        "path": "live-warmer-20261019/unpinned-coding-pair0-read-warm.json",
+        "sha256": "5d364e08dc6b6d93329e1fcea7c3a7117476c17abe6d323f4b54ca72e2421ae2"
+      },
+      {
+        "path": "live-warmer-20261019/v2-pilot-read-request.json",
+        "sha256": "aaa55c97523107009a17a2074e73a49b22c927780898517672fd154307d3e5c2"
+      },
+      {
+        "path": "live-warmer-20261019/v2-pilot-read-warm.json",
+        "sha256": "344461e557d77fd391aef0b71ebfd7c4a076c391f43e12cfc13ff0cad4c714f2"
+      }
+    ],
+    "fix": "Reconfigured research preload and fixtures against the exact installed server library directory, reran long96 and all27 requests, and added /proc mapping equality rejection to the runner.",
+    "no_old_reports_or_hashes_overwritten": true
+  },
+  "finalized_at_utc": "2026-10-19T13:18:30.523971+00:00"
+}

@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "status": "warm_generation_storage_bottleneck_not_observed",
+  "research_question": "Would copying local model files to a RAM disk remove physical disk reads during generation?",
+  "probe_source_sha256": "3cfc1d290bd706fed43810454c2bca75a91e805bf9deb4aa15f900b1fe85521c",
+  "sweep_source_sha256": "2ffb113d8d5526d8d5e33cfb3d4325afe6023a1a189503e2b8cef51f215974eb",
+  "synapse_inspected_read_only": {
+    "repository": "https://github.com/appatalks/Synapse",
+    "commit": "545a7ebf4a6dea3dd4a1ac04760057eed2de1b15",
+    "linux_ram_display": "Physical occupancy including cached pages, with OS availability and cache reported separately.",
+    "linux_disk_read_display": "Backend /proc/<pid>/io physical read_bytes deltas, not cached read syscall bytes or PCIe transfers."
+  },
+  "storage_inspection": {
+    "primary_model_storage": {"filesystem": "ext4", "device_kind": "SATA SSD", "model": "Samsung SSD 870 EVO 1TB"},
+    "archive_storage": {"filesystem": "xfs", "device_kind": "SATA rotational HDD", "model": "ST24000DM001-3Y7103"},
+    "ramdisk": {"filesystem": "tmpfs", "capacity_bytes": 68719476736, "initial_used_bytes": 0, "modified": false},
+    "caution": "These are current resolved mounts, not a claim about historical NVMe benchmark storage."
+  },
+  "file_cache_evidence": {
+    "method": "Read-only fincore --bytes --json before and after the controls.",
+    "model": "gpt-oss-120b-MXFP4",
+    "total_file_bytes": 63387345440,
+    "total_file_gib_rounded": 59.0341,
+    "shards": [
+      {"file": "gpt-oss-120b-MXFP4-00001-of-00002.gguf", "size_bytes": 39815566336, "resident_page_bytes": 39815569408, "resident_pages": 9720598},
+      {"file": "gpt-oss-120b-MXFP4-00002-of-00002.gguf", "size_bytes": 23571779104, "resident_page_bytes": 23571779584, "resident_pages": 5754829}
+    ],
+    "all_model_pages_resident_before_and_after": true,
+    "page_rounding_note": "Resident page bytes round up to page boundaries and can slightly exceed logical file size.",
+    "rss_overlap_note": "Mapped model RSS and filesystem cache describe overlapping physical pages and must not be added."
+  },
+  "measurement_protocol": {
+    "model": "gpt-oss-120b-MXFP4-00001-of-00002.gguf",
+    "context_tokens": 16384,
+    "cpu_threads": 8,
+    "batch_threads": 16,
+    "requests_per_mode": 3,
+    "exact_output_tokens_per_request": 256,
+    "total_output_tokens": 1536,
+    "modes": ["standard_automatic_placement", "installed_experimental_hybrid_profile"],
+    "physical_reads": "Linux /proc/<owned-backend-pid>/io read_bytes",
+    "generation_window": "First received content/reasoning text event through response completion, not an exact backend-internal decode boundary.",
+    "ramdisk_copies": 0,
+    "cache_drops_or_forced_evictions": 0,
+    "drivers_or_mounts_changed": false,
+    "existing_user_services_modified": false,
+    "owned_backend_processes_stopped": true
+  },
+  "controls": [
+    {
+      "mode": "standard",
+      "local_report": "io-study-20261018/gpt120-standard-cached.json",
+      "status": "complete",
+      "load_interval_physical_read_bytes": 7577600,
+      "whole_request_physical_read_bytes": [2318336, 0, 0],
+      "before_first_text_physical_read_bytes": [2318336, 0, 0],
+      "generation_physical_read_bytes": [0, 0, 0],
+      "generation_major_faults": [0, 0, 0],
+      "endpoint_process_swap_bytes": [0, 0, 0],
+      "completion_rss_gib_rounded": [59.17, 59.19, 59.19]
+    },
+    {
+      "mode": "hybrid",
+      "local_report": "io-study-20261018/gpt120-hybrid-cached.json",
+      "status": "complete",
+      "activation_markers": ["async-ids", "context", "coverage", "direct", "gate-up", "hybrid", "overlap", "pipeline", "registered"],
+      "load_interval_physical_read_bytes": 6213632,
+      "whole_request_physical_read_bytes": [36864, 0, 0],
+      "before_first_text_physical_read_bytes": [36864, 0, 0],
+      "generation_physical_read_bytes": [0, 0, 0],
+      "generation_major_faults": [0, 0, 0],
+      "endpoint_process_swap_bytes": [0, 0, 0],
+      "completion_rss_gib_rounded": [59.22, 59.25, 59.27]
+    }
+  ],
+  "interpretation": [
+    "The tested model is already read from resident RAM through the OS file cache; a low non-cache-used figure is not evidence of an empty RAM working set.",
+    "All six generation windows have zero measured backend physical reads and zero major faults. Avoiding physical disk reads cannot explain a RAM-disk generation gain in these specific windows.",
+    "Small reads during initialization and before the first text event were retained; their file identities were not traced and are not assumed to be model-weight reads.",
+    "A RAM disk would allocate from the same host RAM and may duplicate cached pages or crowd out inference allocations; tmpfs can also be swapped.",
+    "No full-model RAM-disk copy is justified by these warm-control results. If sustained physical reads recur, capture the exact model, resolved backing device, phase, faults and memory pressure first."
+  ],
+  "validation": {
+    "ctest_targets": ["vrambridge-io-study-inputs", "vrambridge-execution-sweep"],
+    "passed_against_builds": ["build/trace-release", "build/hybrid-tests"],
+    "first_text_observer_once_and_failure_propagation_tested": true,
+    "physical_vs_logical_read_counters_and_invalid_intervals_tested": true,
+    "failure_report_redaction_and_owned_backend_cleanup_tested": true,
+    "report_overwrite_protection_and_cli_bounds_tested": true,
+    "all_six_exact_token_counts_and_generation_counter_deltas_checked": true
+  },
+  "limitations": [
+    "This does not reproduce the user's historical UI observation or establish behavior for every model.",
+    "The controls were cache-warm; no cold-load versus RAM-disk end-to-end comparison was performed.",
+    "Process physical-read counters do not identify which files were read and do not represent all device-wide activity.",
+    "Endpoint memory snapshots do not establish peak usage or safe allocation headroom.",
+    "Stream-event observation has overhead and can lag backend computation; no acceleration multiplier is claimed.",
+    "These checks establish neither numerical equivalence nor answer quality of the experimental hybrid engine."
+  ],
+  "full_model_acceleration_claim": false,
+  "ramdisk_generation_speedup_established": false,
+  "recommendation": "Retain ordinary file-backed caching for now and return optimization effort to measured CPU/GPU execution and stage-aware prefill. Revisit RAM staging only after reproducing a sustained storage-bound workload, including copy cost and memory pressure."
+}

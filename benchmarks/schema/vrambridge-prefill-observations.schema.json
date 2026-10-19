@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VRAMBridge observed prefill expert work",
+  "type": "object",
+  "required": ["schema_version", "capture_scope", "instrumented", "performance_measurement", "full_model_acceleration_claim", "collector_source_sha256", "backend_commit", "model", "architecture", "layers", "requests", "complete", "coverage_note"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "capture_scope": {"const": "observed_prefill_expert_rows"},
+    "instrumented": {"const": true},
+    "performance_measurement": {"const": false},
+    "full_model_acceleration_claim": {"const": false},
+    "collector_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "backend_commit": {"type": "string", "minLength": 7},
+    "model": {"type": "string", "minLength": 1},
+    "architecture": {"type": "string", "minLength": 1},
+    "batch_size": {"type": "integer", "minimum": 1},
+    "microbatch_size": {"type": "integer", "minimum": 1},
+    "context_tokens": {"type": "integer", "minimum": 1},
+    "layers": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+    "coverage_note": {"type": "string", "minLength": 1},
+    "complete": {"const": true},
+    "requests": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "split", "category", "prompt_tokens", "token_sequence_equivalent", "coverage", "batches"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "split": {"enum": ["train", "test"]},
+          "prompt_tokens": {"type": "integer", "minimum": 1},
+          "token_sequence_equivalent": {"const": true},
+          "coverage": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["layer", "observed_rows", "covers_all_prompt_rows"],
+              "properties": {
+                "layer": {"type": "integer", "minimum": 0},
+                "observed_rows": {"type": "integer", "minimum": 1},
+                "covers_all_prompt_rows": {"type": "boolean"}
+              }
+            }
+          },
+          "batches": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["layer", "rows", "active_experts_per_row", "expert_row_counts"],
+              "properties": {
+                "layer": {"type": "integer", "minimum": 0},
+                "rows": {"type": "integer", "minimum": 0, "maximum": 32768},
+                "active_experts_per_row": {"type": "integer", "minimum": 1},
+                "expert_row_counts": {"type": "array", "minItems": 1, "items": {"type": "integer", "minimum": 0}}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "status": "experimental_quantization_alignment_partial_qualification",
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "probe_source_sha256": "9526a5d718672c0a361b55725f7318e4330a69bdfa1e26086d46f242f2aeaf9a",
+  "patch": "../../third_party/patches/llama-b11669-mxfp4-q8-parity-experimental.patch",
+  "patch_sha256": "5fd38a7c3ccf38ab382b0b97ca98616a462e3273f7481caa58dec7d9f033bbf2",
+  "clean_cuda_library_sha256": "2c719276b2c6ed87f5ad49ccb7e214bc1cda9308c7bba5fc3afbf9002a5df71d",
+  "candidate_cuda_library_sha256": "9dcd293c93a60a47395f2d8a33c39ec1420e01d440d4397e261ece44cb5977f0",
+  "build": {
+    "separate_source": "build/activation-parity-src",
+    "separate_backend": "build/activation-parity-backend",
+    "separate_probe": "build/activation-parity-probe",
+    "cuda": "13.1.115",
+    "host_compiler": "GNU 14.2.0",
+    "cuda_architecture": "120a",
+    "cpu_features": ["AVX2", "FMA", "F16C", "AVX512", "AVX512_VBMI", "AVX512_VNNI", "AVX512_BF16"],
+    "clean_source_built_before_patch": true,
+    "installed_backends_modified": false,
+    "application_defaults_modified": false,
+    "synapse_modified": false
+  },
+  "finding": {
+    "native_cpu": "MXFP4 dot products use Q8_0 activations, nearest-even optimized x86 integer rounding and FP16-stored scales.",
+    "native_cuda": "Vector Q8 uses a different integer-rounding expression; matrix Q8 can retain FP32 scales, while Blackwell defaults to Q4 matrix activations.",
+    "interpretation": "Different activation approximations contribute to CPU/GPU divergence. This does not establish that every native GPU approximation is incorrect.",
+    "identical_input_replays": {
+      "source_reports": "operator-isolation-20261018/identical-input-*.json",
+      "raw_q8_gate_up": {"cases": 18, "passed": 0, "worst_relative_l2": 0.00016871324777453716},
+      "cpu_effective_q8_gate_up": {"cases": 18, "passed": 18, "worst_relative_l2": 0.00000019308208705451057},
+      "cpu_effective_q8_down": {"cases": 9, "passed": 9, "worst_relative_l2": 0.0000001340824147050469},
+      "bias": {"cases": 27, "passed": 27, "max_abs_error": 0},
+      "weighting": {"cases": 9, "passed": 9, "max_abs_error": 0},
+      "swiglu": {"cases": 9, "passed": 9, "worst_relative_l2": 0.00000006487426337177923},
+      "reduction": {"cases": 9, "passed": 9, "worst_relative_l2": 0.00000004406478982125324}
+    },
+    "initial_fusion_and_capture_controls": {
+      "reports": 12,
+      "layers": [0, 17, 35],
+      "rows": 32,
+      "fusion_on_and_off": true,
+      "full_and_single_row_gpu_graphs": true,
+      "observer_output_max_abs_error": 0,
+      "fusion_disable_removed_projection_difference": false
+    }
+  },
+  "experimental_mode": {
+    "flag": "VRAMBRIDGE_HYBRID_MXFP4_Q8_PARITY=1",
+    "default": "off",
+    "scope": "MXFP4 CUDA activation quantization; native x86 Q8_0 reference convention.",
+    "changes": ["Nearest-even integer codes with explicit FP32 division/multiplication rounding", "FP16-rounded activation scales", "Q8 matrix activations instead of default Blackwell Q4"],
+    "target_weight_blocks_modified": false,
+    "experts_skipped": false,
+    "routing_probabilities_changed": false,
+    "runtime_cpu_canonicalization_required": false,
+    "explicit_q4_conflict_rejected": true,
+    "invalid_flag_value_rejected": true
+  },
+  "default_off_regression": {
+    "current_probe_reports": 9,
+    "samples_per_report": 3,
+    "cpu_and_gpu_output_fingerprints_match_clean_baseline": true,
+    "chained_and_identical_input_error_metrics_match_clean_baseline": true,
+    "fingerprint_algorithm": "Non-cryptographic FNV-1a over native IEEE754 output bytes; diagnostic identity, not model integrity.",
+    "local_reports": "operator-isolation-20261018/final-default-off-*.json"
+  },
+  "numerical_validation": {
+    "initial_enabled_configurations": {"cases": 9, "passed": 9},
+    "expanded": {
+      "layers": [0, 8, 17, 26, 35],
+      "rows": [1, 8, 32, 64],
+      "expert_sets": [[0, 7, 42, 113], [2, 31, 78, 127], [4, 19, 55, 102]],
+      "activation_samples": 3,
+      "repetitions_per_schedule": 3,
+      "reports": 60,
+      "all_operator_and_partition_gates_passed": 57,
+      "retained_failures": [
+        {"layer": 17, "rows": 32, "expert_set": [2, 31, 78, 127], "first_failing_operator": "weighting", "final_partition_outputs_pass": true},
+        {"layer": 17, "rows": 64, "expert_set": [2, 31, 78, 127], "first_failing_operator": "weighting", "final_partition_outputs_pass": true},
+        {"layer": 26, "rows": 64, "expert_set": [4, 19, 55, 102], "first_failing_operator": "down_projection", "final_partition_outputs_pass": false}
+      ],
+      "remaining_failure_identical_input_replays_pass": true,
+      "scalar_four_row_and_fusion_disabled_retries": {"reports": 9, "all_checks_passed": 0}
+    },
+    "adversarial": {"patterns": ["zero", "q8-ties"], "layers": [0, 17, 35], "rows": 32, "expert_set": [2, 31, 78, 127], "enabled_cases": 6, "enabled_passed": 6, "disabled_controls": 6, "disabled_passed": 0},
+    "gate": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001",
+    "thresholds_loosened": false
+  },
+  "sanitizers": {
+    "full_operator_probe_memcheck": {"layer": 17, "rows": 32, "errors": 0, "leaked_bytes": 0, "exit_code": 0},
+    "targeted_quantizer_racecheck": {"layer": 17, "rows": 8, "filter": "kns=quantize", "hazards": 0, "errors": 0, "warnings": 0, "exit_code": 0},
+    "full_racecheck": {"status": "inconclusive_timeout", "timeout_seconds": 100, "not_counted_as_pass": true},
+    "owned_timed_out_research_child_not_left_running": true
+  },
+  "timing_protocol": {
+    "reports": 72,
+    "reports_passing_all_final_partition_gates": 72,
+    "layers": [0, 17, 35],
+    "rows": [1, 8, 32, 64],
+    "expert_set": [0, 7, 42, 113],
+    "routing_weights": [0.05, 0.15, 0.30, 0.50],
+    "cpu_threads": 16,
+    "independent_invocations_per_case": 3,
+    "repetitions_per_schedule": 24,
+    "activation_samples": 3,
+    "residency_modes": ["resident", "synchronous_pageable_upload_each_iteration"],
+    "operator_capture_enabled": false,
+    "order": "Serial/concurrent order alternates; middle invocation reverses layer, row and split order; resident/upload order alternates.",
+    "statistic": "Median of three per-invocation concurrent-mode medians; all-GPU candidate compared to unchanged all-CPU expert control in the same isolated probe.",
+    "all_gpu_weight_and_bias_upload_bytes_per_iteration": 53015040,
+    "timed_costs": ["Weight uploads when requested", "Input transfer", "CPU expert work", "GPU expert work", "CPU output staging", "Reconciliation", "Final synchronization"],
+    "excluded_costs": ["File loading", "Graph setup", "Correctness readback"],
+    "background_gpu_process_observed_before_timing": "OBS",
+    "idle_gpu_measurement_claim": false,
+    "local_reports": "operator-isolation-20261018/timing-r*-parity1.json"
+  },
+  "transfer_inclusive_timing_points": [
+    {"layer": 0, "rows_per_expert": 32, "cpu_ms": 7.222576, "gpu_ms": 5.001776, "ratio_of_medians": 1.444002290386455, "all_three_paired_runs_improve": true},
+    {"layer": 17, "rows_per_expert": 32, "cpu_ms": 7.370107, "gpu_ms": 4.357257, "ratio_of_medians": 1.6914556566206673, "all_three_paired_runs_improve": true},
+    {"layer": 35, "rows_per_expert": 32, "cpu_ms": 7.162859, "gpu_ms": 4.6655735, "ratio_of_medians": 1.5352579913273254, "all_three_paired_runs_improve": true},
+    {"layer": 0, "rows_per_expert": 64, "cpu_ms": 14.2176475, "gpu_ms": 5.1691535, "ratio_of_medians": 2.750478874345674, "all_three_paired_runs_improve": true},
+    {"layer": 17, "rows_per_expert": 64, "cpu_ms": 14.627322, "gpu_ms": 5.201959, "ratio_of_medians": 2.811887214028407, "all_three_paired_runs_improve": true},
+    {"layer": 35, "rows_per_expert": 64, "cpu_ms": 14.1670285, "gpu_ms": 5.2226035, "ratio_of_medians": 2.712637193307897, "all_three_paired_runs_improve": true}
+  ],
+  "small_row_result": "At one/eight rows, synchronous uploads lose to CPU execution in the tested layers. This supports measuring stage/workload-specific decisions, not uploading every cold decode expert.",
+  "unit_validation": {
+    "python_unit_methods": 7,
+    "passed_against": ["build/trace-release/vrambridge-hybrid-layer", "build/hybrid-tests/vrambridge-hybrid-layer", "build/activation-parity-probe/vrambridge-hybrid-layer"],
+    "checked": ["Original scalar reference and both reduction strategies", "Bounded rows and explicit expert IDs", "Zero and exact Q8 rounding-tie inputs", "Observer controls and aggregate-only captures", "Output overwrite protection"]
+  },
+  "limitations": [
+    "Three wider operator configurations remain failures; no universal CPU/GPU parity or full-model quality equivalence is established.",
+    "Timing uses the original passing expert set and concentrated synthetic reuse, not the failing held-out configurations or natural prompt routing.",
+    "Layer timing ratios are not full-model tok/s, time-to-first-token, or a gain over the existing optimized hybrid application.",
+    "Background OBS activity and changed compiler/build conditions prevent treating these as idle-GPU results or direct comparisons to earlier timing windows.",
+    "Variable per-token expert membership, masked routes, odd shapes and full hybrid/Mistral patch-stack integration are not qualified by this study.",
+    "No full-target teacher-forced logit or natural-answer qualification was run for the new backend.",
+    "Full racecheck timed out; only the targeted quantizer racecheck completed."
+  ],
+  "next_steps": [
+    "Compare effective activation blocks before down projection on the retained failures and isolate upstream floating-point error propagation.",
+    "Qualify real captured prefill activations and varying per-token expert membership.",
+    "Only then test a bounded full-model stage-aware scheduler with actual VRAM budgets and full-request timing.",
+    "Replicate performance without background GPU workloads before promotion."
+  ],
+  "prefill_speedup_established": false,
+  "generation_speedup_established": false,
+  "full_model_acceleration_claim": false
+}

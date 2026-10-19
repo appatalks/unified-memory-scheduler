@@ -1,0 +1,1106 @@
+{
+  "schema_version": 1,
+  "study": "cpu_decode_critical_path_and_resource_efficiency",
+  "date": "2026-10-18",
+  "generated_at_utc": "2026-10-19T02:11:44.121203+00:00",
+  "status": "measured_optional_cpu_resource_tradeoff_no_new_throughput_default",
+  "research_repository": "https://github.com/appatalks/unified-memory-scheduler",
+  "downstream_repository": "https://github.com/appatalks/Synapse",
+  "downstream_revision_read_only": "545a7ebf4a6dea3dd4a1ac04760057eed2de1b15",
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "research_base_commit": "1c7dc36d2f6429b99c3591824c22661ca4df47a6",
+  "changes_uncommitted": true,
+  "qualified_end_to_end_speedup": false,
+  "full_model_acceleration_claim": false,
+  "generation_60_tok_s_goal_met": false,
+  "process_cpu_resource_reduction_measured": true,
+  "energy_savings_established": false,
+  "general_model_quality_established": false,
+  "default_changed": false,
+  "synapse_changed": false,
+  "installed_backend_changed": false,
+  "weights_changed": false,
+  "configuration": {
+    "model": "gpt-oss-120b-MXFP4",
+    "cpu": "Ryzen9 9950X",
+    "gpu": "RTX5070Ti16GB",
+    "context": 16384,
+    "expert_cache_mib": 12000,
+    "cpu_threads": 8,
+    "batch_threads": 16,
+    "logical_batch": 2048,
+    "physical_batch": 512,
+    "transfer": "direct",
+    "decode_pipeline": true,
+    "async_ids": true,
+    "plan_sha256": "6a679bec76f1a410ed65fa79c186d164a388fc76419d96dcad5978782343949c",
+    "temperature": 0,
+    "seed": 42,
+    "reasoning_effort": "low",
+    "ignore_eos": true,
+    "cache_prompt": false,
+    "timezone": "UTC",
+    "prefill_integration": "Parked; no resident-down experimental path is enabled.",
+    "policy": "GOMP_SPINCOUNT=1000 only in the owned child process; native control has GNU OpenMP overrides cleared."
+  },
+  "critical_path_observation": {
+    "scope": "One instrumented512-output technical request; generation-contained CPU graph spans, not marginal critical-path savings.",
+    "total_profile_records": 37491,
+    "generation_contained_records": 37081,
+    "generation_window_seconds": 10.57175608200123,
+    "cpu_graph_seconds": 6.392929372,
+    "routed_graph_seconds": 6.255670529,
+    "cpu_graph_wall_fraction": 0.6047178276165658,
+    "matrix_records": 54861,
+    "external_id_accounting_complete": true,
+    "logical_projection_weight_bytes": 247820342400,
+    "logical_bytes_per_511_streamed_transitions": 484971315.851272,
+    "logical_gb_per_cpu_graph_second": 38.7647552443506,
+    "streaming_read_8threads_gbps": 44.18902426,
+    "not_physical_dram_measurement": true,
+    "not_a_hardware_roofline_proof": true,
+    "mechanism": "Installed CPU module calls GOMP_parallel; default process CPU usage averages~8cores even outside synchronous CPU graph spans.",
+    "native_poll_distinction": "GGML native pthread poll and GNU OpenMP GOMP_SPINCOUNT are separate controls; ordinary poll tuning does not substitute for the OpenMP wait policy.",
+    "same_work_control": {
+      "scope": "Whole diagnostic process run, including warmup/prefill; known payload bytes exclude null/unobservable entries. Count signatures are not raw expert-identity captures.",
+      "ordered_matmul_count_byte_signatures_equal": true,
+      "same_recorded_cpu_work_quantity": true,
+      "timings_excluded_from_throughput_matrix": true,
+      "runs": [
+        {
+          "variant": "native",
+          "matmul_records": 55728,
+          "known_weight_byte_records": 55197,
+          "known_logical_projection_weight_bytes": 254178777600,
+          "ordered_count_byte_signature_sha256": "20642273ff48e2ecca8fedb0de253759557e937aa1465c3ab723b0fa9a631804",
+          "generation_window_process_cpu_seconds": 83.61,
+          "generated_text_sha256": "41bd5a216462a58e8597ee0adaa4a73e14ec4a509d20f1c8026d7b9e684ba108"
+        },
+        {
+          "variant": "spin1000",
+          "matmul_records": 55728,
+          "known_weight_byte_records": 55197,
+          "known_logical_projection_weight_bytes": 254178777600,
+          "ordered_count_byte_signature_sha256": "20642273ff48e2ecca8fedb0de253759557e937aa1465c3ab723b0fa9a631804",
+          "generation_window_process_cpu_seconds": 61.2,
+          "generated_text_sha256": "41bd5a216462a58e8597ee0adaa4a73e14ec4a509d20f1c8026d7b9e684ba108"
+        }
+      ]
+    }
+  },
+  "resource_policy": {
+    "name": "optional_low_cpu_use",
+    "runtime": "GNU OpenMP only",
+    "setting": {
+      "GOMP_SPINCOUNT": "1000"
+    },
+    "suggested_ui_label": "Lower CPU use (may reduce generation speed)",
+    "not_a_default_recommendation": true,
+    "qualification_criterion": "For each short held-out workload: >=20% median generation-window process CPU reduction with <=5% median decode throughput loss. This is not a per-request SLO.",
+    "criterion_met": true,
+    "raw_requests": 24,
+    "pairs": 12,
+    "total_output_tokens": 10752,
+    "all_output_hashes_match_within_workload": true,
+    "sample_cpu_scope": "Generation CPU uses first-text-to-response-complete /proc process counters, not an exact native decode boundary. Whole-request CPU is reported separately.",
+    "long_prompt_scope": "3577-token frozen technical review; 256 output tokens; prefill dominates CPU cost.",
+    "workloads": {
+      "coding": {
+        "output_tokens_per_request": 512,
+        "paired_repetitions": 3,
+        "variants": {
+          "native": {
+            "medians": {
+              "rate": 50.083465909135455,
+              "cpu": 80.32,
+              "request_cpu": 113.31,
+              "wall": 12.24174039499485,
+              "first_text": 2.2165442270052154,
+              "prompt_ms": 2074.829,
+              "load": 4.224030658995616,
+              "cores": 7.97816238432687
+            },
+            "samples": [
+              {
+                "file": "efficiency-coding-pair0-native.json",
+                "backend_decode_tok_s": 49.435855622922254,
+                "generation_window_process_cpu_seconds": 81.42,
+                "request_process_cpu_seconds": 114.77000000000001,
+                "request_wall_seconds": 12.421732729999349,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+              },
+              {
+                "file": "efficiency-coding-pair1-native.json",
+                "backend_decode_tok_s": 50.45979139665494,
+                "generation_window_process_cpu_seconds": 79.78,
+                "request_process_cpu_seconds": 113.31,
+                "request_wall_seconds": 12.222656363999704,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+              },
+              {
+                "file": "efficiency-coding-pair2-native.json",
+                "backend_decode_tok_s": 50.083465909135455,
+                "generation_window_process_cpu_seconds": 80.32,
+                "request_process_cpu_seconds": 112.98,
+                "request_wall_seconds": 12.24174039499485,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+              }
+            ]
+          },
+          "spin1000": {
+            "medians": {
+              "rate": 47.767812907218264,
+              "cpu": 57.42000000000001,
+              "request_cpu": 89.77000000000001,
+              "wall": 12.794449264998548,
+              "first_text": 2.2346826659995713,
+              "prompt_ms": 2096.368,
+              "load": 4.220449523003481,
+              "cores": 5.435648788404361
+            },
+            "samples": [
+              {
+                "file": "efficiency-coding-pair0-spin1000.json",
+                "backend_decode_tok_s": 47.767812907218264,
+                "generation_window_process_cpu_seconds": 57.42000000000001,
+                "request_process_cpu_seconds": 89.77000000000001,
+                "request_wall_seconds": 12.794449264998548,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+              },
+              {
+                "file": "efficiency-coding-pair1-spin1000.json",
+                "backend_decode_tok_s": 48.071531944708894,
+                "generation_window_process_cpu_seconds": 56.72,
+                "request_process_cpu_seconds": 89.11,
+                "request_wall_seconds": 12.736238992998551,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+              },
+              {
+                "file": "efficiency-coding-pair2-spin1000.json",
+                "backend_decode_tok_s": 47.24347716429672,
+                "generation_window_process_cpu_seconds": 58.76,
+                "request_process_cpu_seconds": 91.92999999999999,
+                "request_wall_seconds": 12.97491332500067,
+                "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+              }
+            ]
+          }
+        },
+        "median_changes": {
+          "decode_throughput_change_percent": -4.623587764709402,
+          "generation_cpu_saving_percent": 28.510956175298784,
+          "request_cpu_saving_percent": 20.77486541346747,
+          "request_wall_change_percent": 4.514953365860297,
+          "prefill_wall_change_percent": 1.0381096466262951
+        },
+        "paired_changes": [
+          {
+            "pair": 0,
+            "order": [
+              "native",
+              "spin1000"
+            ],
+            "decode_throughput_change_percent": -3.3741556501563963,
+            "generation_cpu_saving_percent": 29.476787030213703,
+            "request_cpu_saving_percent": 21.782695826435482
+          },
+          {
+            "pair": 1,
+            "order": [
+              "spin1000",
+              "native"
+            ],
+            "decode_throughput_change_percent": -4.732995095386716,
+            "generation_cpu_saving_percent": 28.904487340185515,
+            "request_cpu_saving_percent": 21.357338275527315
+          },
+          {
+            "pair": 2,
+            "order": [
+              "native",
+              "spin1000"
+            ],
+            "decode_throughput_change_percent": -5.670511601555727,
+            "generation_cpu_saving_percent": 26.84262948207171,
+            "request_cpu_saving_percent": 18.63161621525935
+          }
+        ]
+      },
+      "reasoning": {
+        "output_tokens_per_request": 512,
+        "paired_repetitions": 3,
+        "variants": {
+          "native": {
+            "medians": {
+              "rate": 49.49784868401106,
+              "cpu": 81.19,
+              "request_cpu": 116.08,
+              "wall": 12.500717105998774,
+              "first_text": 2.3060251630013227,
+              "prompt_ms": 2165.832,
+              "load": 4.2218381089987815,
+              "cores": 7.973042261523992
+            },
+            "samples": [
+              {
+                "file": "efficiency-reasoning-pair0-native.json",
+                "backend_decode_tok_s": 51.24627737413674,
+                "generation_window_process_cpu_seconds": 78.52000000000001,
+                "request_process_cpu_seconds": 112.57000000000001,
+                "request_wall_seconds": 12.101092126002186,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+              },
+              {
+                "file": "efficiency-reasoning-pair1-native.json",
+                "backend_decode_tok_s": 49.35205389051126,
+                "generation_window_process_cpu_seconds": 81.52,
+                "request_process_cpu_seconds": 116.35,
+                "request_wall_seconds": 12.530636545998277,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+              },
+              {
+                "file": "efficiency-reasoning-pair2-native.json",
+                "backend_decode_tok_s": 49.49784868401106,
+                "generation_window_process_cpu_seconds": 81.19,
+                "request_process_cpu_seconds": 116.08,
+                "request_wall_seconds": 12.500717105998774,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+              }
+            ]
+          },
+          "spin1000": {
+            "medians": {
+              "rate": 47.54264091089839,
+              "cpu": 57.92,
+              "request_cpu": 92.94,
+              "wall": 13.027827432997583,
+              "first_text": 2.3581814739955007,
+              "prompt_ms": 2221.722,
+              "load": 4.0224287810051464,
+              "cores": 5.453861637093296
+            },
+            "samples": [
+              {
+                "file": "efficiency-reasoning-pair0-spin1000.json",
+                "backend_decode_tok_s": 47.13729488934866,
+                "generation_window_process_cpu_seconds": 58.61,
+                "request_process_cpu_seconds": 92.94,
+                "request_wall_seconds": 13.065219434000028,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+              },
+              {
+                "file": "efficiency-reasoning-pair1-spin1000.json",
+                "backend_decode_tok_s": 47.54264091089839,
+                "generation_window_process_cpu_seconds": 57.92,
+                "request_process_cpu_seconds": 92.96000000000001,
+                "request_wall_seconds": 13.027827432997583,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+              },
+              {
+                "file": "efficiency-reasoning-pair2-spin1000.json",
+                "backend_decode_tok_s": 48.09624972551724,
+                "generation_window_process_cpu_seconds": 57.21,
+                "request_process_cpu_seconds": 91.58,
+                "request_wall_seconds": 12.85618125199835,
+                "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+              }
+            ]
+          }
+        },
+        "median_changes": {
+          "decode_throughput_change_percent": -3.950086367580341,
+          "generation_cpu_saving_percent": 28.661165168124146,
+          "request_cpu_saving_percent": 19.934527911784972,
+          "request_wall_change_percent": 4.21664071372243,
+          "prefill_wall_change_percent": 2.580532562082394
+        },
+        "paired_changes": [
+          {
+            "pair": 0,
+            "order": [
+              "native",
+              "spin1000"
+            ],
+            "decode_throughput_change_percent": -8.018109207795499,
+            "generation_cpu_saving_percent": 25.35659704533878,
+            "request_cpu_saving_percent": 17.438038553788758
+          },
+          {
+            "pair": 1,
+            "order": [
+              "spin1000",
+              "native"
+            ],
+            "decode_throughput_change_percent": -3.666337744781789,
+            "generation_cpu_saving_percent": 28.94995093228655,
+            "request_cpu_saving_percent": 20.1031370863773
+          },
+          {
+            "pair": 2,
+            "order": [
+              "native",
+              "spin1000"
+            ],
+            "decode_throughput_change_percent": -2.8316361129985257,
+            "generation_cpu_saving_percent": 29.535657100628153,
+            "request_cpu_saving_percent": 21.106133700895935
+          }
+        ]
+      },
+      "prose": {
+        "output_tokens_per_request": 512,
+        "paired_repetitions": 3,
+        "variants": {
+          "native": {
+            "medians": {
+              "rate": 55.50276818698633,
+              "cpu": 72.37,
+              "request_cpu": 104.76,
+              "wall": 11.23522792100266,
+              "first_text": 2.1539025970050716,
+              "prompt_ms": 2018.617,
+              "load": 4.214927817003627,
+              "cores": 7.969137195061372
+            },
+            "samples": [
+              {
+                "file": "efficiency-prose-pair0-native.json",
+                "backend_decode_tok_s": 55.50276818698633,
+                "generation_window_process_cpu_seconds": 72.37,
+                "request_process_cpu_seconds": 104.76,
+                "request_wall_seconds": 11.23522792100266,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+              },
+              {
+                "file": "efficiency-prose-pair1-native.json",
+                "backend_decode_tok_s": 55.87442490892797,
+                "generation_window_process_cpu_seconds": 71.87,
+                "request_process_cpu_seconds": 104.25,
+                "request_wall_seconds": 11.174325068001053,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+              },
+              {
+                "file": "efficiency-prose-pair2-native.json",
+                "backend_decode_tok_s": 54.89937728420623,
+                "generation_window_process_cpu_seconds": 73.12,
+                "request_process_cpu_seconds": 105.49,
+                "request_wall_seconds": 11.331051364999439,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+              }
+            ]
+          },
+          "spin1000": {
+            "medians": {
+              "rate": 53.21199471253964,
+              "cpu": 49.29,
+              "request_cpu": 81.42,
+              "wall": 11.727203796996037,
+              "first_text": 2.206206969996856,
+              "prompt_ms": 2069.374,
+              "load": 4.221964315001969,
+              "cores": 5.201302552539822
+            },
+            "samples": [
+              {
+                "file": "efficiency-prose-pair0-spin1000.json",
+                "backend_decode_tok_s": 53.21199471253964,
+                "generation_window_process_cpu_seconds": 49.29,
+                "request_process_cpu_seconds": 82.12,
+                "request_wall_seconds": 11.778965113997401,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+              },
+              {
+                "file": "efficiency-prose-pair1-spin1000.json",
+                "backend_decode_tok_s": 53.66291393823304,
+                "generation_window_process_cpu_seconds": 48.6,
+                "request_process_cpu_seconds": 80.38,
+                "request_wall_seconds": 11.591356744000223,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+              },
+              {
+                "file": "efficiency-prose-pair2-spin1000.json",
+                "backend_decode_tok_s": 52.965481328216725,
+                "generation_window_process_cpu_seconds": 49.57,
+                "request_process_cpu_seconds": 81.42,
+                "request_wall_seconds": 11.727203796996037,
+                "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+              }
+            ]
+          }
+        },
+        "median_changes": {
+          "decode_throughput_change_percent": -4.127313914738762,
+          "generation_cpu_saving_percent": 31.891667818156698,
+          "request_cpu_saving_percent": 22.279495990836196,
+          "request_wall_change_percent": 4.378868674962044,
+          "prefill_wall_change_percent": 2.514444295277407
+        },
+        "paired_changes": [
+          {
+            "pair": 0,
+            "order": [
+              "native",
+              "spin1000"
+            ],
+            "decode_throughput_change_percent": -4.127313914738762,
+            "generation_cpu_saving_percent": 31.891667818156698,
+            "request_cpu_saving_percent": 21.61130202367316
+          },
+          {
+            "pair": 1,
+            "order": [
+              "spin1000",
+              "native"
+            ],
+            "decode_throughput_change_percent": -3.9580022063753884,
+            "generation_cpu_saving_percent": 32.377904549881734,
+            "request_cpu_saving_percent": 22.8968824940048
+          },
+          {
+            "pair": 2,
+            "order": [
+              "native",
+              "spin1000"
+            ],
+            "decode_throughput_change_percent": -3.5226191109199667,
+            "generation_cpu_saving_percent": 32.20733041575493,
+            "request_cpu_saving_percent": 22.817328656744706
+          }
+        ]
+      },
+      "long": {
+        "output_tokens_per_request": 256,
+        "paired_repetitions": 3,
+        "variants": {
+          "native": {
+            "medians": {
+              "rate": 45.320691881677796,
+              "cpu": 43.90999999999997,
+              "request_cpu": 513.8299999999999,
+              "wall": 35.00945080000383,
+              "first_text": 29.508044236004935,
+              "prompt_ms": 29365.477,
+              "load": 4.220341850996192,
+              "cores": 7.981045997420813
+            },
+            "samples": [
+              {
+                "file": "efficiency-long-pair0-native.json",
+                "backend_decode_tok_s": 44.95165581627712,
+                "generation_window_process_cpu_seconds": 44.21999999999997,
+                "request_process_cpu_seconds": 511.88,
+                "request_wall_seconds": 34.912189791000856,
+                "generated_text_sha256": "32b809df5e228065b0b28702fdef9995251fe183c943514908748a5aa0c62987"
+              },
+              {
+                "file": "efficiency-long-pair1-native.json",
+                "backend_decode_tok_s": 45.48918534755878,
+                "generation_window_process_cpu_seconds": 43.73999999999995,
+                "request_process_cpu_seconds": 514.26,
+                "request_wall_seconds": 35.02977773899329,
+                "generated_text_sha256": "32b809df5e228065b0b28702fdef9995251fe183c943514908748a5aa0c62987"
+              },
+              {
+                "file": "efficiency-long-pair2-native.json",
+                "backend_decode_tok_s": 45.320691881677796,
+                "generation_window_process_cpu_seconds": 43.90999999999997,
+                "request_process_cpu_seconds": 513.8299999999999,
+                "request_wall_seconds": 35.00945080000383,
+                "generated_text_sha256": "32b809df5e228065b0b28702fdef9995251fe183c943514908748a5aa0c62987"
+              }
+            ]
+          },
+          "spin1000": {
+            "medians": {
+              "rate": 43.680876084206446,
+              "cpu": 32.05000000000001,
+              "request_cpu": 498.13,
+              "wall": 35.61814318099641,
+              "first_text": 29.910720412000956,
+              "prompt_ms": 29768.82,
+              "load": 4.226722665996931,
+              "cores": 5.599806177316736
+            },
+            "samples": [
+              {
+                "file": "efficiency-long-pair0-spin1000.json",
+                "backend_decode_tok_s": 43.680876084206446,
+                "generation_window_process_cpu_seconds": 32.05000000000001,
+                "request_process_cpu_seconds": 496.86,
+                "request_wall_seconds": 35.54241563400137,
+                "generated_text_sha256": "32b809df5e228065b0b28702fdef9995251fe183c943514908748a5aa0c62987"
+              },
+              {
+                "file": "efficiency-long-pair1-spin1000.json",
+                "backend_decode_tok_s": 43.71232490428286,
+                "generation_window_process_cpu_seconds": 31.960000000000036,
+                "request_process_cpu_seconds": 498.13,
+                "request_wall_seconds": 35.61814318099641,
+                "generated_text_sha256": "32b809df5e228065b0b28702fdef9995251fe183c943514908748a5aa0c62987"
+              },
+              {
+                "file": "efficiency-long-pair2-spin1000.json",
+                "backend_decode_tok_s": 43.314721026018724,
+                "generation_window_process_cpu_seconds": 32.19,
+                "request_process_cpu_seconds": 503.72,
+                "request_wall_seconds": 36.033296009998594,
+                "generated_text_sha256": "32b809df5e228065b0b28702fdef9995251fe183c943514908748a5aa0c62987"
+              }
+            ]
+          }
+        },
+        "median_changes": {
+          "decode_throughput_change_percent": -3.6182496987304247,
+          "generation_cpu_saving_percent": 27.009792757913832,
+          "request_cpu_saving_percent": 3.055485277231751,
+          "request_wall_change_percent": 1.7386516128739427,
+          "prefill_wall_change_percent": 1.3735278333806722
+        },
+        "paired_changes": [
+          {
+            "pair": 0,
+            "order": [
+              "native",
+              "spin1000"
+            ],
+            "decode_throughput_change_percent": -2.826992040659193,
+            "generation_cpu_saving_percent": 27.52148349163267,
+            "request_cpu_saving_percent": 2.934281472220046
+          },
+          {
+            "pair": 1,
+            "order": [
+              "spin1000",
+              "native"
+            ],
+            "decode_throughput_change_percent": -3.9061162113585235,
+            "generation_cpu_saving_percent": 26.931870141746515,
+            "request_cpu_saving_percent": 3.136545716174699
+          },
+          {
+            "pair": 2,
+            "order": [
+              "native",
+              "spin1000"
+            ],
+            "decode_throughput_change_percent": -4.426169973080318,
+            "generation_cpu_saving_percent": 26.690958779321296,
+            "request_cpu_saving_percent": 1.9675768250199344
+          }
+        ]
+      }
+    }
+  },
+  "numerical_qualification": {
+    "original_gate": "max_abs<=0.01; relative_l2<=0.001",
+    "comparisons": [
+      {
+        "role": "native-control-utc96",
+        "positions": 96,
+        "max_abs_logit_error": 0,
+        "max_relative_l2": 0,
+        "top1_matches": 96
+      },
+      {
+        "role": "vnni-utc96",
+        "positions": 96,
+        "max_abs_logit_error": 0,
+        "max_relative_l2": 0,
+        "top1_matches": 96
+      },
+      {
+        "role": "spin1000-utc96",
+        "positions": 96,
+        "max_abs_logit_error": 0,
+        "max_relative_l2": 0,
+        "top1_matches": 96
+      }
+    ],
+    "raw_native_vnni_dot_cases": 240,
+    "bitwise_mismatches": 0,
+    "cpu_trait_interposition_verified": true,
+    "observations_do_not_qualify_new_models_or_other_runtimes": true
+  },
+  "negative_results": {
+    "vnni": {
+      "scope": "Same native CPU floating order with VNNI integer replacement;3 fresh alternating512-token pairs.",
+      "native_median_tok_s": 50.011161982434636,
+      "candidate_median_tok_s": 49.38073561834393,
+      "change_percent": -1.2605713186830791,
+      "promoted": false
+    },
+    "pool_affinity": "Close placement was flat and spread slower in single-pair pilots; no production recommendation.",
+    "persistent_threadpool": {
+      "scope": "Separate non-OpenMP zen4 plugin, byte-identical copied server, original shared libraries; mapped plugin checked.",
+      "poll50_screen_tok_s": 48.5660886098266,
+      "poll0_screen_tok_s": 46.08860611189033,
+      "poll1_screen_tok_s": 49.782433230894526,
+      "matched_native_pilot_rates": [
+        49.421014918086364,
+        50.45071444036681
+      ],
+      "full_logit_qualification_performed": false,
+      "promoted": false,
+      "conclusion": "No robust benefit in bounded pilots; do not infer all pthread configurations are slower."
+    },
+    "prefill_seed": {
+      "scope": "Six native CPU-reference requests:768train+768heldout decode tokens, with per-request prefill observations. All observer-inactive continuations match.",
+      "selected_expert_count": 944,
+      "resident_payload_bytes": 12511549440,
+      "gpu_expert_us": 0,
+      "zero_gpu_cost_is_optimistic": true,
+      "blend_weight": 0.5,
+      "heldout_decode_not_used_for_seed_selection": true,
+      "admission_model": "Existing cost-aware offline heuristic, not installed native admission emulation. Original routes held fixed.",
+      "heldout": [
+        {
+          "category": "coding",
+          "tokens": 256,
+          "control_modeled_expert_ms": 3503.862272758187,
+          "alternatives": {
+            "train_only": {
+              "cold_cpu_bytes": 121218888960,
+              "seed_change_upload_bytes": 4691831040,
+              "modeled_expert_ms": 3772.0758456321487,
+              "modeled_change_percent": 7.654797820087489
+            },
+            "prompt_only": {
+              "cold_cpu_bytes": 118554883200,
+              "seed_change_upload_bytes": 7872733440,
+              "modeled_expert_ms": 3789.397173199838,
+              "modeled_change_percent": 8.149147375501208
+            },
+            "prompt_train_half": {
+              "cold_cpu_bytes": 118422345600,
+              "seed_change_upload_bytes": 6096729600,
+              "modeled_expert_ms": 3724.5903338590765,
+              "modeled_change_percent": 6.299564421153336
+            },
+            "empty": {
+              "cold_cpu_bytes": 134910023040,
+              "seed_change_upload_bytes": 0,
+              "modeled_expert_ms": 4055.882734385392,
+              "modeled_change_percent": 15.754627855068716
+            }
+          }
+        },
+        {
+          "category": "reasoning",
+          "tokens": 256,
+          "control_modeled_expert_ms": 3545.1809404761125,
+          "alternatives": {
+            "train_only": {
+              "cold_cpu_bytes": 122477996160,
+              "seed_change_upload_bytes": 4691831040,
+              "modeled_expert_ms": 3596.558266774673,
+              "modeled_change_percent": 1.4492159119997128
+            },
+            "prompt_only": {
+              "cold_cpu_bytes": 126798721920,
+              "seed_change_upload_bytes": 8031778560,
+              "modeled_expert_ms": 3874.6471434489576,
+              "modeled_change_percent": 9.293353668109194
+            },
+            "prompt_train_half": {
+              "cold_cpu_bytes": 124068447360,
+              "seed_change_upload_bytes": 6335297280,
+              "modeled_expert_ms": 3715.270083604331,
+              "modeled_change_percent": 4.797756334134418
+            },
+            "empty": {
+              "cold_cpu_bytes": 143352668160,
+              "seed_change_upload_bytes": 0,
+              "modeled_expert_ms": 4129.366570938802,
+              "modeled_change_percent": 16.478302243840748
+            }
+          }
+        },
+        {
+          "category": "prose",
+          "tokens": 256,
+          "control_modeled_expert_ms": 3120.1683091304576,
+          "alternatives": {
+            "train_only": {
+              "cold_cpu_bytes": 105950557440,
+              "seed_change_upload_bytes": 4691831040,
+              "modeled_expert_ms": 3281.095917671824,
+              "modeled_change_percent": 5.157657940132543
+            },
+            "prompt_only": {
+              "cold_cpu_bytes": 106361424000,
+              "seed_change_upload_bytes": 8098047360,
+              "modeled_expert_ms": 3421.909070259313,
+              "modeled_change_percent": 9.670656555477475
+            },
+            "prompt_train_half": {
+              "cold_cpu_bytes": 104585420160,
+              "seed_change_upload_bytes": 6229267200,
+              "modeled_expert_ms": 3290.1685434297365,
+              "modeled_change_percent": 5.448431541395138
+            },
+            "empty": {
+              "cold_cpu_bytes": 124147969920,
+              "seed_change_upload_bytes": 0,
+              "modeled_expert_ms": 3727.7581995509095,
+              "modeled_change_percent": 19.472984474666944
+            }
+          }
+        }
+      ],
+      "conclusion": "Full prompt-conditioned rebuilds lose net modeled cost against causal trained initialization on all3 held-out requests. Static placement wins do not establish a live adaptive-cache improvement."
+    }
+  },
+  "reproducibility_findings": {
+    "template_epoch_alone_does_not_fix_timezone": true,
+    "jinja_time_function": "std::localtime in pinned common/jinja/value.cpp",
+    "required_reference_environment": {
+      "TZ": "UTC"
+    },
+    "initial_local_timezone_alignment_rejections": 2,
+    "rejections_were_not_numerical_failures": true,
+    "missing_explicit_cuda_path_trace_attempts": 1
+  },
+  "measurement_limits": {
+    "perf_event_paranoid": "3",
+    "perf_event_open_available_to_nsight": false,
+    "rapl_package_energy_readable": false,
+    "energy_measured": false,
+    "privilege_or_kernel_setting_changed": false
+  },
+  "validation": {
+    "ctest_targets": [
+      "vrambridge-prefill-seed",
+      "vrambridge-cpu-research",
+      "vrambridge-hybrid-layer-self-test",
+      "vrambridge-hybrid-layer-inputs"
+    ],
+    "io_study_methods": 9,
+    "routing_analysis_methods": 26,
+    "prefill_seed_methods": 5,
+    "cpu_research_methods": 3,
+    "no_dependency_installation": true,
+    "no_system_configuration_changes": true
+  },
+  "handoff": {
+    "safe_scope": "Optional resource profile for the checked GNU OpenMP backend, applied only to backend child environment. Keep fastest native default.",
+    "do_not_ship": [
+      "VNNI shim",
+      "graph profiling shim",
+      "non-OpenMP pilot backend",
+      "prompt-conditioned seed policy as a performance fix"
+    ],
+    "rollback": "Remove GOMP_SPINCOUNT from child environment and restore the native control; do not change global shell/system settings.",
+    "next_throughput_work": "Use critical-path and marginal CPU-byte costs to gate future residency/speculation work; do not repeat kernel/pool/cache changes merely under new names."
+  },
+  "tooling": {
+    "source_sha256": {
+      "CMakeLists.txt": "c0bc561b114cbfe3be035d527c09644ae97d713ab2175bfd530a230023d25aa7",
+      "tools/trace/cpu_graph_profile.cpp": "f40d4f3a1dab6f67cced69be4d4ee031742a030002fc33893b06e4c65a4eab6c",
+      "tools/trace/cpu_mxfp4_vnni.cpp": "7b91de078512225880608197aedd98d31d0a051cec88fab2915c11038a19cc68",
+      "tests/test_cpu_research.py": "5091528fcae719bf3e38d5b453d016bec78cb3ec970d460bb50a87a33a253d6f",
+      "tools/benchmark/vrambridge-io-study.py": "1133bb28d92a6c3f85e97805e08a4f5498847d6a9b02d743d775af6c6b197948",
+      "tests/test_io_study.py": "dac01e2a0497fb54fd1b8ff5d670cd16651cb10471a3120e40d2a10f2068be97",
+      "tools/benchmark/vrambridge-prefill-seed.py": "9379840a05055d4a5d67cf924b07e69d2eff6fbe0266bf3519e27f1fdd1a9b1c",
+      "tests/test_prefill_seed.py": "ca27a7425253a04edb6711990a8189a04439b7b143a04bbd7ce77ed786d7ea42",
+      "benchmarks/cpu-decode-corpus.jsonl": "3adac0227429ef7a01327ba8c947dfdbe0591f1502a1924f7949e9cccb7f8577"
+    },
+    "research_shim_sha256": {
+      "libvrambridge-cpu-graph-profile.so": "488ec4d0bc44a307c0e9544572f100639660988e664c2d6fe02b2024d1da7fb8",
+      "libvrambridge-cpu-mxfp4-vnni.so": "6b33d8f0accb848fe4aa2d3ca00613116091f4ab7d212709fb4e5c6e0a69e70a"
+    },
+    "installed_plugin_sha256": {
+      "libggml-cpu-zen4.so": "155a87103fdc442b309b656862bb2ea9b9f77be88f3434f9c044b71a572279e4",
+      "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e"
+    },
+    "pthread_plugin_sha256": "645beb51cdb388f216dbcd4937a5ea8e1db8f18819d6d7274c76e0cb3019a028",
+    "checker_binary_sha256": "3d70c4801bb088465f6c9b57a504cff9de521260eda03ae8847d43714202873a",
+    "collector_binary_sha256": "243d89335ec7ce788b792d9b1c115315f9610bdc71e79a4935e78ceae1f675ce",
+    "historical_source_note": "Raw reports preserve the source hashes used at measurement. I/O runner metadata/verbatim/poll support evolved during the study; older measurements are not relabeled.",
+    "model_hash_note": "Original shard identity checks remain historical; no new full59GiB SHA rehash was performed."
+  },
+  "public_evidence_index": [
+    {
+      "path": "cpu-decode-20261018/baseline-short.json",
+      "sha256": "680a1da7bceab886adbae42271bcb9224529a7bd9e1cab7eeb01ceaf0396488a"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-coding-pair0-native.json",
+      "sha256": "e86f5c483406110ebd686433f03d7c055ecc809108d22cd2375205fa90fafdd5"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-coding-pair0-spin1000.json",
+      "sha256": "c820eb66d39bf1c40f576c86c9c58b1f6695620aca9a06dd226565977c244167"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-coding-pair1-native.json",
+      "sha256": "bf39badd3bfa3c980a92e5f0134a6a064d1d797a8806c0914286e1663ac6847b"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-coding-pair1-spin1000.json",
+      "sha256": "bec969549ee655b5f4cb6658646862f020ee70a38dc71677fcfdb360439d966d"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-coding-pair2-native.json",
+      "sha256": "0507a1ccd2612c4870e34a719f324e1fadfec7e0abc3b580d560ce88a2b63767"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-coding-pair2-spin1000.json",
+      "sha256": "60b61c5a85322b2711d4ecf688a1f3776d12e9d40cf232a5270fb1a3fa1b79ec"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-long-pair0-native.json",
+      "sha256": "f04968aa1c70ba62ffb9c8895ac894cb7199a72cd4964ef4d8f36f9108439a0c"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-long-pair0-spin1000.json",
+      "sha256": "e6921c6025985ad5a563e1b7b1910be6974ff06bed809f346b42bd57e794844c"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-long-pair1-native.json",
+      "sha256": "9c8696e49c5b87ced7a12beb90404b466f3b7fdcdd3ecb0c4697fe3389fd0bb2"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-long-pair1-spin1000.json",
+      "sha256": "b6f5329109ed5502ea0a3f8e5ae35a7458a65b41a79227044854a154530ecd42"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-long-pair2-native.json",
+      "sha256": "9b1c672903f47fe4dabb776328a866244c1758774c9ead88386b73ddd921edae"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-long-pair2-spin1000.json",
+      "sha256": "a9d9e35ec630237671154c31a555f2980032b2fffdf9a8e0ffaf4c82125a6bb6"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-prose-pair0-native.json",
+      "sha256": "42cc6b83e85011d9bdb08f103b2f150a1696147456332bf9bdea8d83cff1aa06"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-prose-pair0-spin1000.json",
+      "sha256": "4ebbafdad267576ca1d55fbfba3cb36390c7ae246e130363b12285c7b603910d"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-prose-pair1-native.json",
+      "sha256": "5cb6d4fcafd999fe6778035e0a5efd1a1f683969e324a2ab6293db13837b2f93"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-prose-pair1-spin1000.json",
+      "sha256": "a9418ac74b87e2ea6a3ff887d7694315b5bbcc609e2f036fc36e916add4964ff"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-prose-pair2-native.json",
+      "sha256": "5e94a15d04b4684d1f7ab7c81c8e22d11b2ac365e2460a30644fdbb916874759"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-prose-pair2-spin1000.json",
+      "sha256": "3f8ea57e7c27bd7bff16a5e2f3f4879d3550242de3df2ce2cd30f9c2f7bdc062"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-reasoning-pair0-native.json",
+      "sha256": "51c542c2c0302cac28b8e762360421bc94089d0d3591041bbba8ac40de18c3c8"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-reasoning-pair0-spin1000.json",
+      "sha256": "edf8d79cb397ecb1e8dd4f4190c45e8e041bb7201cf32785be7b9becfa5721c3"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-reasoning-pair1-native.json",
+      "sha256": "1117ff415f0aed910cedbe2cb45890be2f4a20ce11104625f51b25b09db6b094"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-reasoning-pair1-spin1000.json",
+      "sha256": "14334ff589cdf452abc7ece27fd56fbc0f5d4c5e62f72bc834a8cf5d9d05e2d7"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-reasoning-pair2-native.json",
+      "sha256": "4e1762a5b1d5d37856f8679a7658bf086f0c14d55917d98b72bf1c1ac682d461"
+    },
+    {
+      "path": "cpu-decode-20261018/efficiency-reasoning-pair2-spin1000.json",
+      "sha256": "c798c39068c359951fc4e4f10c880a2047ee7b0b1ded2b8c4d10601068760315"
+    },
+    {
+      "path": "cpu-decode-20261018/native-control-utc96.json",
+      "sha256": "88a4bdb26e3c70ff586c016de3d1a170f34e6d82178e74c77e92f1f246193b9e"
+    },
+    {
+      "path": "cpu-decode-20261018/pair0-native-short.json",
+      "sha256": "a5637cd630bef1265990e8a07e4d9b6b05d4c2615dff1dedc951eed31b90cbd0"
+    },
+    {
+      "path": "cpu-decode-20261018/pair0-vnni-short.json",
+      "sha256": "2e4b44140fa428197f8732d47991531fa805c90239a5514ed013e241561de8ac"
+    },
+    {
+      "path": "cpu-decode-20261018/pair1-native-short.json",
+      "sha256": "d77f45ebb8cf692994196ce97d0c1f86229e9a967e1a40ca654e110729f069ca"
+    },
+    {
+      "path": "cpu-decode-20261018/pair1-vnni-short.json",
+      "sha256": "19f7a008a195ad4c6cdae71cf21c10bdabc2a9b9ace98d87a894907a83b4eccd"
+    },
+    {
+      "path": "cpu-decode-20261018/pair2-native-short.json",
+      "sha256": "7158541579d302f4ab824382921082213e835f2d8a34c439c42776915a31c451"
+    },
+    {
+      "path": "cpu-decode-20261018/pair2-vnni-short.json",
+      "sha256": "36f6036693dbed12e881b76021f65e659e790e86b468daead4f413fb075cf5d9"
+    },
+    {
+      "path": "cpu-decode-20261018/pool-pilot0-native.json",
+      "sha256": "6625f836f5c10f9c0cf158e030dbd69caa08b5f145f35552c64cd8deb5ff0fd0"
+    },
+    {
+      "path": "cpu-decode-20261018/pool-pilot1-close.json",
+      "sha256": "2b9e8ce8b69a284cb8d332230264b95948d015ad7cb5cf98f335149a2fad147a"
+    },
+    {
+      "path": "cpu-decode-20261018/pool-pilot2-native.json",
+      "sha256": "39412e1a5b1079ef3b577a57fe7dbb4b1bc4af2d281ea747ee2d3633931206ae"
+    },
+    {
+      "path": "cpu-decode-20261018/pool-pilot3-spread.json",
+      "sha256": "a4c011f5a68b0cef18715bcf3995a596d1eeed007ed39639ff8628f1cd3a1ad7"
+    },
+    {
+      "path": "cpu-decode-20261018/prefill-seed-final-gpu0.json",
+      "sha256": "2b91c9a5675bb5299b79d6fb33de028303e21dd6072abae2688c5c8f94fe10eb"
+    },
+    {
+      "path": "cpu-decode-20261018/prefill-seed-gpu0.json",
+      "sha256": "a917b564cbbad1a125abe190c38433eaed6bc3fa40d23bfc439bbb7aec87eb05"
+    },
+    {
+      "path": "cpu-decode-20261018/profile-short.json",
+      "sha256": "aa6acded24aef67f8537a49cdf876532654ac2501f4dfddb8c714a93111fcc8b"
+    },
+    {
+      "path": "cpu-decode-20261018/profile-utc-native.json",
+      "sha256": "49cea87a4bbffc2201ab62bc6e63cc7986d6d7fe5d45b4c0dc823b2cf251de36"
+    },
+    {
+      "path": "cpu-decode-20261018/profile-utc-spin1000.json",
+      "sha256": "e31be60edcb8356e2bedf3706faa1a1c683fe94c19161dd9af9424dc7b698cc3"
+    },
+    {
+      "path": "cpu-decode-20261018/pthread-pilot-native.json",
+      "sha256": "f027ccabd2392d4d6a2e5a57c3431b40ae8ef9de8728f01cd2aba5089e37e869"
+    },
+    {
+      "path": "cpu-decode-20261018/pthread-pilot-pthread.json",
+      "sha256": "bbde2b419e2719f857b12f253e53815c4481c660057e0ced22d3103d3ae041f4"
+    },
+    {
+      "path": "cpu-decode-20261018/pthread-wait-pilot0-native-poll50.json",
+      "sha256": "f9ee697b6cd1e757ed6c83b9b22e4d4e428f06518695bf11f73bcc975f33ad15"
+    },
+    {
+      "path": "cpu-decode-20261018/pthread-wait-pilot1-pthread-poll0.json",
+      "sha256": "3fda08e130127c0c72d1cf5aeff48440aafaa8491a452e2b16a5b385f3d043c4"
+    },
+    {
+      "path": "cpu-decode-20261018/pthread-wait-pilot2-pthread-poll1.json",
+      "sha256": "7132eafc33abb28e7aa28a0646c8f8f7e0fad2cc90c3a57d9fa0f085322339db"
+    },
+    {
+      "path": "cpu-decode-20261018/pthread-wait-pilot3-native-poll50.json",
+      "sha256": "602e80fc9e3906796d2c0cb860795c8fd71865808f417d05328c9302ae27d900"
+    },
+    {
+      "path": "cpu-decode-20261018/ram-read-8threads.json",
+      "sha256": "9d1d9a6ab2681de12598be4875d8c55ac046590a80794180b6b7489e44b4670d"
+    },
+    {
+      "path": "cpu-decode-20261018/spin-pilot0-default.json",
+      "sha256": "533eeb57147d3a16b2e51229630fad2da4c9bdc5956c55045b58c8d8366e0a72"
+    },
+    {
+      "path": "cpu-decode-20261018/spin-pilot1-0.json",
+      "sha256": "f03a72ea723435bfc855ed56da76120fdd171d2183d0b84c029275e239e2afd8"
+    },
+    {
+      "path": "cpu-decode-20261018/spin-pilot2-1000.json",
+      "sha256": "9596e92dba1e1afebd395581d4a5be0c001692df83b6e9e736584f7281cb43e4"
+    },
+    {
+      "path": "cpu-decode-20261018/spin-pilot3-10000.json",
+      "sha256": "f4c9be28189b2b3d44f115e790d191fa23c9e88d4ccc24c8b6162ce775478c8c"
+    },
+    {
+      "path": "cpu-decode-20261018/spin-pilot4-100000.json",
+      "sha256": "818b5d8808aee2516854c53e27f6cdd9cf03f5d2bced4817f404b1e35f7df0ec"
+    },
+    {
+      "path": "cpu-decode-20261018/spin-pilot5-default.json",
+      "sha256": "fc6379e8cf3d88305e275181a75a1e197a4174b5a2f35cab32b3a7027200e2e5"
+    },
+    {
+      "path": "cpu-decode-20261018/spin1000-utc96.json",
+      "sha256": "88a4bdb26e3c70ff586c016de3d1a170f34e6d82178e74c77e92f1f246193b9e"
+    },
+    {
+      "path": "cpu-decode-20261018/vnni-utc96.json",
+      "sha256": "88a4bdb26e3c70ff586c016de3d1a170f34e6d82178e74c77e92f1f246193b9e"
+    }
+  ],
+  "private_evidence_metadata": [
+    {
+      "path": "cpu-decode-20261018/native-decode-routing.jsonl",
+      "sha256": "ade2764512a2f64331ee8a7ce1af25c7d7263aaf4987e6607dc55a876e9cd555",
+      "bytes": 6090521,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "cpu-decode-20261018/native-prefill-observations.json",
+      "sha256": "b9cbec5a58c8c44935c8b215e47fecd85a6bf6400e1a1030ab9c54e77a12cb34",
+      "bytes": 486784,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "cpu-decode-20261018/profile-short-events.jsonl",
+      "sha256": "f8baedecf3c9928e13412491bd58302123d587e878304150f91dcc5cdf9d0ec6",
+      "bytes": 16282848,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "full-prefill-down-20261018/installed-hybrid-reference.bin",
+      "sha256": "18d6b1d1c63b888d42fadc812bee1ffdc9fcbf4dbd68d2760d72e1d45573a540",
+      "bytes": 77256985,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "cpu-decode-20261018/profile-utc-native-events.jsonl",
+      "sha256": "56260036502068a384a2e7c1838cfa7676409e9ca34db33410b7b6d6ee5c892e",
+      "bytes": 16285880,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "cpu-decode-20261018/profile-utc-spin1000-events.jsonl",
+      "sha256": "ac4e382057fc8213f512606587af4466a36d64170bf786779639a26f702a84cd",
+      "bytes": 16296433,
+      "permissions": "0o600",
+      "publish": false
+    }
+  ],
+  "retained_setup_failures": [
+    {
+      "path": "cpu-decode-20261018/native-control96.log",
+      "sha256": "224a2424136c282da6b69cb580c56f05c0c9f29a9495608292e0283a2edb3ff0"
+    },
+    {
+      "path": "cpu-decode-20261018/matched-control96.log",
+      "sha256": "b5ed0782876621c657a53e32803dc3bcb638d69c1385e4c3d0b04b9dbc321a90"
+    },
+    {
+      "path": "cpu-decode-20261018/native-routing.log",
+      "sha256": "94d142672ccf78476ac9bfeeb6dc98f794eae26207585cd7fc342c276c6ab836"
+    }
+  ],
+  "finalized_at_utc": "2026-10-19T02:19:24.216759+00:00"
+}

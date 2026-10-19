@@ -1,0 +1,854 @@
+{
+  "schema_version": 1,
+  "study": "resident_down_full_model_mask_correctness_control",
+  "date": "2026-10-18",
+  "generated_at_utc": "2026-10-18T22:38:21.105439+00:00",
+  "status": "default_off_exact_enabled_full_target_gate_failed",
+  "full_model_acceleration_claim": false,
+  "qualified_performance_improvement": false,
+  "latency_benchmarks_run": false,
+  "compact_dispatch_implemented": false,
+  "compaction_promotion_blocked": true,
+  "research_repository": "https://github.com/appatalks/unified-memory-scheduler",
+  "research_base_commit": "1c7dc36d2f6429b99c3591824c22661ca4df47a6",
+  "changes_uncommitted": true,
+  "downstream": {
+    "repository": "https://github.com/appatalks/Synapse",
+    "verified_revision": "545a7ebf4a6dea3dd4a1ac04760057eed2de1b15",
+    "edited": false,
+    "pushed": false
+  },
+  "patch_stack": {
+    "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+    "base_hybrid_patch": "third_party/patches/llama-b11669-hybrid-experts.patch",
+    "base_hybrid_patch_sha256": "961544562fa0f9c45c1b5ee71e91196d693b01285572c40197c5c260df07319b",
+    "experimental_patch": "third_party/patches/llama-b11669-resident-down-prefill-experimental.patch",
+    "experimental_patch_sha256": "dbad9ecd55ff3b7b966742c2d76ae773cfcde09fa2a8bbf7e3cf72af94fd2a3d",
+    "reconstruction_verified": true,
+    "baseline_hybrid_files_matching_installed_source": "14/14",
+    "experimental_source_sha256": {
+      "include/llama.h": "d5d687ddd0cf04339a77efd2dd734801156c42223ac3a97b95bcbafa210db87d",
+      "src/llama-context.cpp": "e8d4405a2f522763a1b8a02285c2b0f381464f8fee7c0f01df6129dba6a5c7d6",
+      "src/llama-context.h": "60f47108fc1908e62c7227a2e6d221ca7b8e7ec86ecda707ad259aaff8c2d879",
+      "src/llama-graph.cpp": "555073f6a8800175a92255e12c5d250ead00dcae57d4b7b8035ed744df7da03f",
+      "src/llama-graph.h": "f967d8697d8a4bb81c86648613d58a337cb7b758e7523232d3d61d15fc9e0bcb",
+      "src/llama-moe-cache.cpp": "b38273a9fd7fb73e291e0aecb10f4048965b8ac0e505918f1b6fdb2a0717ef71",
+      "src/llama-moe-cache.h": "6209aeae39a5d21aad9aed61c28c703730b6f6453fcf9ebbd9b0ec68c0acfb20",
+      "tools/server/server-context.cpp": "d8ab233774e0fb91530027ce910590b92271be8af849e7810edb20e58020e43d"
+    }
+  },
+  "build": {
+    "separate_source_and_build": true,
+    "cpu_backend_compilation": "off; unchanged installed zen4 plugin reused read-only",
+    "cuda_compilation": "off; unchanged installed CUDA plugin reused read-only",
+    "compiler": "GNU 14.2.0",
+    "build_type": "Release",
+    "installed_plugin_and_baseline_sha256": {
+      "installed_cpu": "155a87103fdc442b309b656862bb2ea9b9f77be88f3434f9c044b71a572279e4",
+      "installed_cuda": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+      "installed_hybrid_llama": "148c134928fce83224465faddde52febed9d4f4c6da8e6b159ac88448b2f9eb4"
+    },
+    "final_binary_sha256": {
+      "build/prefill-down-backend/bin/libllama.so.0": "f4863a7fba1609eaddfe59dbfa055a9ac5544d793bfaeffa25a5ca5207c97dc6",
+      "build/prefill-down-backend/bin/libllama-common.so.0": "a8ba6da8b946695adefdfb0dfffd45dae24b9709236c726f370c75bf5ceacbbe",
+      "build/prefill-down-backend/bin/libggml-base.so.0": "7162196429d539d0f5f0d4874b1a0b948934bf48b762f8e71f3d36aed29c2545",
+      "build/prefill-down-backend/bin/llama-server": "e20f80f0877cdb2b4133f4a1d3d97d610879dedc2455e6dcba84afafdae66f6f",
+      "build/prefill-down-probe/vrambridge-logit-check": "63f854ca6923a0dcf9ceb576626f4840be73d3922e1764ada8650d8084441b87"
+    },
+    "provenance_note": "Builds were extended with diagnostic controls during the study. Final binary hashes apply to the final default-off/enabled controls and server smoke; earlier immutable raw reports retain their measured checker source hashes."
+  },
+  "implementation": {
+    "choice": "User approved existing masks as a correctness control before compact resident-aware gather/scatter.",
+    "phase": "Explicit llama_set_prefill_phase; graph cache key includes phase. Server uses all token is_prompt tags, never row count alone.",
+    "eligibility": "Default off; native GPT-OSS-120B hybrid profile, bulk rows >1, physical rows <=2048, no evaluation callback; speculation not qualified.",
+    "cpu": "Original gate/up/bias/SwiGLU, native Q8_0 reconstruction; original cold down work and CPU reduction boundary.",
+    "gpu": "Resident cached down weights/bias, explicit Q8 inputs; protected zero slots serve inactive rows.",
+    "masks": "Supported negative CPU IDs only for inactive CPU work. GPU IDs remain valid and use reserved zero slots for inactive GPU work.",
+    "limitations": "Padded GPU work and full-rank transfers remain; not a compact or overlapped performance implementation.",
+    "bulk_admissions": 0,
+    "bulk_evictions": 0,
+    "zero_one_row_and_decode_code_paths": "unchanged",
+    "flags": [
+      "VRAMBRIDGE_HYBRID_PREFILL_DOWN",
+      "VRAMBRIDGE_HYBRID_PREFILL_DOWN_CPU_CONTROL",
+      "VRAMBRIDGE_HYBRID_PREFILL_DOWN_AUDIT",
+      "VRAMBRIDGE_HYBRID_PREFILL_DOWN_LAYER"
+    ]
+  },
+  "configuration": {
+    "context": 16384,
+    "expert_cache_mib": 12000,
+    "logical_batch": 2048,
+    "physical_batch": 512,
+    "generation_threads": 8,
+    "batch_threads": 16,
+    "fit": "off",
+    "cpu_moe": true,
+    "repack": false,
+    "host_op_offload": false,
+    "direct_dma": true,
+    "decode_pipeline": true,
+    "async_ids": true,
+    "plan_sha256": "6a679bec76f1a410ed65fa79c186d164a388fc76419d96dcad5978782343949c",
+    "template_epoch_seconds": 0,
+    "reasoning_effort": "low",
+    "evaluation_callback": false,
+    "heldout_categories": [
+      "coding",
+      "prose",
+      "reasoning"
+    ],
+    "prompt_tokens": [
+      3590,
+      3781,
+      2275
+    ],
+    "positions_per_request": 32,
+    "positions_per_comparison": 96,
+    "vocabulary_entries_per_position": 201088
+  },
+  "gate": {
+    "max_abs_logit_error": 0.01,
+    "relative_l2": 0.001,
+    "unchanged": true
+  },
+  "full_target_comparisons": {
+    "optimized_default_off": {
+      "report": "full-prefill-down-20261018/final-default-off.json",
+      "checker_source_sha256": "79c3e874cf7285d01f6d5414f0a9f1bf23d7f19011e1e15778a1c17edd53e78c",
+      "all_checks_passed": true,
+      "cuda_disable_fusion": null,
+      "worst_max_abs_logit_error": 0.0,
+      "worst_relative_l2": 0.0,
+      "top1_matches": 96,
+      "requests": [
+        {
+          "category": "coding",
+          "id": "heldout-staging-review",
+          "max_abs_logit_error": 0.0,
+          "max_relative_l2": 0.0,
+          "passed": true,
+          "positions": 32,
+          "prompt_tokens": 3590,
+          "top1_matches": 32
+        },
+        {
+          "category": "prose",
+          "id": "heldout-architecture-prose",
+          "max_abs_logit_error": 0.0,
+          "max_relative_l2": 0.0,
+          "passed": true,
+          "positions": 32,
+          "prompt_tokens": 3781,
+          "top1_matches": 32
+        },
+        {
+          "category": "reasoning",
+          "id": "heldout-scheduling-reasoning",
+          "max_abs_logit_error": 0.0,
+          "max_relative_l2": 0.0,
+          "passed": true,
+          "positions": 32,
+          "prompt_tokens": 2275,
+          "top1_matches": 32
+        }
+      ]
+    },
+    "optimized_enabled": {
+      "report": "full-prefill-down-20261018/final-enabled.json",
+      "checker_source_sha256": "79c3e874cf7285d01f6d5414f0a9f1bf23d7f19011e1e15778a1c17edd53e78c",
+      "all_checks_passed": false,
+      "cuda_disable_fusion": null,
+      "worst_max_abs_logit_error": 3.8607985973358154,
+      "worst_relative_l2": 0.18133564670375218,
+      "top1_matches": 93,
+      "requests": [
+        {
+          "category": "coding",
+          "id": "heldout-staging-review",
+          "max_abs_logit_error": 3.8607985973358154,
+          "max_relative_l2": 0.17347853926133402,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3590,
+          "top1_matches": 31
+        },
+        {
+          "category": "prose",
+          "id": "heldout-architecture-prose",
+          "max_abs_logit_error": 2.972688674926758,
+          "max_relative_l2": 0.18133564670375218,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3781,
+          "top1_matches": 31
+        },
+        {
+          "category": "reasoning",
+          "id": "heldout-scheduling-reasoning",
+          "max_abs_logit_error": 3.7368850708007812,
+          "max_relative_l2": 0.1615638241714305,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 2275,
+          "top1_matches": 31
+        }
+      ]
+    },
+    "optimized_cpu_only_control": {
+      "report": "full-prefill-down-20261018/full-target-cpu-control.json",
+      "checker_source_sha256": "57c5601c2c505aa9d331fd5c1b5e1f758a0739e69a18ea735e7f6934a63f406c",
+      "all_checks_passed": false,
+      "cuda_disable_fusion": null,
+      "worst_max_abs_logit_error": 3.603219985961914,
+      "worst_relative_l2": 0.16133813828829527,
+      "top1_matches": 92,
+      "requests": [
+        {
+          "category": "coding",
+          "id": "heldout-staging-review",
+          "max_abs_logit_error": 3.603219985961914,
+          "max_relative_l2": 0.16133813828829527,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3590,
+          "top1_matches": 30
+        },
+        {
+          "category": "prose",
+          "id": "heldout-architecture-prose",
+          "max_abs_logit_error": 3.149404525756836,
+          "max_relative_l2": 0.14780135339746106,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3781,
+          "top1_matches": 31
+        },
+        {
+          "category": "reasoning",
+          "id": "heldout-scheduling-reasoning",
+          "max_abs_logit_error": 3.0070852041244507,
+          "max_relative_l2": 0.14695963034558124,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 2275,
+          "top1_matches": 31
+        }
+      ]
+    },
+    "no_fusion_cpu_only_control": {
+      "report": "full-prefill-down-20261018/no-fusion-cpu-control.json",
+      "checker_source_sha256": "57c5601c2c505aa9d331fd5c1b5e1f758a0739e69a18ea735e7f6934a63f406c",
+      "all_checks_passed": true,
+      "cuda_disable_fusion": "1",
+      "worst_max_abs_logit_error": 0.0,
+      "worst_relative_l2": 0.0,
+      "top1_matches": 96,
+      "requests": [
+        {
+          "category": "coding",
+          "id": "heldout-staging-review",
+          "max_abs_logit_error": 0.0,
+          "max_relative_l2": 0.0,
+          "passed": true,
+          "positions": 32,
+          "prompt_tokens": 3590,
+          "top1_matches": 32
+        },
+        {
+          "category": "prose",
+          "id": "heldout-architecture-prose",
+          "max_abs_logit_error": 0.0,
+          "max_relative_l2": 0.0,
+          "passed": true,
+          "positions": 32,
+          "prompt_tokens": 3781,
+          "top1_matches": 32
+        },
+        {
+          "category": "reasoning",
+          "id": "heldout-scheduling-reasoning",
+          "max_abs_logit_error": 0.0,
+          "max_relative_l2": 0.0,
+          "passed": true,
+          "positions": 32,
+          "prompt_tokens": 2275,
+          "top1_matches": 32
+        }
+      ]
+    },
+    "no_fusion_enabled": {
+      "report": "full-prefill-down-20261018/no-fusion-enabled.json",
+      "checker_source_sha256": "57c5601c2c505aa9d331fd5c1b5e1f758a0739e69a18ea735e7f6934a63f406c",
+      "all_checks_passed": false,
+      "cuda_disable_fusion": "1",
+      "worst_max_abs_logit_error": 10.00695013999939,
+      "worst_relative_l2": 0.3719005477727366,
+      "top1_matches": 92,
+      "requests": [
+        {
+          "category": "coding",
+          "id": "heldout-staging-review",
+          "max_abs_logit_error": 10.00695013999939,
+          "max_relative_l2": 0.3719005477727366,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3590,
+          "top1_matches": 31
+        },
+        {
+          "category": "prose",
+          "id": "heldout-architecture-prose",
+          "max_abs_logit_error": 3.352724075317383,
+          "max_relative_l2": 0.1453222333004877,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3781,
+          "top1_matches": 31
+        },
+        {
+          "category": "reasoning",
+          "id": "heldout-scheduling-reasoning",
+          "max_abs_logit_error": 6.667716979980469,
+          "max_relative_l2": 0.14297525831227878,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 2275,
+          "top1_matches": 30
+        }
+      ]
+    },
+    "no_fusion_enabled_audit": {
+      "report": "full-prefill-down-20261018/no-fusion-enabled-audit.json",
+      "checker_source_sha256": "528d27e1ebdaa85aa688f40a7d4f9f9f9dc96220321d6085eb9f4edc87e1ba6f",
+      "all_checks_passed": false,
+      "cuda_disable_fusion": "1",
+      "worst_max_abs_logit_error": 10.00695013999939,
+      "worst_relative_l2": 0.3719005477727366,
+      "top1_matches": 92,
+      "requests": [
+        {
+          "category": "coding",
+          "id": "heldout-staging-review",
+          "max_abs_logit_error": 10.00695013999939,
+          "max_relative_l2": 0.3719005477727366,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3590,
+          "top1_matches": 31
+        },
+        {
+          "category": "prose",
+          "id": "heldout-architecture-prose",
+          "max_abs_logit_error": 3.352724075317383,
+          "max_relative_l2": 0.1453222333004877,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3781,
+          "top1_matches": 31
+        },
+        {
+          "category": "reasoning",
+          "id": "heldout-scheduling-reasoning",
+          "max_abs_logit_error": 6.667716979980469,
+          "max_relative_l2": 0.14297525831227878,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 2275,
+          "top1_matches": 30
+        }
+      ]
+    },
+    "no_fusion_layer0_only": {
+      "report": "full-prefill-down-20261018/single-layer0-no-fusion.json",
+      "checker_source_sha256": "79c3e874cf7285d01f6d5414f0a9f1bf23d7f19011e1e15778a1c17edd53e78c",
+      "all_checks_passed": false,
+      "cuda_disable_fusion": "1",
+      "worst_max_abs_logit_error": 6.331846714019775,
+      "worst_relative_l2": 0.18680448096570354,
+      "top1_matches": 91,
+      "requests": [
+        {
+          "category": "coding",
+          "id": "heldout-staging-review",
+          "max_abs_logit_error": 6.331846714019775,
+          "max_relative_l2": 0.18680448096570354,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3590,
+          "top1_matches": 31
+        },
+        {
+          "category": "prose",
+          "id": "heldout-architecture-prose",
+          "max_abs_logit_error": 3.109858512878418,
+          "max_relative_l2": 0.15305306947361752,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 3781,
+          "top1_matches": 30
+        },
+        {
+          "category": "reasoning",
+          "id": "heldout-scheduling-reasoning",
+          "max_abs_logit_error": 5.427925109863281,
+          "max_relative_l2": 0.12758027648884843,
+          "passed": false,
+          "positions": 32,
+          "prompt_tokens": 2275,
+          "top1_matches": 30
+        }
+      ]
+    }
+  },
+  "bulk_dispatch_counts": {
+    "optimized_enabled": {
+      "batches": 735,
+      "rows": 337610,
+      "gpu_routes": 320597,
+      "cpu_routes": 1029843,
+      "admissions": 0
+    },
+    "optimized_cpu_only_control": {
+      "batches": 735,
+      "rows": 337610,
+      "gpu_routes": 0,
+      "cpu_routes": 1350440,
+      "admissions": 0
+    },
+    "no_fusion_cpu_only_control": {
+      "batches": 735,
+      "rows": 337610,
+      "gpu_routes": 0,
+      "cpu_routes": 1350440,
+      "admissions": 0
+    },
+    "no_fusion_enabled": {
+      "batches": 735,
+      "rows": 337610,
+      "gpu_routes": 324345,
+      "cpu_routes": 1026095,
+      "admissions": 0
+    },
+    "no_fusion_enabled_audit": {
+      "batches": 735,
+      "rows": 337610,
+      "gpu_routes": 324345,
+      "cpu_routes": 1026095,
+      "admissions": 0
+    },
+    "no_fusion_layer0_only": {
+      "batches": 735,
+      "rows": 337610,
+      "gpu_routes": 9378,
+      "cpu_routes": 1341062,
+      "admissions": 0
+    }
+  },
+  "local_oracle_audit": {
+    "scope": "Mixed-device weighted FFN output versus native CPU weighted down on the same live activations; fusion-off diagnostic, not performance.",
+    "layers": 35,
+    "batches": 735,
+    "failing_primitive_comparisons": 0,
+    "worst_relative_l2": 1.17104751e-07,
+    "primitive_gate": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001",
+    "by_layer": [
+      {
+        "layer": 0,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 1.14440918e-05,
+        "relative_l2": 8.28185903e-08
+      },
+      {
+        "layer": 1,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 1.14440918e-05,
+        "relative_l2": 1.12377811e-07
+      },
+      {
+        "layer": 2,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 1.33514404e-05,
+        "relative_l2": 1.06991189e-07
+      },
+      {
+        "layer": 3,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 2.28881836e-05,
+        "relative_l2": 1.17104751e-07
+      },
+      {
+        "layer": 4,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 3.05175781e-05,
+        "relative_l2": 1.03947059e-07
+      },
+      {
+        "layer": 5,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 3.05175781e-05,
+        "relative_l2": 1.138058e-07
+      },
+      {
+        "layer": 6,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 4.57763672e-05,
+        "relative_l2": 1.13965962e-07
+      },
+      {
+        "layer": 7,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 6.10351562e-05,
+        "relative_l2": 1.10999395e-07
+      },
+      {
+        "layer": 8,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000183105469,
+        "relative_l2": 1.02238746e-07
+      },
+      {
+        "layer": 9,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 7.62939453e-05,
+        "relative_l2": 1.02603402e-07
+      },
+      {
+        "layer": 10,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000183105469,
+        "relative_l2": 1.06457186e-07
+      },
+      {
+        "layer": 11,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000122070312,
+        "relative_l2": 9.06760509e-08
+      },
+      {
+        "layer": 12,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000183105469,
+        "relative_l2": 9.98154514e-08
+      },
+      {
+        "layer": 13,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000183105469,
+        "relative_l2": 8.84019634e-08
+      },
+      {
+        "layer": 14,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000244140625,
+        "relative_l2": 9.99287599e-08
+      },
+      {
+        "layer": 15,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00048828125,
+        "relative_l2": 9.57322968e-08
+      },
+      {
+        "layer": 16,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000244140625,
+        "relative_l2": 9.15146046e-08
+      },
+      {
+        "layer": 17,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000427246094,
+        "relative_l2": 9.81788895e-08
+      },
+      {
+        "layer": 18,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000610351562,
+        "relative_l2": 6.88241417e-08
+      },
+      {
+        "layer": 19,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.000610351562,
+        "relative_l2": 8.57627015e-08
+      },
+      {
+        "layer": 20,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00170898438,
+        "relative_l2": 9.85279683e-08
+      },
+      {
+        "layer": 21,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.0009765625,
+        "relative_l2": 9.3349404e-08
+      },
+      {
+        "layer": 22,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00122070312,
+        "relative_l2": 4.96964799e-08
+      },
+      {
+        "layer": 23,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00170898438,
+        "relative_l2": 1.05875008e-07
+      },
+      {
+        "layer": 24,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.001953125,
+        "relative_l2": 1.07857426e-07
+      },
+      {
+        "layer": 25,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00244140625,
+        "relative_l2": 9.97550326e-08
+      },
+      {
+        "layer": 26,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.0029296875,
+        "relative_l2": 8.71305131e-08
+      },
+      {
+        "layer": 27,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00244140625,
+        "relative_l2": 9.87190978e-08
+      },
+      {
+        "layer": 28,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00390625,
+        "relative_l2": 9.6412253e-08
+      },
+      {
+        "layer": 29,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.0048828125,
+        "relative_l2": 8.49973537e-08
+      },
+      {
+        "layer": 30,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00439453125,
+        "relative_l2": 1.06224199e-07
+      },
+      {
+        "layer": 31,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00390625,
+        "relative_l2": 5.96783351e-08
+      },
+      {
+        "layer": 32,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.00390625,
+        "relative_l2": 7.56085003e-08
+      },
+      {
+        "layer": 33,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.0029296875,
+        "relative_l2": 7.87078083e-08
+      },
+      {
+        "layer": 34,
+        "calls": 21,
+        "failures": 0,
+        "max_abs": 0.005859375,
+        "relative_l2": 7.55075245e-08
+      }
+    ],
+    "audit_does_not_replace_candidate_values": true,
+    "full_output_vector_audit_neutrality_separately_established": false
+  },
+  "interpretation": [
+    "Exact final default-off preservation separates the experimental path from baseline rebuild differences.",
+    "CPU-only routing control is exact under matched fusion-off execution but not the optimized profile, implicating a graph/fusion interaction without identifying its exact kernel cause.",
+    "Real GPU down fails even in fusion-off control and when limited to layer 0, despite all live local oracle comparisons passing near 1e-7.",
+    "Results support investigating small arithmetic changes amplified downstream through quantization/routing; the first amplifying operator is not yet established.",
+    "Compaction alone is not shown to resolve numerical fidelity. Do not widen gates, snap values or choose only passing layers."
+  ],
+  "validation": {
+    "focused_ctest_targets": 8,
+    "all_focused_tests_passed": true,
+    "checker_input_methods": 18,
+    "phase_graph_cache_default_off_and_bidirectional_separation_test": true,
+    "ordinary_backend_rejects_research_flag_before_gpu_init": true,
+    "server_functional_smoke": {
+      "kind": "functional_server_phase_smoke",
+      "performance_measurement": false,
+      "numerical_qualification": false,
+      "full_model_acceleration_claim": false,
+      "context": 16384,
+      "expert_cache_mib": 12000,
+      "authentication": "ephemeral loopback key; not recorded",
+      "status": "completed",
+      "health_checked": true,
+      "health_attempts": 31,
+      "prompt_tokens": 89,
+      "output_tokens": 16,
+      "output_sha256": "5e661aa721c07965dabe6706e92ed63f70a397e3c2d2c159e28ad470a3199949",
+      "owned_server_stopped": true,
+      "prefill_dispatch_marker": "0.05.530.197 W VRAMBridge resident-down prefill batches=105 rows=3115 GPU routes=3885 CPU routes=8575 admissions=0"
+    },
+    "full_prototype_sanitizer_qualification": "not performed; prior isolated-operator sanitizer results do not cover this full prototype",
+    "peak_memory_or_residency_performance_qualification": false
+  },
+  "source_sha256": {
+    "tools/trace/logit_check.cpp": "79c3e874cf7285d01f6d5414f0a9f1bf23d7f19011e1e15778a1c17edd53e78c",
+    "tests/test_logit_checker.py": "ee7d172ecd33288f2af7fa486c58a7ef57fa348bebb61337f4ddb6c7155e83bc",
+    "tests/test_prefill_phase.cpp": "0ba96b8f985031d38a4ee8806c4467566a118586349434005d813a2eb76d5706",
+    "CMakeLists.txt": "72de2e40af8de34966df6ff6f0f632491bde00782a311efc7d80fe1829c53afe"
+  },
+  "public_evidence_index": [
+    {
+      "path": "full-prefill-down-20261018/final-default-off.json",
+      "sha256": "beede7ec6a3099ba70b5abf119e94e7666ff9c1f34287a592f931bb77e22b69a"
+    },
+    {
+      "path": "full-prefill-down-20261018/final-default-off.log",
+      "sha256": "9de506165f191ea4fe37a7de4f31e4e1277f6e85c4fc9c789c6af98632019199"
+    },
+    {
+      "path": "full-prefill-down-20261018/final-enabled.json",
+      "sha256": "ea93c7f1f937131d86e0927448e9e6ac61da436fc71e99b0b92c25c601b71fa4"
+    },
+    {
+      "path": "full-prefill-down-20261018/final-enabled.log",
+      "sha256": "d1103aab29e94c0a35cdeef032d54e0cbc3573a837effaab682fac399cdd85d9"
+    },
+    {
+      "path": "full-prefill-down-20261018/full-target-cpu-control.json",
+      "sha256": "fea2d028a2e19831c25a49f0038682fa6473e40911d7a33e047a0f64482e65cf"
+    },
+    {
+      "path": "full-prefill-down-20261018/full-target-cpu-control.log",
+      "sha256": "5642773b73d52b9d461f255cfadfbd372204a2513cfaf8a0baf5596bdb393f55"
+    },
+    {
+      "path": "full-prefill-down-20261018/no-fusion-cpu-control.json",
+      "sha256": "2ca3b996ecd9051def6e9c1b66f30cd6a2871eb2f74c9544e9fc00db29a9dee7"
+    },
+    {
+      "path": "full-prefill-down-20261018/no-fusion-cpu-control.log",
+      "sha256": "8fda8bb3028551f487d17d33536732d61ab5cb5a525bcbb8ff12a71c4f85188b"
+    },
+    {
+      "path": "full-prefill-down-20261018/no-fusion-enabled.json",
+      "sha256": "881b475de2abe2ef5743ef29c0ef7b5f0870099aee4c0c1b64bacf3d4e56e5a7"
+    },
+    {
+      "path": "full-prefill-down-20261018/no-fusion-enabled.log",
+      "sha256": "f957423067b6736bdeaa419cb543d8ead8f251bc0c8554f540deb1cef98e3122"
+    },
+    {
+      "path": "full-prefill-down-20261018/no-fusion-enabled-audit.json",
+      "sha256": "b599abf1ca36d4669363c2af5f1a9277cfa31a88d0a6be74710e56fef6483a88"
+    },
+    {
+      "path": "full-prefill-down-20261018/no-fusion-enabled-audit.log",
+      "sha256": "4dc2a44fd4f9a10a62595b9390147cfd213df71c494f0398ce9a56e9eac51552"
+    },
+    {
+      "path": "full-prefill-down-20261018/single-layer0-no-fusion.json",
+      "sha256": "8010ca2a2dbf8bd94d29c85c4a461df8cff82671b856042597c394d3f0aad549"
+    },
+    {
+      "path": "full-prefill-down-20261018/single-layer0-no-fusion.log",
+      "sha256": "12fe68825b3ed39bec95e3350d8aafd3366ced02d91a743fc172e70b707d4f24"
+    },
+    {
+      "path": "full-prefill-down-20261018/full-target-reference.json",
+      "sha256": "fe90d7a151ea4ff4f04103964b3baafb93b1896731a99b79d7221e995f8faa6d"
+    },
+    {
+      "path": "full-prefill-down-20261018/full-target-reference.log",
+      "sha256": "244bfc946ec49b6294c4fdfa4e57cf74876ce73a8a17829f014dec7df1f17c39"
+    },
+    {
+      "path": "full-prefill-down-20261018/no-fusion-reference.json",
+      "sha256": "7602fc0f8f50a99bffeed99ee465e61fa7e1ef4f3665ea242f92f9222203eec6"
+    },
+    {
+      "path": "full-prefill-down-20261018/no-fusion-reference.log",
+      "sha256": "aac53e7bf0fd75280e75d829cd463d10749d44a52e449c3fbeade6aff4b020cc"
+    },
+    {
+      "path": "full-prefill-down-20261018/local-audit-metrics.json",
+      "sha256": "616775017096833308941e0ebfe0a5c6e0112be414cd56751b90a254e24e1f34"
+    },
+    {
+      "path": "full-prefill-down-20261018/server-functional-smoke.json",
+      "sha256": "82f9099b6b39044720b413ccbdcb9f70c9a29ff66cedd88c40888f1ee792229f"
+    },
+    {
+      "path": "full-prefill-down-20261018/server-functional-smoke.log",
+      "sha256": "b19796e70b15b014fc439949e30f46b1b66455b5f947698dda0df8628b12e2b4"
+    }
+  ],
+  "private_evidence_metadata": [
+    {
+      "path": "full-prefill-down-20261018/installed-hybrid-reference.bin",
+      "sha256": "18d6b1d1c63b888d42fadc812bee1ffdc9fcbf4dbd68d2760d72e1d45573a540",
+      "bytes": 77256985,
+      "publish": false
+    },
+    {
+      "path": "full-prefill-down-20261018/no-fusion-hybrid-reference.bin",
+      "sha256": "fc9841527689fd87c80912fb625328d76bfd6d6dc95b2e80a6eeeb97504ea42e",
+      "bytes": 77256985,
+      "publish": false
+    },
+    {
+      "path": "actual-prefill-split-20261018/heldout-three-category-corpus.jsonl",
+      "sha256": "6f844e38a40a601bfd6999550408715d3e5976ebac596a39382130e4136506fc",
+      "bytes": 43983,
+      "publish": false
+    }
+  ],
+  "installed_libraries_changed": false,
+  "application_defaults_changed": false,
+  "raw_logits_or_token_ids_published": false,
+  "next_step": "Precision/fusion localization before compact dispatch or accepted-output request benchmarks; keep experimental mode off and Synapse installer pins unchanged."
+}

@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "kind": "optimized_verification_research",
+  "date": "2026-10-19",
+  "status": "numerical_advancement_without_qualified_throughput_gain",
+  "goal": {
+    "target": "unchanged GPT-OSS-120B MXFP4",
+    "accepted_output_tok_s": 60,
+    "achieved": false,
+    "synapse_rollout_ready": false,
+    "held_out_three_pair_512_output_confirmation_completed": false
+  },
+  "boundaries": {
+    "research": "https://github.com/appatalks/unified-memory-scheduler",
+    "downstream_read_only": "https://github.com/appatalks/Synapse",
+    "synapse_revision_inspected": "545a7ebf4a6dea3dd4a1ac04760057eed2de1b15",
+    "installed_backends_changed": false,
+    "original_models_changed": false,
+    "committed_or_pushed_during_experiments": false,
+    "raw_prompts_tokens_logits_paths_or_addresses_in_summary": false
+  },
+  "installed_synapse_comparison": {
+    "managed_launcher_profile_inspected_read_only": true,
+    "installed_runtime_source_matches_local_app_py": true,
+    "local_synapse_revision_inspected": "f7b1668f83140f1b284eb73beb29fbd1dd40ea59",
+    "profile_context": 16384,
+    "profile_expert_cache_mib": 12000,
+    "profile_transfer": "direct",
+    "profile_decode_pipeline": true,
+    "profile_async_ids": true,
+    "earlier_async_id_technique_already_enabled": true,
+    "installed_runtime_rejects_hybrid_speculation": true,
+    "matched_installed_deployment_performance_comparison_completed": false,
+    "faster_than_installed_synapse_established": false
+  },
+  "target_controls": {
+    "backend_pin": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+    "context": 16384,
+    "kv_types": ["f16", "f16"],
+    "generation_threads": 8,
+    "prefill_threads": 16,
+    "physical_prefill_batch": 512,
+    "selected_resident_experts": 944,
+    "allocated_bank_slots_including_reserve": 948,
+    "requested_expert_cache_mib": 12000,
+    "actual_expert_cache_mib": 11995.16,
+    "adaptive_residency": false,
+    "decode_weight_migration": false
+  },
+  "numerical": {
+    "max_absolute_threshold": 0.01,
+    "relative_l2_threshold": 0.001,
+    "thresholds_unchanged": true,
+    "older_global_canonical_contract_still_differs_from_optimized": true,
+    "optimized_preserving_windows": {
+      "models": ["GPT-OSS", "Qwen"],
+      "short_widths_passed": [2, 3, 4],
+      "long_widths_passed": [2, 4],
+      "observed_max_absolute_error": 0,
+      "observed_max_relative_l2": 0
+    },
+    "initial_gpt_rejected_suffix_matrix": {
+      "positions": 1056,
+      "rejected_suffix_windows": 337,
+      "max_absolute_error": 0,
+      "max_relative_l2": 0
+    },
+    "qwen_single_sequence_tail_removal_only": "unsupported; recurrent snapshot/copy rollback remains unqualified",
+    "selective_kv_matrix": {
+      "positions": 864,
+      "rejected_suffix_windows": 270,
+      "discarded_input_tokens": 450,
+      "short_widths": [2, 4],
+      "long_width": 4,
+      "long_prompt_lengths": [4048, 4099, 4112],
+      "max_absolute_error": 0,
+      "max_relative_l2": 0,
+      "owner_tracker_drained": true
+    },
+    "expert_product_ablation": {
+      "native_widths_tested": [2, 4],
+      "native_passed": false,
+      "native_max_absolute_error": 4.624174118041992,
+      "native_max_relative_l2": 0.14876816407909926,
+      "restored_columns_positions": 288,
+      "restored_columns_max_absolute_error": 0,
+      "restored_columns_max_relative_l2": 0
+    }
+  },
+  "draft": {
+    "origin": "pre-existing verified BF16 GPT DFlash model",
+    "original_bytes": 1582738368,
+    "proposal_only_q4_0_bytes": 454803648,
+    "q4_0_tensors": 57,
+    "f32_tensors": 66,
+    "target_precision_changed": false,
+    "original_preserved": true,
+    "q5_or_q8_derivative_created": false
+  },
+  "calibration": {
+    "split": "train",
+    "output_tokens_per_request": 256,
+    "fresh_pairs": 1,
+    "rate_definition": "(accepted outputs - 1) / wall seconds after first output",
+    "candidate": "DFlash Q4_0, two rows, eight verification threads, selective cold KV, ordinary device weights",
+    "global_managed_memory": false,
+    "rows": [
+      {
+        "category": "coding",
+        "scalar_tok_s": 41.03008378369867,
+        "candidate_tok_s": 37.48828406773794,
+        "change_percent": -8.63220200726934,
+        "scalar_request_seconds": 7.953449,
+        "candidate_request_seconds": 8.668407,
+        "full_output_equal": true,
+        "offered_draft_tokens": 145,
+        "accepted_draft_tokens": 109
+      },
+      {
+        "category": "reasoning",
+        "scalar_tok_s": 25.10010855440432,
+        "candidate_tok_s": 24.458439965780695,
+        "change_percent": -2.556437503976572,
+        "scalar_request_seconds": 12.035627,
+        "candidate_request_seconds": 12.329661,
+        "full_output_equal": true,
+        "offered_draft_tokens": 140,
+        "accepted_draft_tokens": 114
+      },
+      {
+        "category": "prose",
+        "scalar_tok_s": 35.64697945913173,
+        "candidate_tok_s": 30.512895321060885,
+        "change_percent": -14.402578327728799,
+        "scalar_request_seconds": 8.831441,
+        "candidate_request_seconds": 10.058833,
+        "full_output_equal": true,
+        "offered_draft_tokens": 163,
+        "accepted_draft_tokens": 92
+      }
+    ],
+    "physical_generation_read_bytes_both_arms": 0,
+    "owned_process_swap_bytes_both_arms": 0,
+    "cpu_core_equivalents_approximately": 8,
+    "confirmation_promoted": false
+  },
+  "four_row_smoke": {
+    "category": "coding",
+    "output_tokens": 64,
+    "accepted_output_tok_s": 32.44931807188005,
+    "scalar_prefix_equal": true,
+    "draft_tokens_offered": 65,
+    "draft_tokens_accepted": 40,
+    "reported_mean_window_length": 2.82,
+    "confirmation_promoted": false
+  },
+  "thread_policy_screen_global_managed_two_rows": {
+    "categories": ["coding", "reasoning", "prose"],
+    "sixteen_threads_tok_s": [34.05678088639327, 22.93062607683545, 28.708259831918436],
+    "eight_threads_tok_s": [36.889318718985706, 24.98409865975615, 31.249453130741035],
+    "cpu_core_equivalents_before_approximately": 15.8,
+    "cpu_core_equivalents_after_approximately": 7.9,
+    "beats_original_scalar": false
+  },
+  "exact_cpu_packing": {
+    "low_level_bit_exact_checks": 3432,
+    "full_vocabulary_positions": 288,
+    "max_absolute_error": 0,
+    "max_relative_l2": 0,
+    "isolated_warm_single_thread_speed_ratio_approximately": 2.1,
+    "categories": ["coding", "reasoning", "prose"],
+    "fresh_scalar_tok_s": [42.16492171992148, 25.96232449851959, 35.51011516959921],
+    "exact_packed_tok_s": [37.12195701023628, 23.593510823908588, 32.21169419926136],
+    "full_outputs_equal": true,
+    "anonymous_gib_approximately": 57.3,
+    "load_seconds_approximately": 14.9,
+    "gemv_calls_approximately": 9850000,
+    "gemm_calls": 0,
+    "activation_pack_calls": 0,
+    "whole_request_gain": false,
+    "slowdown_cause_established": false,
+    "ordinary_repack_max_absolute_error": 4.823772430419922
+  },
+  "selective_kv": {
+    "small_gpu_roundtrip_passed": true,
+    "managed_kv_pointer_verified": true,
+    "completed_cpu_prefetch_location_verified": true,
+    "normal_and_mixed_contexts_remained_device_allocations": true,
+    "views_tested": true,
+    "target_logical_kv_bytes": 632291328,
+    "target_plus_draft_logical_kv_bytes": 900726784,
+    "live_managed_allocation_calls": 3,
+    "live_cpu_stage_requests": 11,
+    "live_requested_stage_bytes_not_measured_transfers": 3334471680,
+    "owner_buffers_remaining_after_shutdown": 0,
+    "context_or_precision_changed": false,
+    "global_managed_mode": false,
+    "physical_gpu_two_row_ready_used_bytes": 17006264320,
+    "physical_gpu_total_bytes": 17094934528,
+    "physical_vram_savings_established": false,
+    "pcie_transfer_savings_established": false
+  },
+  "retained_failures": [
+    "older canonical versus optimized numerical incompatibility",
+    "window capacity changing final prefill placement before both guards were corrected",
+    "intermediate slot-map mismatch causing CUDA illegal access; excluded",
+    "ordinary CPU repacking numerical failure",
+    "exact CPU repacking whole-request slowdown",
+    "selective KV DFlash calibration slowdown",
+    "native expert-product ablation numerical failure"
+  ],
+  "energy_savings_established": false,
+  "broad_answer_quality_established": false,
+  "next_evidence_gate": "First establish a matched baseline against the installed Synapse profile. Then profile exact verification and test shared multirow execution only at measured hot operators while preserving scalar reductions, masks and KV partition/combine policy.",
+  "new_fused_launcher_implemented": false,
+  "full_model_acceleration_claim": false
+}

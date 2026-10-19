@@ -55,6 +55,9 @@ struct Trace {
     std::string phase;
     std::string error;
     int token = 0;
+    bool prefill_enabled = false;
+    json prefill_batches = json::array();
+    json prefill_requests = json::array();
 
     void emit(const json & value) {
         const std::string line = value.dump() + '\n';
@@ -66,7 +69,8 @@ struct Trace {
 
 static bool routing_callback(ggml_tensor * tensor, bool ask, void * data) noexcept {
     auto & trace = *static_cast<Trace *>(data);
-    if (trace.phase != "decode") {
+    const bool prefill = trace.prefill_enabled && trace.phase == "prefill";
+    if (trace.phase != "decode" && !prefill) {
         return !ask;
     }
     const std::string prefix = "ffn_moe_topk-";
@@ -87,11 +91,15 @@ static bool routing_callback(ggml_tensor * tensor, bool ask, void * data) noexce
         }
         const auto & layer = trace.layers.at(layer_id);
         if (tensor->type != GGML_TYPE_I32 || tensor->ne[0] != layer.active ||
-            tensor->ne[1] != 1 || tensor->ne[2] != 1 || tensor->ne[3] != 1) {
-            throw std::runtime_error("Unsupported routing tensor shape/type: " + name);
+            tensor->ne[1] < (prefill ? 0 : 1) || tensor->ne[1] > (prefill ? 32768 : 1) ||
+            tensor->ne[2] != 1 || tensor->ne[3] != 1 || ggml_nbytes(tensor) > 16 * 1024 * 1024) {
+            throw std::runtime_error("Unsupported routing tensor shape/type: " + name + " type=" +
+                ggml_type_name(tensor->type) + " shape=" +
+                json({tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3]}).dump());
         }
         std::vector<uint8_t> values(ggml_nbytes(tensor));
-        ggml_backend_tensor_get(tensor, values.data(), 0, values.size());
+        std::vector<int> row_counts(prefill ? layer.experts : 0, 0);
+        if (!values.empty()) ggml_backend_tensor_get(tensor, values.data(), 0, values.size());
         for (int64_t column = 0; column < tensor->ne[1]; ++column) {
             std::vector<int32_t> experts;
             std::set<int32_t> unique;
@@ -106,16 +114,83 @@ static bool routing_callback(ggml_tensor * tensor, bool ask, void * data) noexce
                     throw std::runtime_error("Out-of-range or duplicate routed expert.");
                 }
                 experts.push_back(expert);
+                if (prefill) ++row_counts[expert];
             }
-            trace.emit({{"type", "route"}, {"request", trace.request}, {"phase", trace.phase},
-                        {"token", trace.token}, {"layer", layer_id}, {"experts", experts}});
-            ++trace.counts[layer_id];
+            if (!prefill) {
+                trace.emit({{"type", "route"}, {"request", trace.request}, {"phase", trace.phase},
+                            {"token", trace.token}, {"layer", layer_id}, {"experts", experts}});
+                ++trace.counts[layer_id];
+            }
+        }
+        if (prefill) {
+            trace.prefill_batches.push_back({{"layer", layer_id}, {"rows", tensor->ne[1]},
+                {"active_experts_per_row", layer.active}, {"expert_row_counts", row_counts}});
         }
         return true;
     } catch (const std::exception & exc) {
         trace.error = exc.what();
         return false;
     }
+}
+
+static int prefill_self_test() {
+    ggml_backend_load_all_from_path(VRAMBRIDGE_LLAMA_LIBRARY_DIR);
+    auto * device = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU);
+    if (!device) throw std::runtime_error("Prefill self-test requires a CPU backend.");
+    std::unique_ptr<ggml_backend, decltype(&ggml_backend_free)> backend(
+        ggml_backend_dev_init(device, nullptr), ggml_backend_free);
+    std::unique_ptr<ggml_context, decltype(&ggml_free)> ctx(
+        ggml_init({1024 * 1024, nullptr, true}), ggml_free);
+    if (!backend || !ctx) throw std::runtime_error("Cannot initialize prefill self-test.");
+    auto * storage = ggml_new_tensor_2d(ctx.get(), GGML_TYPE_I32, 3, 3);
+    auto * ids = ggml_view_2d(ctx.get(), storage, 2, 3, storage->nb[1], 0);
+    auto * wrong_shape = ggml_new_tensor_2d(ctx.get(), GGML_TYPE_I32, 1, 3);
+    auto * zero_rows = ggml_new_tensor_2d(ctx.get(), GGML_TYPE_I32, 2, 0);
+    ggml_set_name(ids, "ffn_moe_topk-0");
+    ggml_set_name(wrong_shape, "ffn_moe_topk-0");
+    ggml_set_name(zero_rows, "ffn_moe_topk-0");
+    std::unique_ptr<ggml_backend_buffer, decltype(&ggml_backend_buffer_free)> buffer(
+        ggml_backend_alloc_ctx_tensors(ctx.get(), backend.get()), ggml_backend_buffer_free);
+    if (!buffer) throw std::runtime_error("Cannot allocate prefill self-test tensors.");
+    std::vector<int32_t> values{0, 1, 99, 1, 2, 99, 2, 3, 99};
+    ggml_backend_tensor_set(storage, values.data(), 0, values.size() * sizeof(int32_t));
+    Trace trace;
+    trace.layers[0].experts = 4;
+    trace.layers[0].active = 2;
+    trace.prefill_enabled = true;
+    trace.phase = "prefill";
+    if (!routing_callback(ids, true, &trace) || !routing_callback(ids, false, &trace) ||
+        trace.prefill_batches.size() != 1 ||
+        trace.prefill_batches[0].at("expert_row_counts") != json({1, 2, 2, 1})) {
+        throw std::runtime_error("Strided prefill histogram self-test failed: " + trace.error);
+    }
+    const auto histogram = trace.prefill_batches[0];
+    for (int invalid : {0, 4}) {
+        values[1] = invalid;
+        ggml_backend_tensor_set(storage, values.data(), 0, values.size() * sizeof(int32_t));
+        trace.error.clear();
+        if (routing_callback(ids, false, &trace) || trace.error.empty() || trace.prefill_batches.size() != 1) {
+            throw std::runtime_error("Invalid prefill routing was not rejected.");
+        }
+    }
+    trace.error.clear();
+    if (routing_callback(wrong_shape, false, &trace) || trace.error.empty()) {
+        throw std::runtime_error("Invalid prefill shape was not rejected.");
+    }
+    trace.error.clear();
+    if (!routing_callback(zero_rows, false, &trace) || !trace.error.empty() ||
+        trace.prefill_batches.size() != 2 || trace.prefill_batches[1].at("rows") != 0) {
+        throw std::runtime_error("Zero-row pruned prefill observation was not recorded.");
+    }
+    trace.phase.clear();
+    if (routing_callback(ids, true, &trace)) {
+        throw std::runtime_error("Inactive prefill callback requested a tensor.");
+    }
+    std::cout << json({{"self_test", true}, {"strided_histogram", histogram},
+        {"invalid_routes_rejected", true}, {"invalid_shape_rejected", true},
+        {"zero_rows_recorded", true},
+        {"inactive_callback_skips_capture", true}}).dump() << '\n';
+    return 0;
 }
 
 static std::vector<Request> read_corpus(const fs::path & path) {
@@ -282,8 +357,21 @@ static void run_request(Trace & trace, const Request & request, llama_context * 
                 {"category", request.category}, {"prompt_tokens", tokens.size()},
                 {"max_tokens", request.tokens}});
     // Prefill can prune the final layer to output positions; it is not a complete routing trace.
-    trace.phase.clear();
+    trace.prefill_batches = json::array();
+    trace.phase = trace.prefill_enabled ? "prefill" : "";
     evaluate_prompt(ctx, tokens);
+    if (!trace.error.empty()) throw std::runtime_error("Prefill capture failed: " + trace.error);
+    std::map<int, int64_t> observed_rows;
+    if (trace.prefill_enabled) {
+        for (const auto & batch : trace.prefill_batches) {
+            observed_rows[batch.at("layer").get<int>()] += batch.at("rows").get<int64_t>();
+        }
+        for (const auto & [id, layer] : trace.layers) {
+            if (observed_rows[id] <= 0 || observed_rows[id] > static_cast<int64_t>(tokens.size())) {
+                throw std::runtime_error("Missing or duplicate prefill layer observations.");
+            }
+        }
+    }
     trace.counts.clear();
     trace.phase = "decode";
     std::unique_ptr<llama_sampler, decltype(&llama_sampler_free)> sampler(
@@ -326,6 +414,17 @@ static void run_request(Trace & trace, const Request & request, llama_context * 
     }
     trace.emit({{"type", "request_end"}, {"id", request.id}, {"decode_tokens", decoded},
                 {"stop_reason", stop}, {"token_sequence_equivalent", true}});
+    if (trace.prefill_enabled) {
+        json coverage = json::array();
+        for (const auto & [id, rows] : observed_rows) {
+            coverage.push_back({{"layer", id}, {"observed_rows", rows},
+                {"covers_all_prompt_rows", rows == static_cast<int64_t>(tokens.size())}});
+        }
+        trace.prefill_requests.push_back({{"id", request.id}, {"split", request.split},
+            {"category", request.category}, {"prompt_tokens", tokens.size()},
+            {"token_sequence_equivalent", true}, {"coverage", coverage},
+            {"batches", trace.prefill_batches}});
+    }
     if (std::fflush(trace.output.get()) != 0) {
         throw std::runtime_error("Failed to flush routing trace.");
     }
@@ -336,22 +435,29 @@ static void run_request(Trace & trace, const Request & request, llama_context * 
 static int run(int argc, char ** argv) {
     fs::path corpus;
     fs::path destination;
+    fs::path prefill_destination;
     std::vector<char *> backend_args{argv[0]};
     bool cpu_only = false;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--help") {
             std::cout << "Usage: vrambridge-trace --trace-corpus corpus.jsonl --trace-output trace.jsonl "
+                         "[--prefill-output summary.json] "
                          "[matching llama.cpp arguments, including --model]\n"
                          "Only the pinned official backend is supported. Collection synchronizes routing tensors; "
-                         "its timings are not inference benchmarks. Prompt/output text is not stored.\n";
+                         "its timings are not inference benchmarks. Prompt/output text is not stored. "
+                         "Prefill summaries retain observed expert row histograms, including pruned final-layer coverage. "
+                         "Or --prefill-self-test for CPU-only strided histogram and invalid-input checks.\n";
             return 0;
         }
-        if (arg == "--trace-corpus" || arg == "--trace-output") {
+        if (arg == "--prefill-self-test" && argc == 2) return prefill_self_test();
+        if (arg == "--trace-corpus" || arg == "--trace-output" || arg == "--prefill-output") {
             if (++i >= argc) {
                 throw std::runtime_error("Missing trace option value.");
             }
-            (arg == "--trace-corpus" ? corpus : destination) = argv[i];
+            if (arg == "--trace-corpus") corpus = argv[i];
+            else if (arg == "--trace-output") destination = argv[i];
+            else prefill_destination = argv[i];
         } else {
             if ((arg == "--n-gpu-layers" || arg == "--gpu-layers" || arg == "-ngl") && i + 1 < argc) {
                 cpu_only = std::string(argv[i + 1]) == "0";
@@ -367,12 +473,24 @@ static int run(int argc, char ** argv) {
     if (fs::exists(destination) || fs::exists(partial)) {
         throw std::runtime_error("Refusing to overwrite an existing trace or partial trace.");
     }
+    if (!prefill_destination.empty()) {
+        std::set<fs::path> paths{fs::weakly_canonical(corpus), fs::weakly_canonical(destination),
+                               fs::weakly_canonical(partial)};
+        if (!paths.insert(fs::weakly_canonical(prefill_destination)).second ||
+            !paths.insert(fs::weakly_canonical(prefill_destination.string() + ".part")).second) {
+            throw std::runtime_error("Prefill output must not alias the corpus, trace, or partial paths.");
+        }
+        if (fs::exists(prefill_destination) || fs::exists(prefill_destination.string() + ".part")) {
+            throw std::runtime_error("Refusing to overwrite an existing prefill summary or partial.");
+        }
+    }
     const std::string identity = llama_commit();
     if (identity.size() < 7 ||
         std::string("620d2225cc436ab0b001e3200e590e3b286ef9ab").rfind(identity, 0) != 0) {
         throw std::runtime_error("Linked llama.cpp build does not match the supported commit.");
     }
     Trace trace;
+    trace.prefill_enabled = !prefill_destination.empty();
     ggml_backend_load_all_from_path(VRAMBRIDGE_LLAMA_LIBRARY_DIR);
     if (ggml_backend_dev_count() == 0) {
         throw std::runtime_error("No backends loaded from the matching library directory.");
@@ -461,6 +579,27 @@ static int run(int argc, char ** argv) {
     }
     fs::create_hard_link(partial, destination);
     fs::remove(partial);
+    if (trace.prefill_enabled) {
+        if (!prefill_destination.parent_path().empty()) fs::create_directories(prefill_destination.parent_path());
+        const fs::path prefill_partial = prefill_destination.string() + ".part";
+        std::unique_ptr<FILE, CloseFile> output(std::fopen(prefill_partial.c_str(), "wx"));
+        if (!output) throw std::runtime_error("Cannot exclusively create prefill summary.");
+        const auto serialized = json({{"schema_version", 1}, {"capture_scope", "observed_prefill_expert_rows"},
+            {"instrumented", true}, {"performance_measurement", false}, {"full_model_acceleration_claim", false},
+            {"collector_source_sha256", VRAMBRIDGE_TRACE_SOURCE_SHA256}, {"backend_commit", llama_commit()},
+            {"model", fs::path(params.model.path).filename().string()}, {"architecture", arch},
+            {"batch_size", params.n_batch}, {"microbatch_size", params.n_ubatch},
+            {"context_tokens", llama_n_ctx(initialized->context())}, {"cpu_threads", params.cpuparams.n_threads},
+            {"batch_threads", params.cpuparams_batch.n_threads}, {"layers", layers},
+            {"coverage_note", "Observed graph rows only; final-layer output pruning can omit prompt positions."},
+            {"requests", trace.prefill_requests}, {"complete", true}}).dump(2) + '\n';
+        if (std::fwrite(serialized.data(), 1, serialized.size(), output.get()) != serialized.size() ||
+            std::fclose(output.release()) != 0) {
+            throw std::runtime_error("Failed to publish complete prefill summary.");
+        }
+        fs::create_hard_link(prefill_partial, prefill_destination);
+        fs::remove(prefill_partial);
+    }
     initialized.reset();
     llama_backend_free();
     std::cout << destination.string() << '\n';

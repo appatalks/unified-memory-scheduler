@@ -343,9 +343,18 @@ class Runtime:
                  hybrid_layout: dict | None = None, hybrid_generic: bool = False,
                  hybrid_context: int = 16384, hybrid_cache_mib: int = 10240, hybrid_transfer: str = "direct",
                  hybrid_decode_pipeline: bool = False, hybrid_async_ids: bool = False,
-                 hybrid_generic_cache_mib: int | None = None, hybrid_generic_transfer: str | None = None):
+                 hybrid_generic_cache_mib: int | None = None, hybrid_generic_transfer: str | None = None,
+                 research_batch_sizes: tuple[int, int] | None = None):
         if backend_kind not in ("llama.cpp", "ik_llama.cpp"):
             raise ValueError("Unsupported backend kind.")
+        if research_batch_sizes is not None:
+            if (backend_kind != "llama.cpp" or not isinstance(research_batch_sizes, tuple) or
+                    len(research_batch_sizes) != 2 or
+                    any(type(value) is not int or not 32 <= value <= 2048 for value in research_batch_sizes) or
+                    research_batch_sizes[1] > research_batch_sizes[0]):
+                raise ValueError("Invalid bounded research batch sizes.")
+        self.research_batch_sizes = research_batch_sizes
+        self.observed_batch_sizes: dict[str, int] = {}
         if (hybrid_plan is None) != (hybrid_cuda_plugin is None):
             raise ValueError("Hybrid execution requires both a plan and the matching CUDA plugin.")
         self.default_execution_mode = execution_mode or ("hybrid" if hybrid_plan is not None else "standard")
@@ -740,6 +749,11 @@ class Runtime:
                 "--api-key", self.key, "--ctx-size", str(context), "--parallel", "1",
                 "--threads", str(cpu_threads), "--threads-batch", str(batch_threads),
             ]
+            if self.research_batch_sizes is not None:
+                logical, physical = self.research_batch_sizes
+                if logical > context:
+                    raise AppError(400, "Research batch size must not exceed the requested context.")
+                command += ["--batch-size", str(logical), "--ubatch-size", str(physical), "--verbosity", "4"]
             if selected_executable.lower().endswith(".py"):
                 command.insert(0, sys.executable)
             if self.backend_kind == "llama.cpp":
@@ -795,6 +809,7 @@ class Runtime:
             if self.backend_kind == "llama.cpp":
                 environment["GGML_OP_OFFLOAD_MIN_BATCH"] = str(op_offload_min_batch)
             self.logs.clear()
+            self.observed_batch_sizes.clear()
             self.hybrid_markers.clear()
             self.executable = selected_executable
             self.hybrid_active = hybrid
@@ -857,6 +872,11 @@ class Runtime:
                 with self.lock:
                     if self.process is process:
                         self.logs.append(line.rstrip().replace(key, "[redacted]")[:2000])
+                        # The native logger can truncate the constructor name to twelve characters.
+                        if self.state == "loading" and "llama_contex" in line:
+                            observed_batch = re.search(r"\b(n_batch|n_ubatch)\s*=\s*(\d+)\b", line)
+                            if observed_batch:
+                                self.observed_batch_sizes[observed_batch[1]] = int(observed_batch[2])
                         if self.hybrid_active:
                             if f"EXPERIMENTAL HYBRID enabled: {self.hybrid_experts} selected experts; adaptive admissions" in line:
                                 self.hybrid_markers.add("hybrid")

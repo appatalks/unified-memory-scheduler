@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vrambridge.dev/schema/routed-ffn-replay-v1.json",
+  "title": "Bounded actual-routing FFN numerical replay",
+  "type": "object",
+  "required": ["schema_version", "kind", "backend_commit", "probe_source_sha256", "capture", "activation_source", "independent_scalar_reference", "raw_activations_recorded", "raw_routing_recorded", "timings_qualified", "performance_measurement", "full_model_acceleration_claim", "general_model_quality_established", "expert_bank_size", "active_experts_per_row", "distinct_ordered_routes", "expert_row_counts", "routing_probabilities_modified", "routing_experts_modified", "cpu_vs_reference", "candidate_vs_reference", "candidate_vs_cpu", "operator_diagnostics", "all_checks_passed"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "routed_ffn_replay"},
+    "probe_source_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "activation_source": {"enum": ["synthetic_routed_fixture", "actual_prefill_capture"]},
+    "independent_scalar_reference": {"type": "boolean"},
+    "raw_activations_recorded": {"const": false},
+    "raw_routing_recorded": {"const": false},
+    "timings_qualified": {"const": false},
+    "performance_measurement": {"const": false},
+    "full_model_acceleration_claim": {"const": false},
+    "general_model_quality_established": {"const": false},
+    "routing_probabilities_modified": {"const": false},
+    "routing_experts_modified": {"const": false},
+    "expert_bank_size": {"type": "integer", "minimum": 4, "maximum": 128},
+    "active_experts_per_row": {"const": 4},
+    "distinct_ordered_routes": {"type": "integer", "minimum": 1, "maximum": 64},
+    "expert_row_counts": {"type": "array", "minItems": 4, "maxItems": 128, "items": {"type": "integer", "minimum": 1, "maximum": 64}},
+    "capture": {
+      "type": "object",
+      "required": ["request", "category", "native_rows", "rows", "row_offset", "layer", "observed_empty_batches"],
+      "properties": {
+        "request": {"type": "string", "minLength": 1, "maxLength": 128},
+        "category": {"enum": ["coding", "prose", "reasoning"]},
+        "native_rows": {"type": "integer", "minimum": 1, "maximum": 2048},
+        "rows": {"type": "integer", "minimum": 1, "maximum": 64},
+        "row_offset": {"type": "integer", "minimum": 0, "maximum": 2047},
+        "layer": {"type": "integer", "minimum": 0, "maximum": 35},
+        "observed_empty_batches": {"type": "integer", "minimum": 0},
+        "capture_execution_controls": {
+          "type": "object",
+          "required": ["cuda_disable_fusion", "cpu_reference"],
+          "properties": {
+            "cuda_disable_fusion": {"enum": [null, "0", "1"]},
+            "cpu_reference": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "cpu_vs_reference": {"$ref": "hybrid-layer-v1.json#/$defs/comparison"},
+    "candidate_vs_reference": {"$ref": "hybrid-layer-v1.json#/$defs/comparison"},
+    "candidate_vs_cpu": {"$ref": "hybrid-layer-v1.json#/$defs/comparison"},
+    "operator_diagnostics": {
+      "allOf": [
+        {"$ref": "hybrid-layer-v1.json#/properties/operator_diagnostics"},
+        {"properties": {"samples": {"items": {"required": ["cpu_activation_observer_control"]}}}}
+      ]
+    },
+    "all_checks_passed": {"type": "boolean"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"activation_source": {"const": "actual_prefill_capture"}}},
+      "then": {
+        "properties": {
+          "independent_scalar_reference": {"const": false},
+          "capture": {"required": ["capture_execution_controls"]}
+        }
+      }
+    }
+  ]
+}

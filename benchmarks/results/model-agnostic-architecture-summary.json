@@ -1,0 +1,440 @@
+{
+  "schema_version": 1,
+  "kind": "reviewed_model_agnostic_architecture_study",
+  "date": "2026-10-19",
+  "research_repository": "https://github.com/appatalks/unified-memory-scheduler",
+  "downstream_repository": "https://github.com/appatalks/Synapse",
+  "downstream_read_only_revision": "545a7ebf4a6dea3dd4a1ac04760057eed2de1b15",
+  "target": "Qwen3.8-Flash-Next GSQ-RCO IQ3_S",
+  "context": 16384,
+  "kv_type": "F16",
+  "target_weights_unchanged": true,
+  "all_selected_target_experts_preserved": true,
+  "hardware": {
+    "cpu": "Ryzen 9 9950X",
+    "gpu": "RTX 5070 Ti 16GB",
+    "host_ram_gib": 123.48
+  },
+  "target_shards": [
+    {
+      "name": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf",
+      "bytes": 54817524224,
+      "sha256": "4c1eb2ceb4915e1192f4f386021897bde56a97f40a0bb78bb86465e0f7d2aca3"
+    },
+    {
+      "name": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00002-of-00002.gguf",
+      "bytes": 28800138432,
+      "sha256": "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+    }
+  ],
+  "dense_tensors_byte_verified": 777,
+  "native_expert_layers_verified": 48,
+  "shared_resident_experts": 3067,
+  "shared_expert_payload_bytes": 6277760000,
+  "frozen_profile_sha256": "e28683eb6716c96ecdd8c1c0a9659c8be7477fc06eb66b98acf726e54cb0b410",
+  "executed_strata_version": "0.1.43",
+  "strata_source_revision": "7695859aa13afb248bdb4d36f9b2e95707db079d",
+  "strata_binary_sha256": "73b66e36e16a8336c09fd834ae00fe009edc1d3b535f9f65fd0f6fc1c29ee47e",
+  "strata_binary_source_binding_proven": false,
+  "native_backend_pin": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "metric": "(accepted_output_tokens - 1) / (completion_wall_time - first_output_wall_time)",
+  "confirmation": [
+    {
+      "category": "coding",
+      "pairs": 3,
+      "output_tokens_per_request": 512,
+      "baseline_accepted_wall_tok_s": [
+        47.66517456456297,
+        48.981405034887196,
+        47.66631748566777
+      ],
+      "candidate_accepted_wall_tok_s": [
+        56.82609615494797,
+        57.20303171294204,
+        58.27883442686693
+      ],
+      "baseline_median_tok_s": 47.66631748566777,
+      "candidate_median_tok_s": 57.20303171294204,
+      "ratio_of_medians_gain_percent": 20.007239347033167,
+      "paired_gain_percent": [
+        19.219318242454865,
+        16.78519975529278,
+        22.2641846507025
+      ],
+      "median_paired_gain_percent": 19.219318242454865,
+      "request_throughput_gain_percent": [
+        17.765752937616952,
+        15.414759662182309,
+        20.41948008261818
+      ],
+      "request_cpu_time_change_percent": [
+        -15.908040665434397,
+        -14.212957479568878,
+        -18.0078395204058
+      ],
+      "all_greedy_hashes_equal": true,
+      "output_token_sha256": "cc3e6364beedff358be36d15781b27c6b4cb0465618afce8669e953e4015a86e",
+      "median_post_first_verify_window_ms": 31.01768389583665,
+      "accepted_outputs_per_post_first_window": [
+        1.7743055555555556,
+        1.7743055555555556,
+        1.7743055555555556
+      ],
+      "generation_physical_read_bytes": [
+        {
+          "baseline": 53465088,
+          "candidate": 18956288
+        },
+        {
+          "baseline": 0,
+          "candidate": 0
+        },
+        {
+          "baseline": 0,
+          "candidate": 0
+        }
+      ],
+      "all_owned_process_swap_zero": true
+    },
+    {
+      "category": "reasoning",
+      "pairs": 3,
+      "output_tokens_per_request": 512,
+      "baseline_accepted_wall_tok_s": [
+        34.231614776468696,
+        34.91598499905412,
+        34.37248219255728
+      ],
+      "candidate_accepted_wall_tok_s": [
+        43.84982616783709,
+        43.84758056437872,
+        44.50028018743122
+      ],
+      "baseline_median_tok_s": 34.37248219255728,
+      "candidate_median_tok_s": 43.84982616783709,
+      "ratio_of_medians_gain_percent": 27.572474755203878,
+      "paired_gain_percent": [
+        28.097451593139834,
+        25.580248031285848,
+        29.464843237498073
+      ],
+      "median_paired_gain_percent": 28.097451593139834,
+      "request_throughput_gain_percent": [
+        26.30926640713165,
+        23.90989886363508,
+        27.50800659924586
+      ],
+      "request_cpu_time_change_percent": [
+        -21.716040162642102,
+        -20.189381129523166,
+        -22.553510452236193
+      ],
+      "all_greedy_hashes_equal": true,
+      "output_token_sha256": "6ed9c59cc2e044b613dad7ee5ef76bc68cc9cd1980a16ba406b552b4eb65d4d3",
+      "median_post_first_verify_window_ms": 43.160777544444834,
+      "accepted_outputs_per_post_first_window": [
+        1.8925925925925926,
+        1.8925925925925926,
+        1.8925925925925926
+      ],
+      "generation_physical_read_bytes": [
+        {
+          "baseline": 24293376,
+          "candidate": 7565312
+        },
+        {
+          "baseline": 0,
+          "candidate": 0
+        },
+        {
+          "baseline": 0,
+          "candidate": 0
+        }
+      ],
+      "all_owned_process_swap_zero": true
+    },
+    {
+      "category": "prose",
+      "pairs": 3,
+      "output_tokens_per_request": 512,
+      "baseline_accepted_wall_tok_s": [
+        38.32579441420065,
+        39.55174980871085,
+        38.43032879120609
+      ],
+      "candidate_accepted_wall_tok_s": [
+        43.38054374210422,
+        45.25878256810181,
+        45.53677588352616
+      ],
+      "baseline_median_tok_s": 38.43032879120609,
+      "candidate_median_tok_s": 45.25878256810181,
+      "ratio_of_medians_gain_percent": 17.768398011880283,
+      "paired_gain_percent": [
+        13.188896421232865,
+        14.429280087461628,
+        18.491767611278487
+      ],
+      "median_paired_gain_percent": 14.429280087461628,
+      "request_throughput_gain_percent": [
+        12.34161181323623,
+        13.4852820569326,
+        17.285906424546617
+      ],
+      "request_cpu_time_change_percent": [
+        -11.179372614725857,
+        -12.479663125658004,
+        -15.511950153445554
+      ],
+      "all_greedy_hashes_equal": true,
+      "output_token_sha256": "6c46574e2d49f55dafe34829370ada5dae3a18c444697febb0ab747cd3a1a24e",
+      "median_post_first_verify_window_ms": 38.273309433898866,
+      "accepted_outputs_per_post_first_window": [
+        1.7322033898305085,
+        1.7322033898305085,
+        1.7322033898305085
+      ],
+      "generation_physical_read_bytes": [
+        {
+          "baseline": 104611840,
+          "candidate": 29933568
+        },
+        {
+          "baseline": 0,
+          "candidate": 0
+        },
+        {
+          "baseline": 0,
+          "candidate": 0
+        }
+      ],
+      "all_owned_process_swap_zero": true
+    }
+  ],
+  "native_optimized_scalar": {
+    "coding": {
+      "median_accepted_wall_tok_s": 37.93542191435943,
+      "samples": [
+        38.34127428744176,
+        35.85469946583671,
+        37.93542191435943
+      ]
+    },
+    "reasoning": {
+      "median_accepted_wall_tok_s": 29.700874995855827,
+      "samples": [
+        29.43062627998151,
+        29.700874995855827,
+        29.716507548951537
+      ]
+    },
+    "prose": {
+      "median_accepted_wall_tok_s": 31.92937996155395,
+      "samples": [
+        31.92937996155395,
+        31.159217834164355,
+        32.39329300580604
+      ]
+    }
+  },
+  "single_run_exploratory_screens": {
+    "native-canonical-screen": {
+      "coding": 37.490536682383606,
+      "reasoning": 29.152544071116036,
+      "prose": 30.236637047563928
+    },
+    "native-mtp-screen-v2": {
+      "coding": 35.563695552976675,
+      "reasoning": 33.112578524425544,
+      "prose": 25.79352758655148
+    },
+    "native-mtp-window2-screen": {
+      "coding": 36.519778598206514,
+      "reasoning": 30.68850767614302,
+      "prose": 29.823732489790007
+    },
+    "strata-mtp-screen": {
+      "coding": 41.42453768694126,
+      "reasoning": 43.9272015223475,
+      "prose": 33.22370511906372
+    },
+    "strata-mtp-window2-screen": {
+      "coding": 48.630452370027676,
+      "reasoning": 39.761404349412544,
+      "prose": 36.95081601847319
+    }
+  },
+  "natural_eos_sanity": {
+    "cases": [
+      {
+        "variant": "native-scalar-natural-sanity",
+        "category": "coding",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 118,
+        "natural_stop": "eos"
+      },
+      {
+        "variant": "native-scalar-natural-sanity",
+        "category": "reasoning",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 89,
+        "natural_stop": "eos"
+      },
+      {
+        "variant": "native-scalar-natural-sanity",
+        "category": "prose",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 63,
+        "natural_stop": "eos"
+      },
+      {
+        "variant": "native-canonical-natural-sanity",
+        "category": "coding",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 118,
+        "natural_stop": "eos"
+      },
+      {
+        "variant": "native-canonical-natural-sanity",
+        "category": "reasoning",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 89,
+        "natural_stop": "eos"
+      },
+      {
+        "variant": "native-canonical-natural-sanity",
+        "category": "prose",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 63,
+        "natural_stop": "eos"
+      },
+      {
+        "variant": "native-mtp-natural-sanity",
+        "category": "coding",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 118,
+        "natural_stop": "eos"
+      },
+      {
+        "variant": "native-mtp-natural-sanity",
+        "category": "reasoning",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 89,
+        "natural_stop": "eos"
+      },
+      {
+        "variant": "native-mtp-natural-sanity",
+        "category": "prose",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 63,
+        "natural_stop": "eos"
+      },
+      {
+        "variant": "strata-scalar-natural-sanity-fixed",
+        "category": "coding",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 118,
+        "natural_stop": "stop"
+      },
+      {
+        "variant": "strata-scalar-natural-sanity-fixed",
+        "category": "reasoning",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 89,
+        "natural_stop": "stop"
+      },
+      {
+        "variant": "strata-scalar-natural-sanity-fixed",
+        "category": "prose",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 63,
+        "natural_stop": "stop"
+      },
+      {
+        "variant": "strata-mtp-natural-sanity-fixed",
+        "category": "coding",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 118,
+        "natural_stop": "stop"
+      },
+      {
+        "variant": "strata-mtp-natural-sanity-fixed",
+        "category": "reasoning",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 89,
+        "natural_stop": "stop"
+      },
+      {
+        "variant": "strata-mtp-natural-sanity-fixed",
+        "category": "prose",
+        "passed": true,
+        "reason": "exact expected JSON",
+        "output_tokens": 63,
+        "natural_stop": "stop"
+      }
+    ],
+    "all_passed": true,
+    "broad_quality_established": false
+  },
+  "native_numerical_gates": {
+    "canonical-b2": {
+      "passed": true,
+      "positions": 96,
+      "max_abs": 0.0,
+      "max_relative_l2": 0.0
+    },
+    "canonical-b4": {
+      "passed": true,
+      "positions": 96,
+      "max_abs": 0.0,
+      "max_relative_l2": 0.0
+    },
+    "optimized-v-canonical": {
+      "passed": false,
+      "positions": 96,
+      "max_abs": 1.9707475900650024,
+      "max_relative_l2": 0.11157327356454368
+    }
+  },
+  "strata_full_vocabulary_gate_established": false,
+  "strata_greedy_consistency_only": true,
+  "gpt_60_tok_s_goal_met": false,
+  "synapse_changes_made": false,
+  "installed_runtime_or_defaults_changed": false,
+  "generic_policy_prototype_promoted": false,
+  "policy": {
+    "capability_based_not_checkpoint_named": true,
+    "criterion": "(draft_cost + verify_cost + commit_cost) / expected_accepted_outputs < scalar_target_cost",
+    "unsupported_or_numerically_incompatible_modes": "remain disabled",
+    "do_not_hardcode_two_rows_for_every_model": true
+  },
+  "blockers": [
+    "Native canonical and optimized scalar execution fail the frozen interchange gate.",
+    "Strata matching greedy output hashes and bounded sanity do not establish the full-vocabulary gate.",
+    "The executed native-pack serve verifier has no valid no-token-graph CLI ablation.",
+    "The verified downstream hybrid path explicitly rejects speculation; this is not a drop-in setting.",
+    "Qwen has a trained MTP capability; GPT-OSS-120B transfer has not been established."
+  ],
+  "controls_and_retained_failures": [
+    "Original complete Strata profile admitted3991 experts; excluded from matched timing.",
+    "Default dynamic CPU prefill-share cohorts are exploratory; final confirmation disables it.",
+    "Native SSE can omit UTF-8-buffered raw IDs; every native timing is separately output-audited.",
+    "Initial collector stop-reason mismatch and missing native MTP opt-in are retained failed runs.",
+    "Strata/native draft quantization, vocabulary and hidden-state conventions differ."
+  ],
+  "source_sha256": "e7876291fc406bc239944889fb98e747388fb1bc65968c0ba9c3ad574211c909"
+}

@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "status": "isolated_measurements_complete_full_model_unqualified",
+  "research_question": "At what routed row count does transferring original expert weights to the GPU become cheaper than CPU execution?",
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "probe_source_sha256": "95481ea7507921171bbca3f501be32c662493d0e1e03d57b6c03bae35db947a9",
+  "collector_source_sha256": "f401d9d43b7c31b72d0e2f636cc1a09394c7cfd157311f49d9665b479fa908e6",
+  "model": "gpt-oss-120b-MXFP4-00001-of-00002.gguf",
+  "full_model_acceleration_claim": false,
+  "generation_speedup_established": false,
+  "prefill_speedup_established": false,
+  "break_even_rows": null,
+  "integrated_stage_aware_scheduler_implemented": false,
+  "all_execution_variants_qualified": false,
+  "cuda_recovery": {
+    "user_rebooted": true,
+    "direct_driver_cuInit_status_after_reboot": 0,
+    "driver_or_installed_backend_modified": false
+  },
+  "measurement_protocol": {
+    "layers": [0, 17, 35],
+    "curve_rows": [1, 2, 4, 8, 16, 32, 64, 128],
+    "curve_reports": 96,
+    "curve_reports_passing_every_variant": 40,
+    "curve_repetitions_per_schedule": 12,
+    "repeated_reports": 54,
+    "repeated_reports_passing_every_variant": 3,
+    "repeat_invocations_per_case": 3,
+    "repeat_repetitions_per_schedule": 24,
+    "activation_samples_per_report": 3,
+    "cpu_threads": 16,
+    "selected_expert_ids": [0, 7, 42, 113],
+    "routing_weights": [0.05, 0.15, 0.30, 0.50],
+    "total_selected_weight_and_bias_bytes": 53015040,
+    "cuda_mmq_precision_controls": ["auto", "q8"],
+    "repeat_profiles": ["auto_full_row", "q8_full_row", "auto_gpu_chunks_of_4"],
+    "schedules": ["serial", "concurrent"],
+    "order": "Serial/concurrent schedules alternate first position each repetition; curve resident/upload order alternates with row count; repeated profile/layer/row order and GPU split order reverse on the middle invocation.",
+    "statistic": "Median of three per-invocation concurrent-mode medians; each candidate must pass every warm-up and measured execution in both schedules in all three invocations.",
+    "local_curve_files": "prefill-20261018/curve-*.json",
+    "local_repeat_files": "prefill-20261018/repeat*-r24.json",
+    "inventory_sha256": "ecd74105ca19e6aafa5cba70bb60626c514f6c7876906565833047a34cb259c4",
+    "inventory_digest_recipe": "SHA256 of compact sorted-key JSON array of {file: basename, sha256: file SHA256}, ordered by basename across all 150 curve/repeat files."
+  },
+  "gpu_timing_samples": [
+    {"layer": 0, "rows_per_expert": 32, "profile": "auto_gpu_chunks_of_4", "passing_gpu_expert_counts": [0, 1, 2, 3, 4], "exploratory_best_passing_gpu_experts": 3, "cpu_ms_rounded": 6.569, "candidate_ms_rounded": 4.666, "ratio_of_medians_rounded": 1.408},
+    {"layer": 0, "rows_per_expert": 128, "profile": "auto_gpu_chunks_of_4", "passing_gpu_expert_counts": [0, 1, 2, 3], "exploratory_best_passing_gpu_experts": 3, "cpu_ms_rounded": 27.039, "candidate_ms_rounded": 10.392, "ratio_of_medians_rounded": 2.602},
+    {"layer": 17, "rows_per_expert": 32, "profile": "auto_gpu_chunks_of_4", "passing_gpu_expert_counts": [0, 1], "exploratory_best_passing_gpu_experts": 1, "cpu_ms_rounded": 6.739, "candidate_ms_rounded": 5.941, "ratio_of_medians_rounded": 1.134},
+    {"layer": 17, "rows_per_expert": 128, "profile": "auto_gpu_chunks_of_4", "passing_gpu_expert_counts": [0, 1], "exploratory_best_passing_gpu_experts": 1, "cpu_ms_rounded": 26.701, "candidate_ms_rounded": 22.782, "ratio_of_medians_rounded": 1.172},
+    {"layer": 35, "rows_per_expert": 32, "profile": "auto_gpu_chunks_of_4", "passing_gpu_expert_counts": [0, 1], "exploratory_best_passing_gpu_experts": 1, "cpu_ms_rounded": 6.571, "candidate_ms_rounded": 5.974, "ratio_of_medians_rounded": 1.100},
+    {"layer": 35, "rows_per_expert": 128, "profile": "auto_gpu_chunks_of_4", "passing_gpu_expert_counts": [0, 1], "exploratory_best_passing_gpu_experts": 1, "cpu_ms_rounded": 26.971, "candidate_ms_rounded": 21.877, "ratio_of_medians_rounded": 1.233}
+  ],
+  "numerical_findings": {
+    "default_auto_full_row": "Rows 1/2/4 pass all partitions in the three sampled layers; wide-row fast timings are excluded where the unchanged gate fails.",
+    "blackwell_mmq": "Pinned CUDA MMQ source defaults MXFP4 matrix execution to Q4 activations when Blackwell MMA is available. Existing process-scoped Q8 override reduces, but does not eliminate, observed numerical differences.",
+    "q8_full_row_repeated_passing_splits": {"layer0_rows32_and_128": [0, 1, 2], "layer17_rows32_and_128": [0, 1], "layer35_rows32_and_128": [0]},
+    "gpu_row_chunks": "Sharing original weights across chunks of four GPU rows improves some gates without changing the full-row CPU reference, target weights or probabilities. Some cases still fail maximum-absolute and/or relative-L2 bounds.",
+    "selection_warning": "Passing split counts are post-hoc experimental observations for fixed experts and synthetic activations, not a safe runtime policy or evidence that other real routing weights pass."
+  },
+  "prefill_observations": {
+    "local_summary": "prefill-20261018/gpt120-prefill-observations-v2.json",
+    "local_decode_trace": "prefill-20261018/gpt120-prefill-observer-v2-decode.jsonl",
+    "corpus_sha256": "9c35fd878623b039fbdeb164bca66b25f0a49220cfc9ad19606f44280d17286a",
+    "corpus": "../prefill-corpus.jsonl",
+    "workload": "Two controlled systems-design prompts, not a representative natural-workload qualification.",
+    "batch_size": 512,
+    "microbatch_size": 512,
+    "context_tokens": 4096,
+    "cpu_threads": 8,
+    "batch_threads": 16,
+    "performance_measurement": false,
+    "requests": [
+      {"id": "prefill-train", "prompt_tokens": 628, "routing_observations": 72, "fully_covered_layers": 35, "final_layer_observed_rows": 1, "observed_512_row_layers": 35, "routed_work_fraction_in_experts_with_at_least_32_rows": 0.6680, "routed_work_fraction_in_experts_with_at_least_64_rows": 0.4291, "maximum_expert_rows_in_512_row_observation": 445, "greedy_continuation_matches_callback_inactive": true},
+      {"id": "prefill-test", "prompt_tokens": 755, "routing_observations": 72, "fully_covered_layers": 35, "final_layer_observed_rows": 1, "observed_512_row_layers": 35, "routed_work_fraction_in_experts_with_at_least_32_rows": 0.6739, "routed_work_fraction_in_experts_with_at_least_64_rows": 0.4371, "maximum_expert_rows_in_512_row_observation": 445, "greedy_continuation_matches_callback_inactive": true}
+    ],
+    "coverage_note": "Counts describe observed graph work. Zero-row pruned final-layer observations are retained; the final layer is not labeled as covering every prompt token.",
+    "decode_format_regression": "The ordinary decode trace passed the unchanged routing analyzer."
+  },
+  "execution_boundary": {
+    "current_prefill": "Original backend path above the guarded hybrid batch limit; not a stage-aware expert-workload scheduler.",
+    "new_probe_rows": [1, 256],
+    "same_expert_set_for_every_row": true,
+    "optional_gpu_row_chunk_limit": [0, 256],
+    "zero_chunk_limit_means_full_row_gpu_graph": true,
+    "activation_source": "deterministic synthetic",
+    "weight_upload_method": "optional synchronous pageable source recopy inside every timed iteration",
+    "target_weights_changed": false,
+    "selected_experts_skipped": false,
+    "routing_probabilities_changed": false,
+    "installed_backend_modified": false,
+    "application_defaults_changed": false
+  },
+  "validation": {
+    "builds": [
+      {
+        "directory": "build/trace-release",
+        "target": "vrambridge-hybrid-layer",
+        "build_passed": true,
+        "ctest_targets_passed": ["vrambridge-hybrid-layer-self-test", "vrambridge-hybrid-layer-inputs"]
+      },
+      {
+        "directory": "build/hybrid-tests",
+        "target": "vrambridge-hybrid-layer",
+        "build_passed": true,
+        "ctest_targets_passed": ["vrambridge-hybrid-layer-self-test", "vrambridge-hybrid-layer-inputs"]
+      }
+    ],
+    "python_regression_methods": 5,
+    "batched_scalar_comparison_rows": [2, 7, 256],
+    "both_reduction_strategies_checked": true,
+    "cpu_self_test_upload_accounting_checked": true,
+    "maximum_row_chunk_graph_checked": {"rows": 256, "gpu_row_limit": 1},
+    "collector_regression_methods": 6,
+    "targeted_ctest_targets_passed_in_each_build": 5,
+    "prefill_histogram_strides_domains_zero_rows_and_path_collisions_checked": true,
+    "curve_and_repeat_json_schema_and_threshold_checks_passed": 150,
+    "prefill_schema_histogram_totals_and_coverage_checks_passed": true,
+    "invalid_rows_rejected_before_backend_loading": [0, 257, "2garbage"],
+    "numerical_gate": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+  },
+  "failed_gpu_attempt": {
+    "layer": 0,
+    "rows_per_expert": 1,
+    "cpu_threads": 8,
+    "samples": 3,
+    "repetitions": 6,
+    "upload_weights": true,
+    "exit_code": 2,
+    "failed_before_weight_loading": true,
+    "error": "ggml_cuda_init: failed to initialize CUDA: unknown error; no usable GPU; no CPU-only fallback for a real hybrid probe.",
+    "local_log": "prefill-20261018/layer0-rows1-upload-screen.log",
+    "driver_version": "595.58.03",
+    "nvidia_smi_available": true,
+    "direct_driver_cuInit_status": 999,
+    "direct_driver_error": "unknown error",
+    "unchanged_stock_backend_available_cuda_devices": 0,
+    "gpu_reset_attempted": false,
+    "driver_modified": false
+  },
+  "limitations": [
+    "No integrated stage-aware prefill scheduler, full-model speedup or broad quality qualification is established.",
+    "Every timing row selects the same four experts; real prefill routing histograms were collected separately and do not make these timing activations representative.",
+    "Repeated copies of the same source bytes do not enforce CPU cache misses.",
+    "Pageable synchronous transfers do not model pinned asynchronous DMA or a pipelined executor.",
+    "A microkernel break-even point, if later established, is not a complete-model scheduling rule.",
+    "No numerical thresholds were loosened and no missing GPU work was replaced with CPU success.",
+    "All-GPU fast timings and failing mixed splits are excluded from qualified improvements.",
+    "The fastest passing partition was selected after observing fixed synthetic cases, not qualified on new activations or arbitrary expert IDs.",
+    "Instrumented routing capture is not a latency benchmark; one matching greedy continuation token per prompt is not full-logit or answer-quality qualification."
+  ],
+  "retained_followup_failures": [
+    {"local_log": "prefill-20261018/layer0-rows32-upload-reboot-screen.log", "exit_code": 134, "reason": "Reduced branch used [hidden, rows, 1] while the merge expected [hidden, 1, rows]. Fixed probe layout and added explicit layout guards and CPU reconciliation regression checks."},
+    {"local_log": "prefill-20261018/gpt120-prefill-observer.log", "exit_code": 2, "reason": "Initial observer rejected the legitimate zero-row pruned final-layer tensor. Zero-row observations are now retained and covered by the self-test."}
+  ],
+  "next_steps": [
+    "Resolve batched CPU/GPU numerical differences across arbitrary expert sets and representative captured activations without relaxing thresholds.",
+    "Measure per-expert workload curves and pinned asynchronous transfer costs under cache pressure rather than extrapolating four-expert warm curves.",
+    "Expand routing observations beyond two controlled prompts and include uneven expert loads and all relevant layers.",
+    "Only then design a bounded prefill scheduling prototype that charges temporary memory, eviction and decode-residency effects.",
+    "Qualify full-model prompt throughput, time to first token, accepted-output decode rate, total request time and peak memory before promoting any policy."
+  ]
+}

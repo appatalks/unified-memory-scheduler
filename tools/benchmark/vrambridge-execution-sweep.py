@@ -14,6 +14,7 @@ import re
 import statistics
 import sys
 import time
+from typing import Callable
 from urllib.parse import urlsplit
 import urllib.request
 
@@ -91,7 +92,8 @@ def validate_sample(timings: dict, usage: dict, tokens: int, elapsed: float, don
 
 
 def sample(base: str, tokens: int, headers: dict[str, str] | None = None, *,
-           prompt: str = PROMPT, ignore_eos: bool = True, reasoning_effort: str | None = "low") -> dict:
+           prompt: str = PROMPT, ignore_eos: bool = True, reasoning_effort: str | None = "low",
+           on_first_token: Callable[[], None] | None = None) -> dict:
     if reasoning_effort not in (None, "low", "medium", "high"):
         raise ValueError("Reasoning effort must be low, medium, high, or None for the model default.")
     payload = {
@@ -127,6 +129,8 @@ def sample(base: str, tokens: int, headers: dict[str, str] | None = None, *,
                 text = (delta.get("reasoning_content") or "") + (delta.get("content") or "")
                 if text and first is None:
                     first = time.monotonic() - started
+                    if on_first_token is not None:
+                        on_first_token()
                 digest.update(text.encode())
     result = validate_sample(timings, usage, tokens, time.monotonic() - started, done)
     result.update(first_token_seconds=first, generated_text_sha256=digest.hexdigest())

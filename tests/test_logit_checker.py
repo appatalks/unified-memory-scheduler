@@ -26,10 +26,10 @@ class LogitCheckerInputs(unittest.TestCase):
     def tearDown(self):
         self.temporary.cleanup()
 
-    def invoke(self, *extra):
+    def invoke(self, *extra, env=None):
         return subprocess.run([str(BINARY), "--corpus", str(self.corpus), "--output", str(self.output),
                                "--reference-in", str(self.reference), *extra],
-                              capture_output=True, text=True, timeout=10)
+                              capture_output=True, text=True, timeout=10, env=env)
 
     def rejected(self, result):
         self.assertEqual(result.returncode, 2, result.stderr)
@@ -41,6 +41,69 @@ class LogitCheckerInputs(unittest.TestCase):
     def test_help_and_required_options(self):
         self.assertEqual(subprocess.run([str(BINARY), "--help"], capture_output=True).returncode, 0)
         self.rejected(subprocess.run([str(BINARY)], capture_output=True, text=True))
+
+    def test_rollback_requires_a_multi_position_reference_comparison(self):
+        result = self.invoke("--rollback-check", "--batch-check", "1")
+        self.rejected(result)
+        self.assertIn("Rollback checking requires a reference", result.stderr)
+
+    def test_invalid_prefill_research_flag_fails_before_backend_loading(self):
+        for value in ("", "yes", "2", "-1"):
+            result = self.invoke(env={**os.environ, "VRAMBRIDGE_HYBRID_PREFILL_DOWN": value})
+            self.rejected(result)
+            self.assertIn("VRAMBRIDGE_HYBRID_PREFILL_DOWN must be 0 or 1", result.stderr)
+
+    def test_prefill_diagnostic_controls_cannot_run_without_enabled_mode(self):
+        for name in ("VRAMBRIDGE_HYBRID_PREFILL_DOWN_CPU_CONTROL", "VRAMBRIDGE_HYBRID_PREFILL_DOWN_AUDIT",
+                     "VRAMBRIDGE_HYBRID_PREFILL_DOWN_LAYER", "VRAMBRIDGE_HYBRID_PREFILL_DOWN_LOCALIZE"):
+            for value in ("1", "yes", ""):
+                self.rejected(self.invoke(env={**os.environ, "VRAMBRIDGE_HYBRID_PREFILL_DOWN": "0", name: value}))
+
+    def test_localization_reference_is_bounded_before_backend_initialization(self):
+        source = self.root / "localization.bin"
+        header = json.dumps({"schema_version": 1, "records": 180, "contains_sensitive_activations": True}).encode()
+        cases = [b"", b"BADMAGIC", b"VRLOC001" + struct.pack("=Q", 16385),
+                 b"VRLOC001" + struct.pack("=Q", len(header)) + header]
+        prefix = b"VRLOC001" + struct.pack("=Q", len(header)) + header
+        meta = {"request": "held-out", "layer": 0, "component": "input", "rows": 1, "width": 2880, "type": "f32"}
+        for change in ({"rows": 513}, {"layer": 36}, {"width": 64}, {"type": "i32"}, {"request": []}):
+            serialized = json.dumps({**meta, **change}).encode()
+            cases.append(prefix + struct.pack("=Q", len(serialized)) + serialized)
+        for data in cases:
+            source.write_bytes(data)
+            result = self.invoke("--localize-reference", str(source), env={
+                **os.environ, "VRAMBRIDGE_HYBRID_PREFILL_DOWN": "0", "GGML_CUDA_DISABLE_FUSION": "1"})
+            self.rejected(result)
+
+    def test_localization_focus_and_fusion_guards_are_explicit(self):
+        for value in ("ffn", "attention1", "rounding1", "unknown"):
+            self.rejected(self.invoke("--localize-focus", value))
+        result = self.invoke("--localize-reference", str(self.root / "missing-trace.bin"),
+                             env={**os.environ, "GGML_CUDA_DISABLE_FUSION": "0"})
+        self.rejected(result)
+        self.assertIn("CUDA fusion disabled", result.stderr)
+
+    def test_teacher_forced_export_requires_comparison_and_private_storage(self):
+        destination = self.root / "teacher.bin"
+        result = subprocess.run(
+            [str(BINARY), "--corpus", str(self.corpus), "--output", str(self.output),
+             "--reference-out", str(self.reference), "--teacher-forced-reference-out", str(destination)],
+            capture_output=True, text=True, timeout=10)
+        self.rejected(result)
+        self.assertIn("Teacher-forced export requires --reference-in", result.stderr)
+        public = self.root / "shared"
+        public.mkdir(mode=0o755)
+        public.chmod(0o755)
+        result = self.invoke("--teacher-forced-reference-out", str(public / "teacher.bin"))
+        self.rejected(result)
+        self.assertIn("private parent directory", result.stderr)
+
+    def test_localization_distinguishes_route_order_from_expert_membership(self):
+        result = subprocess.run([str(BINARY), "--localization-self-test"],
+                                capture_output=True, text=True, check=True, timeout=10)
+        self.assertEqual(json.loads(result.stdout), {
+            "different_ordered_rows": 2, "different_expert_set_rows": 1, "first_different_expert_set_row": 1})
+        self.assertNotIn("ggml_cuda_init", result.stderr)
 
     def test_invalid_step_counts(self):
         for value in ("0", "-1", "129", "1.5", "12tail", "99999999999999999"):
@@ -54,6 +117,23 @@ class LogitCheckerInputs(unittest.TestCase):
         result = self.invoke("--debug-output", str(self.output))
         self.rejected(result)
         self.assertIn("paths overlap", result.stderr)
+        result = self.invoke("--prefill-capture-output", str(self.output))
+        self.rejected(result)
+        self.assertIn("paths overlap", result.stderr)
+
+    def test_private_prefill_capture_paths_are_checked_before_backend_initialization(self):
+        destination = self.root / "capture.json"
+        destination.write_text("preserve")
+        result = self.invoke("--prefill-capture-output", str(destination))
+        self.rejected(result)
+        self.assertIn("already exists", result.stderr)
+        self.assertEqual(destination.read_text(), "preserve")
+        public = self.root / "public"
+        public.mkdir(mode=0o755)
+        public.chmod(0o755)
+        result = self.invoke("--prefill-capture-output", str(public / "capture.json"))
+        self.rejected(result)
+        self.assertIn("private parent directory", result.stderr)
 
     def test_all_layer_diagnostics_requires_output_before_backend_initialization(self):
         result = self.invoke("--debug-all-layers")

@@ -813,6 +813,29 @@ class LocalAppTests(unittest.TestCase):
         self.assertEqual(flags["gpu_layers"], "all")
         self.assertTrue(flags["cpu_moe"])
 
+    def test_research_batch_override_is_explicit_and_observed(self):
+        default = self.load()
+        flags = json.loads(default["logs"][0])
+        for name in ("batch_size", "ubatch_size", "verbosity"):
+            self.assertIsNone(flags[name])
+        self.assertEqual(self.runtime.observed_batch_sizes, {})
+        self.runtime.stop(closing=True)
+        self.runtime = app.Runtime(str(self.backend), research_batch_sizes=(2048, 1024))
+        self.server.runtime = self.runtime
+        status = self.load(context=4096)
+        flags = json.loads(status["logs"][0])
+        self.assertEqual((flags["batch_size"], flags["ubatch_size"], flags["verbosity"]), (2048, 1024, 4))
+        self.assertEqual(self.runtime.observed_batch_sizes, {"n_batch": 2048, "n_ubatch": 1024})
+        self.runtime.stop()
+        code, _, _ = self.request("POST", "/api/v1/model/load", {"model": str(self.model), "context": 512})
+        self.assertEqual(code, 400)
+        self.assertIsNone(self.runtime.process)
+        for sizes in ((16, 16), (2048, 4096), (2048, True), (2048,), [2048, 512]):
+            with self.assertRaisesRegex(ValueError, "research batch"):
+                app.Runtime(str(self.backend), research_batch_sizes=sizes)
+        with self.assertRaisesRegex(ValueError, "research batch"):
+            app.Runtime(str(self.backend), backend_kind="ik_llama.cpp", research_batch_sizes=(2048, 512))
+
     def test_invalid_execution_settings(self):
         for extra in ({"cpu_threads": True}, {"cpu_threads": 0},
                       {"cpu_threads": (os.cpu_count() or 1) + 1},

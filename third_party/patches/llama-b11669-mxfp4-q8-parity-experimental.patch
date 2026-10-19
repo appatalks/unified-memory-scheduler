@@ -1,0 +1,171 @@
+diff --git a/ggml/src/ggml-cuda/mmq.cu b/ggml/src/ggml-cuda/mmq.cu
+index 46efdfe..e068421 100644
+--- a/ggml/src/ggml-cuda/mmq.cu
++++ b/ggml/src/ggml-cuda/mmq.cu
+@@ -121,6 +121,10 @@ static ggml_prec ggml_cuda_mmq_get_prec_src1(const ggml_tensor * src0, const ggm
+     if (prec == GGML_PREC_UNDEFINED) {
+         prec = (ggml_prec) ggml_get_op_params_i32(dst, 3);
+     }
++    if (src0->type == GGML_TYPE_MXFP4 && ggml_cuda_mxfp4_cpu_q8_parity()) {
++        GGML_ASSERT(prec != GGML_PREC_Q4 && "MXFP4 CPU-Q8 parity conflicts with explicit Q4 activations");
++        return GGML_PREC_Q8;
++    }
+ 
+     // Q4 only for the FP4 types on Blackwell
+     GGML_ASSERT(prec == GGML_PREC_UNDEFINED || prec == GGML_PREC_Q8 || prec == GGML_PREC_Q4);
+diff --git a/ggml/src/ggml-cuda/quantize.cu b/ggml/src/ggml-cuda/quantize.cu
+index ea089a8..a625f1a 100644
+--- a/ggml/src/ggml-cuda/quantize.cu
++++ b/ggml/src/ggml-cuda/quantize.cu
+@@ -1,5 +1,27 @@
+ #include "quantize.cuh"
+ #include <cstdint>
++#include <cstdlib>
++#include <cstring>
++
++bool ggml_cuda_mxfp4_cpu_q8_parity() {
++    static const bool enabled = [] {
++        const char * value = std::getenv("VRAMBRIDGE_HYBRID_MXFP4_Q8_PARITY");
++        if (!value || std::strcmp(value, "0") == 0) {
++            return false;
++        }
++        if (std::strcmp(value, "1") != 0) {
++            GGML_ABORT("VRAMBRIDGE_HYBRID_MXFP4_Q8_PARITY must be 0 or 1");
++        }
++        GGML_LOG_WARN("VRAMBridge experimental MXFP4 CPU-Q8 activation parity enabled; original weights unchanged\n");
++        return true;
++    }();
++    return enabled;
++}
++
++static __device__ __forceinline__ int8_t quantize_cpu_q8_code(float value, float amax) {
++    const float inverse = amax > 0.0f ? __fdiv_rn(127.0f, amax) : 0.0f;
++    return static_cast<int8_t>(__float2int_rn(__fmul_rn(value, inverse)));
++}
+ 
+ #if defined(BLACKWELL_MMA_AVAILABLE)
+ // this maps to 256-bit loads in PTX on supported devices,
+@@ -54,7 +76,7 @@ __launch_bounds__(CUDA_QUANTIZE_BLOCK_SIZE, 1)
+ static __global__ void quantize_q8_1(
+         const float * x_ptr, void * vy_ptr,
+         const int64_t ne00, const int64_t s01, const int64_t s02, const int64_t s03,
+-        const int64_t ne0, const uint32_t ne1, const uint3 ne2) {
++        const int64_t ne0, const uint32_t ne1, const uint3 ne2, const bool cpu_q8) {
+     ggml_cuda_pdl_lc();
+     const float * GGML_CUDA_RESTRICT x  = x_ptr;
+     void        * GGML_CUDA_RESTRICT vy = vy_ptr;
+@@ -89,7 +111,7 @@ static __global__ void quantize_q8_1(
+     sum  = warp_reduce_sum<QK8_1>(sum);
+ 
+     const float  d = amax / 127.0f;
+-    const int8_t q = amax == 0.0f ? 0 : roundf(xi / d);
++    const int8_t q = cpu_q8 ? quantize_cpu_q8_code(xi, amax) : amax == 0.0f ? 0 : roundf(xi / d);
+ 
+     y[ib].qs[iqs] = q;
+ 
+@@ -457,7 +479,7 @@ template <mmq_q8_1_ds_layout ds_layout, bool scatter>
+ static __global__ void quantize_mmq_q8_1(
+         const float * __restrict__ x, const int32_t * __restrict__ ids, void * __restrict__ vy,
+         const int64_t ne00, const int64_t s01, const int64_t s02, const int64_t s03,
+-        const int64_t ne0, const int ne1, const int ne2, const int n_expert_used) {
++        const int64_t ne0, const int ne1, const int ne2, const int n_expert_used, const bool cpu_q8) {
+ 
+     constexpr int vals_per_scale = ds_layout == MMQ_Q8_1_DS_LAYOUT_D2S6 ? 64 : 32;
+     constexpr int vals_per_sum   = ds_layout == MMQ_Q8_1_DS_LAYOUT_D2S6 ? 16 : 32;
+@@ -513,11 +535,19 @@ static __global__ void quantize_mmq_q8_1(
+ 
+     const float d_inv = 127.0f / amax;
+     char4 q;
+-    q.x = roundf(xi.x*d_inv);
+-    q.y = roundf(xi.y*d_inv);
+-    q.z = roundf(xi.z*d_inv);
+-    q.w = roundf(xi.w*d_inv);
+-    const float d = 1.0f / d_inv;
++    if (cpu_q8) {
++        q.x = quantize_cpu_q8_code(xi.x, amax);
++        q.y = quantize_cpu_q8_code(xi.y, amax);
++        q.z = quantize_cpu_q8_code(xi.z, amax);
++        q.w = quantize_cpu_q8_code(xi.w, amax);
++    } else {
++        q.x = roundf(xi.x*d_inv);
++        q.y = roundf(xi.y*d_inv);
++        q.z = roundf(xi.z*d_inv);
++        q.w = roundf(xi.w*d_inv);
++    }
++    // Native x86 MXFP4 uses Q8_0 activation codes and an FP16-stored scale.
++    const float d = cpu_q8 ? __half2float(__float2half_rn(__fdiv_rn(amax, 127.0f))) : 1.0f / d_inv;
+ 
+     // write the block once (normal) or to each of the token's compact rows (scatter)
+     const int nwrite = scatter ? n_expert_used : 1;
+@@ -567,8 +597,8 @@ void quantize_row_q8_1_cuda(
+     const dim3 num_blocks(block_num_x, ne1, ne2*ne3);
+     const dim3 block_size(CUDA_QUANTIZE_BLOCK_SIZE, 1, 1);
+     const ggml_cuda_kernel_launch_params launch_params = ggml_cuda_kernel_launch_params(num_blocks, block_size, 0, stream);
+-    ggml_cuda_kernel_launch(quantize_q8_1, launch_params, x, vy, ne00, s01, s02, s03, ne0, ne1, ne2_fastdiv);
+-    GGML_UNUSED(type_src0);
++    const bool cpu_q8 = type_src0 == GGML_TYPE_MXFP4 && ggml_cuda_mxfp4_cpu_q8_parity();
++    ggml_cuda_kernel_launch(quantize_q8_1, launch_params, x, vy, ne00, s01, s02, s03, ne0, ne1, ne2_fastdiv, cpu_q8);
+ }
+ 
+ void quantize_mmq_q8_1_cuda(
+@@ -582,18 +612,20 @@ void quantize_mmq_q8_1_cuda(
+     const int64_t block_num_y = (ne0 + 4*CUDA_QUANTIZE_BLOCK_SIZE_MMQ - 1) / (4*CUDA_QUANTIZE_BLOCK_SIZE_MMQ);
+     const dim3 num_blocks(ne1, block_num_y, ne2*ne3);
+     const dim3 block_size(CUDA_QUANTIZE_BLOCK_SIZE_MMQ, 1, 1);
++    const bool cpu_q8 = type_src0 == GGML_TYPE_MXFP4 && ggml_cuda_mxfp4_cpu_q8_parity();
++    GGML_ASSERT(!cpu_q8 || mmq_get_q8_1_ds_layout(type_src0) == MMQ_Q8_1_DS_LAYOUT_D4);
+     switch (mmq_get_q8_1_ds_layout(type_src0)) {
+         case MMQ_Q8_1_DS_LAYOUT_D4:
+             quantize_mmq_q8_1<MMQ_Q8_1_DS_LAYOUT_D4, false>
+-                <<<num_blocks, block_size, 0, stream>>>(x, ids, vy, ne00, s01, s02, s03, ne0, ne1, ne2, /*n_expert_used=*/0);
++                <<<num_blocks, block_size, 0, stream>>>(x, ids, vy, ne00, s01, s02, s03, ne0, ne1, ne2, /*n_expert_used=*/0, cpu_q8);
+             break;
+         case MMQ_Q8_1_DS_LAYOUT_DS4:
+             quantize_mmq_q8_1<MMQ_Q8_1_DS_LAYOUT_DS4, false>
+-                <<<num_blocks, block_size, 0, stream>>>(x, ids, vy, ne00, s01, s02, s03, ne0, ne1, ne2, /*n_expert_used=*/0);
++                <<<num_blocks, block_size, 0, stream>>>(x, ids, vy, ne00, s01, s02, s03, ne0, ne1, ne2, /*n_expert_used=*/0, cpu_q8);
+             break;
+         case MMQ_Q8_1_DS_LAYOUT_D2S6:
+             quantize_mmq_q8_1<MMQ_Q8_1_DS_LAYOUT_D2S6, false>
+-                <<<num_blocks, block_size, 0, stream>>>(x, ids, vy, ne00, s01, s02, s03, ne0, ne1, ne2, /*n_expert_used=*/0);
++                <<<num_blocks, block_size, 0, stream>>>(x, ids, vy, ne00, s01, s02, s03, ne0, ne1, ne2, /*n_expert_used=*/0, cpu_q8);
+             break;
+         default:
+             GGML_ABORT("fatal error");
+@@ -611,18 +643,20 @@ void quantize_scatter_mmq_q8_1_cuda(
+     const int64_t block_num_y = (ne0 + 4*CUDA_QUANTIZE_BLOCK_SIZE_MMQ - 1) / (4*CUDA_QUANTIZE_BLOCK_SIZE_MMQ);
+     const dim3 num_blocks(n_tokens, block_num_y, 1);
+     const dim3 block_size(CUDA_QUANTIZE_BLOCK_SIZE_MMQ, 1, 1);
++    const bool cpu_q8 = type_src0 == GGML_TYPE_MXFP4 && ggml_cuda_mxfp4_cpu_q8_parity();
++    GGML_ASSERT(!cpu_q8 || mmq_get_q8_1_ds_layout(type_src0) == MMQ_Q8_1_DS_LAYOUT_D4);
+     switch (mmq_get_q8_1_ds_layout(type_src0)) {
+         case MMQ_Q8_1_DS_LAYOUT_D4:
+             quantize_mmq_q8_1<MMQ_Q8_1_DS_LAYOUT_D4, true><<<num_blocks, block_size, 0, stream>>>(
+-                x, ids_src1_inv, vy, ne00, /*s01=*/0, /*s02=*/stride_token, /*s03=*/0, ne0, /*ne1=*/(int) nrows_dst, /*ne2=*/1, n_expert_used);
++                x, ids_src1_inv, vy, ne00, /*s01=*/0, /*s02=*/stride_token, /*s03=*/0, ne0, /*ne1=*/(int) nrows_dst, /*ne2=*/1, n_expert_used, cpu_q8);
+             break;
+         case MMQ_Q8_1_DS_LAYOUT_DS4:
+             quantize_mmq_q8_1<MMQ_Q8_1_DS_LAYOUT_DS4, true><<<num_blocks, block_size, 0, stream>>>(
+-                x, ids_src1_inv, vy, ne00, /*s01=*/0, /*s02=*/stride_token, /*s03=*/0, ne0, /*ne1=*/(int) nrows_dst, /*ne2=*/1, n_expert_used);
++                x, ids_src1_inv, vy, ne00, /*s01=*/0, /*s02=*/stride_token, /*s03=*/0, ne0, /*ne1=*/(int) nrows_dst, /*ne2=*/1, n_expert_used, cpu_q8);
+             break;
+         case MMQ_Q8_1_DS_LAYOUT_D2S6:
+             quantize_mmq_q8_1<MMQ_Q8_1_DS_LAYOUT_D2S6, true><<<num_blocks, block_size, 0, stream>>>(
+-                x, ids_src1_inv, vy, ne00, /*s01=*/0, /*s02=*/stride_token, /*s03=*/0, ne0, /*ne1=*/(int) nrows_dst, /*ne2=*/1, n_expert_used);
++                x, ids_src1_inv, vy, ne00, /*s01=*/0, /*s02=*/stride_token, /*s03=*/0, ne0, /*ne1=*/(int) nrows_dst, /*ne2=*/1, n_expert_used, cpu_q8);
+             break;
+         default:
+             GGML_ABORT("fatal error");
+diff --git a/ggml/src/ggml-cuda/quantize.cuh b/ggml/src/ggml-cuda/quantize.cuh
+index 5f08dcb..19bf448 100644
+--- a/ggml/src/ggml-cuda/quantize.cuh
++++ b/ggml/src/ggml-cuda/quantize.cuh
+@@ -16,6 +16,8 @@ typedef void (*quantize_cuda_t)(
+         ggml_type type_src0, int64_t ne00, int64_t s01, int64_t s02, int64_t s03,
+         int64_t ne0, int64_t ne1, int64_t ne2, int64_t ne3, cudaStream_t stream);
+ 
++bool ggml_cuda_mxfp4_cpu_q8_parity();
++
+ void quantize_row_q8_1_cuda(
+         const float * x, const int32_t * ids, void * vy,
+         ggml_type type_src0, int64_t ne00, int64_t s01, int64_t s02, int64_t s03,

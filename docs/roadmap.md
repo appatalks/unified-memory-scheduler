@@ -1,5 +1,107 @@
 # Roadmap
 
+## Native Handoff Follow-up: Measured Budget, Mixed Control-thread Result
+
+The [critical-path study](../benchmarks/results/handoff-critical-path-summary.json)
+uses a warmer-free, installed-library CUDA/CPU trace. Within a 3.068-second
+CPU-enclosed diagnostic envelope, CPU expert graphs account for about 1.730
+seconds, scalar controls 0.049 seconds, and CUDA API intervals cover 0.418
+seconds outside CPU graph/GPU execution. Required GPU waits, API calls,
+observer overhead and idle gaps are not interchangeable or additive.
+
+A default-off scalar-control interposer keeps expert work at its original
+thread count while executing bounded dispatch/copy-only graphs with one worker.
+The original long 96-position reference remains exact. Three matched pairs
+per workload give median decode changes of +0.85% coding, +0.13% reasoning
+and -0.41% prose. That is not a general speedup or a reason to alter defaults.
+The control work itself is too small a budget for the 60 tok/s target.
+
+The native Q/K/V optimizer passes short numerical controls but does not
+improve a three-pair coding screen; concurrency metadata is not proof of
+actual stream execution. CUDA12 pinned-copy/sync microbenchmarks find no
+advantage for explicit spinning over auto; blocking waits lose. Do not repeat
+these under new labels.
+
+Further work should cost a genuinely different handoff protocol that reduces
+host calls while proving native buffer lifetime/dependencies. Pinned memory,
+CUDA graph replay, route packets and guarded CPU/GPU overlap are already
+present or tested; neither skipping required fences nor counting all API
+elapsed time as savings is justified.
+
+## Live CPU Warmer: Implemented And Correct, No Throughput Win
+
+At the user's request, the [live follow-up](../benchmarks/results/live-cpu-cache-warmer-summary.json)
+goes beyond the offline gate below. A separate opt-in reader uses current
+router IDs and original host weight buffers, with a latest-only bounded queue,
+same-CCD helper affinity, finite job budget, cancellation and safe unload.
+It does not wait for warming before executing experts or modify target math.
+
+The final read path matches the original long-prompt full-vocabulary reference
+exactly at all 96 coding/prose/reasoning positions. Native/noop/read controls
+have matching outputs across 27 repeated 512-output requests. Median live
+read throughput is 0.2-1.1% below matched native, not a demonstrated speedup.
+An unrestricted coding triplet also fails to show a gain; fixed-CCD placement
+is not credited as a warming benefit.
+
+Actual NVTX helper-job intervals overlap GPU kernels by about 0.012%,
+and any GPU activity by about 4.6%, mostly transfers. Much of warming instead
+coincides with CPU dispatcher/control work or host gaps before GPU expert launches.
+These whole-process diagnostic intervals are not per-cacheline timestamps.
+The final matrix attests identical installed backend library mappings across
+all variants. An earlier cohort with a differing preloaded GGML base was
+retained as exploratory and excluded from the clean comparison.
+
+Keep the prototype default-off and uninstalled. Do not increase warm volume
+or promote a scheduler from isolated warm-cache ratios. Further work must
+change information timing or execution order and pass a new matched gate;
+the current causal dispatch trigger does not improve the throughput goal.
+
+## GPU-window CPU-cache Staging: Feasible Primitive, Early Knowledge Unresolved
+
+The [staging investigation](../benchmarks/results/gpu-window-cpu-cache-summary.json)
+now has real CUDA/CPU timelines and repeated native CPU cache calibration.
+Same-CCD full warming of one original expert reduces isolated FFN compute
+about 3.0-3.13x with bit-exact outputs, but serial warming is slower overall.
+Warming from the other CCD instead yields about 0.61x compute speed.
+
+An ideal 32 MiB, 40 GB/s, perfect-next-demand model can stage about 27-33%
+of logical projection payload in the four sampled traces. This is not a
+throughput prediction: it assumes ideal retention, ignores helper overhead
+and is measured on a profiler-perturbed execution. Actual observed route-ready
+and pre-admission snapshots cover less than 0.3%; the simple previous-cold-set
+control covers only about 2-3% while wasting most staged bytes.
+
+Do not implement a learned predictor or live scheduler merely from the
+microbenchmark ratio. Next require an earlier causal hint with useful
+byte-weighted prediction under the current residency/admission policy, then
+cost same-CCD tile warming, pollution, helper wakeup and concurrent DRAM use.
+No installed runtime, target arithmetic, residency budget or decoder changes
+are authorized by this study. The native control remains the throughput
+baseline; this study does not promote the slower low-CPU-use profile below.
+
+## Current Research Priority: Decode Cost And Resource Efficiency
+
+GPU-prefill integration is parked while decode alternatives are evaluated.
+The [CPU follow-up](../benchmarks/results/cpu-decode-efficiency-summary.json)
+now has a repeatable, numerical-preserving **resource/latency tradeoff**:
+GNU OpenMP `GOMP_SPINCOUNT=1000` reduces generation-window process CPU by
+27-32% at roughly 4% lower generation throughput. Whole-request savings are
+about 20-22% on short prompts but only 3% when prefill dominates. Native control
+and candidate remain exact at 96 held-out full-vocabulary positions, with
+matching generated outputs across the paired request matrix.
+
+This is a candidate **optional lower-CPU-use mode**, not a faster default,
+energy measurement or achievement of 60 tok/s. Diagnostic paired profiles
+retain the same ordered CPU matmul/count/byte signatures, supporting idle
+spinning rather than omitted expert work as the resource-saving mechanism.
+
+VNNI integer replacement, pool-affinity and non-OpenMP threadpool pilots did
+not establish a speed improvement. Full prompt-conditioned seed rebuilds
+also fail the first costed comparison against causal admission on the small
+held-out dataset. Preserve those negative results instead of repeating them
+under new names. Further throughput work needs a measured critical-path
+headroom argument before another kernel or scheduler implementation.
+
 ## Milestone 1: Baseline Infrastructure
 
 - hardware/CUDA discovery;
@@ -270,6 +372,98 @@ Extend only demonstrated mechanisms to prefill, decode, and concurrent-request
 objectives. Compare static, size-aware LRU, and measured/adaptive policies. Expose
 simple user goals rather than expert-cache parameters; keep ordinary upstream
 inference available independently of experimental scheduling.
+
+The stage-aware prefill investigation now has transfer-inclusive real-weight
+curves and separate observed routing histograms. After a user reboot restored
+CUDA, 96 initial and 54 repeated reports tested rows 1-128 across early/middle/late
+GPT layers. Four-row GPU chunks yield passing isolated improvements in selected
+splits, including layer 0 at 32 rows (6.569 -> 4.666 ms). Other splits still fail
+unchanged numerical gates, so there is no universal crossover or qualified
+whole-model prefill gain. Two controlled prompt traces confirm substantial
+row reuse and explicitly retain zero/one-row final-layer pruning.
+Next resolve numerical differences on representative activations/expert sets,
+measure per-expert/cache-pressure/pipelined costs, then qualify an integrated
+stage-aware candidate on full-request time and decode-residency effects.
+Application defaults remain unchanged. See the
+[measured investigation](../benchmarks/RESULTS.md#stage-aware-prefill-calibration-isolated-gains-full-model-unqualified).
+
+The subsequent [MXFP4 activation-alignment study](../benchmarks/RESULTS.md#mxfp4-activation-alignment-isolated-improvement-residual-failures)
+finds a numerical contributor in CPU/CUDA activation rounding, scale storage,
+and matrix precision. A separate default-off CUDA patch passes 57/60 broader
+operator cases and all six zero/tie stress cases; three residual failures
+remain. Qualified fixed-set isolated upload timings favor GPU execution at
+32/64 rows but lose at one/eight rows. These are not application gains.
+The [effective-Q8 replay follow-up](../benchmarks/results/mxfp4-effective-q8-propagation-summary.json)
+now reproduces the severe down error on CPU using the GPU chain's effective
+input; GPU down on identical effective input is accurate near 1e-7 relative L2.
+Both projection propagation and activation-only rounding remain relevant for
+that GPU-first prototype.
+
+The [CPU-activation/GPU-down experiment](../benchmarks/results/cpu-activation-gpu-down-summary.json)
+now implements the alternative split with CPU-native Q8 canonicalization and
+all preparation/copy costs included. It passes all sixty bounded operator
+configurations on the unchanged stock backend without the parity patch.
+Three-repeat transfer-inclusive isolated timings improve at 32/64/128 rows;
+one/eight-row uploads lose and sixteen rows are inconsistent. Scoped memcheck
+and racecheck complete without reported errors. This bypasses the unresolved
+GPU gate/up/activation differences rather than fixing the original prototype.
+The [actual-input follow-up](../benchmarks/results/actual-prefill-activation-replay-summary.json)
+now passes nine routed FFN frames across coding/prose/reasoning and early,
+middle and pruned final layers. Native CPU replay matches captured output and
+GPU-down preserves the original per-token IDs/probabilities. Capture on the
+optimized CUDA profile perturbs logits; a separately qualified no-fusion
+reference/capture pair is exact at 96 full-vocabulary observer positions.
+Replay itself uses normal GPU fusion. This does not qualify candidate
+full-model logits or make fusion-off a product recommendation.
+The [separate full-model mask control](../benchmarks/results/resident-down-full-model-prototype-summary.json)
+now implements explicit prefill, resident-only down weights and unchanged
+zero/one-row/decode paths. Final default-off logits match the installed hybrid
+exactly at 96 positions; enabled mode fails. CPU-only control is exact under
+matched fusion-off execution, but real GPU down and even layer-0-only GPU down
+still fail. A live CPU oracle passes all 735 local FFN comparisons near 1e-7
+relative L2 while target logits diverge.
+Do not move directly to compaction or request-speed claims: first isolate
+graph/fusion sensitivity and where small arithmetic changes are amplified
+through subsequent quantization/routing. No tolerance widening or tie-snapping
+is justified. Full-target numerical, mixed-routing, memory and request-latency
+gates remain; compact resident-aware dispatch is still the intended long-term
+direction once those correctness issues are resolved.
+
+The [numerical localization](../benchmarks/results/resident-down-numerical-localization-summary.json)
+now confirms one amplification path with observer-preserved logits: tiny
+layer-0 FFN differences remain small through layer-1 Q/K/V projections, cross
+native F16 K/V storage boundaries (19/30 changed values), then grow through
+attention and FFN Q8 replay before an expert-set change in layer 2. Query-F16
+conversion is only replayed, not captured. The production fusion discrepancy
+remains a separate open problem.
+
+Next advancement candidates, not promised speedups:
+
+1. Extend the now-passing
+   [CPU-compatible packed-down probe](../benchmarks/results/cpu-compatible-packed-down-summary.json)
+   into the research target graph with original CPU post-ops and actual
+   quantized-state parity. Scalar and packed-DP4A variants pass 384 total
+   checks bit-exact against local CPU controls. DP4A has repeated raw-stage
+   gains with Q8 preparation/transfers included, but the all-required-experts
+   resident probe is not the model's mixed-placement plan. Fresh uploads
+   remain unfavorable or mixed, and shared CPU activation/post-op costs are
+   outside the raw-stage comparison. Do not infer request acceleration.
+2. Preserve native optimized fusion/kernel choices while changing dispatch.
+   Validate the CPU-only control first without intrusive tensor observers.
+3. Only after both target gates pass, compact resident token/rank work,
+   reuse bounded buffers and test overlap without decoder-residency regressions.
+   Then measure actual request latency and accepted-output generation.
+
+The [real-model before/after study](../benchmarks/results/gpt120-prefill-real-workload-summary.json)
+also tests native batching independently of that experimental CUDA patch.
+Three 3,577-token/256-output pairs show about 3.5% lower prompt latency with
+1024 rather than 512 physical rows, but a separate long held-out full-vocabulary
+check fails the original gates while its unchanged control is exact. Larger
+batching is rejected; thread/logical-batch screens find no new qualified winner.
+The [Synapse research handoff](synapse-prefill-handoff.md) is reviewable but
+explicitly blocks rollout. Qualify real activations and varying membership
+before any full-model stage-aware scheduler. Installed libraries and serving
+defaults remain unchanged.
 
 ## Deferred
 

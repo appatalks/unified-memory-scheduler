@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vrambridge.dev/schema/prefill-localization-v1.json",
+  "title": "Aggregate prefill numerical-localization diagnostics",
+  "type": "object",
+  "required": ["raw_activations_recorded_in_report", "performance_measurement", "records", "focus", "comparisons"],
+  "properties": {
+    "raw_activations_recorded_in_report": {"const": false},
+    "performance_measurement": {"const": false},
+    "records": {"enum": [6, 12, 180]},
+    "focus": {"enum": ["ffn", "attention1", "rounding1"]},
+    "verified_native_fp16_cache_stores": {"type": "integer", "minimum": 0, "maximum": 2},
+    "comparisons": {
+      "type": "array",
+      "maxItems": 180,
+      "items": {
+        "type": "object",
+        "required": ["request", "layer", "component", "width", "rows", "type", "different_values", "first_different_row", "max_abs", "reference_max_abs", "relative_l2"],
+        "properties": {
+          "request": {"type": "string", "minLength": 1, "maxLength": 128},
+          "layer": {"type": "integer", "minimum": 0, "maximum": 35},
+          "component": {"enum": ["input", "output", "router", "ids", "probabilities", "residual0", "attn_norm1", "q_projection1", "q_biased1", "k_projection1", "k_biased1", "v_projection1", "v_biased1", "attn_context1", "attn_output1", "ffn_residual1", "postnorm1", "q_rope1", "k_rope1", "stored_k1", "stored_v1"]},
+          "width": {"enum": [4, 128, 512, 2880, 4096]},
+          "rows": {"type": "integer", "minimum": 1, "maximum": 512},
+          "type": {"enum": ["f32", "i32"]},
+          "different_values": {"type": "integer", "minimum": 0},
+          "first_different_row": {"type": ["integer", "null"], "minimum": 0, "maximum": 511},
+          "max_abs": {"type": "number", "minimum": 0},
+          "reference_max_abs": {"type": "number", "minimum": 0},
+          "relative_l2": {"type": "number", "minimum": 0},
+          "different_ordered_rows": {"type": "integer", "minimum": 0, "maximum": 512},
+          "different_expert_set_rows": {"type": "integer", "minimum": 0, "maximum": 512},
+          "first_different_expert_set_row": {"type": ["integer", "null"], "minimum": 0, "maximum": 511},
+          "native_storage_type": {"const": "f16"},
+          "native_q8": {
+            "type": "object",
+            "required": ["blocks", "different_scales", "different_codes", "effective_max_abs", "effective_relative_l2", "first_different_row"],
+            "properties": {
+              "blocks": {"type": "integer", "minimum": 1},
+              "different_scales": {"type": "integer", "minimum": 0},
+              "different_codes": {"type": "integer", "minimum": 0},
+              "effective_max_abs": {"type": "number", "minimum": 0},
+              "effective_relative_l2": {"type": "number", "minimum": 0},
+              "first_different_row": {"type": ["integer", "null"], "minimum": 0, "maximum": 511}
+            }
+          },
+          "fp16_rounding": {
+            "type": "object",
+            "required": ["different_codes", "effective_max_abs", "effective_relative_l2", "first_different_row", "actual_cache_storage"],
+            "properties": {
+              "different_codes": {"type": "integer", "minimum": 0},
+              "effective_max_abs": {"type": "number", "minimum": 0},
+              "effective_relative_l2": {"type": "number", "minimum": 0},
+              "first_different_row": {"type": ["integer", "null"], "minimum": 0, "maximum": 511},
+              "actual_cache_storage": {"type": "boolean"}
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"component": {"enum": ["stored_k1", "stored_v1"]}}},
+            "then": {
+              "required": ["native_storage_type", "fp16_rounding"],
+              "properties": {"fp16_rounding": {"properties": {"actual_cache_storage": {"const": true}}}}
+            }
+          },
+          {
+            "if": {"properties": {"component": {"const": "input"}}},
+            "then": {"required": ["native_q8"]}
+          },
+          {
+            "if": {"properties": {"component": {"const": "ids"}}},
+            "then": {"required": ["different_ordered_rows", "different_expert_set_rows", "first_different_expert_set_row"]}
+          },
+          {
+            "if": {"properties": {"component": {"enum": ["q_rope1", "k_rope1", "v_biased1"]}}},
+            "then": {"properties": {"fp16_rounding": {"properties": {"actual_cache_storage": {"const": false}}}}}
+          }
+        ]
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"focus": {"const": "ffn"}}},
+      "then": {"properties": {"records": {"const": 180}}}
+    },
+    {
+      "if": {"properties": {"focus": {"const": "attention1"}}},
+      "then": {"properties": {"records": {"const": 12}}}
+    },
+    {
+      "if": {"properties": {"focus": {"const": "rounding1"}}},
+      "then": {
+        "required": ["verified_native_fp16_cache_stores"],
+        "properties": {"records": {"const": 6}, "verified_native_fp16_cache_stores": {"const": 2}}
+      }
+    }
+  ]
+}

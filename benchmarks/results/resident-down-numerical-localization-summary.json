@@ -1,0 +1,812 @@
+{
+  "schema_version": 1,
+  "study": "observer_qualified_prefill_numerical_localization",
+  "date": "2026-10-18",
+  "generated_at_utc": "2026-10-18T23:59:46.203380+00:00",
+  "status": "confirmed_attention_state_rounding_path_candidate_still_unqualified",
+  "candidate_matches_native_reference": false,
+  "full_model_acceleration_claim": false,
+  "qualified_performance_improvement": false,
+  "performance_measurement": false,
+  "research_repository": "https://github.com/appatalks/unified-memory-scheduler",
+  "research_base_commit": "1c7dc36d2f6429b99c3591824c22661ca4df47a6",
+  "changes_uncommitted": true,
+  "downstream": {
+    "layer1_input": {
+      "component": "input",
+      "different_values": 831360,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 0.0010810643434524536,
+      "native_q8": {
+        "blocks": 46080,
+        "different_codes": 1307,
+        "different_scales": 448,
+        "effective_max_abs": 0.013031005859375,
+        "effective_relative_l2": 0.0005419364672783278,
+        "first_different_row": 16
+      },
+      "reference_max_abs": 2.5368874073028564,
+      "relative_l2": 7.011317064579513e-05,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 2880
+    },
+    "layer1_router_probabilities": {
+      "component": "probabilities",
+      "different_values": 1093,
+      "first_different_row": 3,
+      "layer": 1,
+      "max_abs": 7.37309455871582e-05,
+      "reference_max_abs": 0.9093190431594849,
+      "relative_l2": 2.048988086662915e-05,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 4
+    },
+    "layer1_ffn_output": {
+      "component": "output",
+      "different_values": 784202,
+      "first_different_row": 3,
+      "layer": 1,
+      "max_abs": 0.04600858688354492,
+      "reference_max_abs": 46.873470306396484,
+      "relative_l2": 0.0007542461818231458,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 2880
+    },
+    "first_true_expert_set_change": {
+      "component": "ids",
+      "different_expert_set_rows": 1,
+      "different_ordered_rows": 5,
+      "different_values": 9,
+      "first_different_expert_set_row": 138,
+      "first_different_row": 138,
+      "layer": 2,
+      "max_abs": 68.0,
+      "reference_max_abs": 127.0,
+      "relative_l2": 0.047000988398138634,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "i32",
+      "width": 4
+    },
+    "layer2_ffn_output": {
+      "component": "output",
+      "different_values": 1465839,
+      "first_different_row": 3,
+      "layer": 2,
+      "max_abs": 2.4496445655822754,
+      "reference_max_abs": 103.50591278076172,
+      "relative_l2": 0.007860558084074752,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 2880
+    },
+    "coordinate_system": "Zero-based row within first 512-row prefill batch; no token IDs are published."
+  },
+  "configuration": {
+    "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+    "context": 16384,
+    "expert_cache_mib": 12000,
+    "reported_usable_cache_mib": 11995.16,
+    "logical_batch": 2048,
+    "physical_batch": 512,
+    "generation_threads": 8,
+    "batch_threads": 16,
+    "prompt_tokens": 3590,
+    "heldout_category": "coding",
+    "scope": "First nonempty 512-row prefill tensors, with final-layer one-row pruning. Single layer 0 GPU down; all other bulk FFNs use CPU control.",
+    "cuda_disable_fusion": "1",
+    "cpu_only_reference_control": true,
+    "original_weights_and_probabilities_preserved": true,
+    "template_epoch_seconds": 0,
+    "reasoning_effort": "low",
+    "continuation": "Original native-reference teacher-forced tokens"
+  },
+  "observer_controls": [
+    {
+      "role": "ffn_cpu",
+      "report": "numerical-localization-20261018/cpu-reference-trace.json",
+      "comparison_reference_file": "coding-native-reference.bin",
+      "positions": 32,
+      "max_abs_logit_error": 0.0,
+      "relative_l2": 0.0,
+      "top1_matches": 32,
+      "trace_records": 180,
+      "checker_source_sha256": "eea4319bedbe1b80eed1d0c7469589b9c20ca43627bb06da2851dedff79af4e2",
+      "localization_source_sha256": "edb2a1e56bc11a8fcb488300698a4cbde9be7220be0edee61928be276c77ea08",
+      "legacy_writer_shape": true
+    },
+    {
+      "role": "ffn_candidate",
+      "report": "numerical-localization-20261018/layer0-localized-final.json",
+      "comparison_reference_file": "private-layer0-preservation-reference.bin",
+      "positions": 32,
+      "max_abs_logit_error": 0.0,
+      "relative_l2": 0.0,
+      "top1_matches": 32,
+      "trace_records": 180,
+      "checker_source_sha256": "9a83c40ae8b3a3484a7c4a3515f7f6537a168c1f85e30629bb9e81061a9c585c",
+      "localization_source_sha256": "5267843ceeb54619299b56a1014274d2b14840299d3157535131d03fe2e0f148",
+      "legacy_writer_shape": false
+    },
+    {
+      "role": "attention_cpu",
+      "report": "numerical-localization-20261018/attention1-cpu-reference.json",
+      "comparison_reference_file": "coding-native-reference.bin",
+      "positions": 32,
+      "max_abs_logit_error": 0.0,
+      "relative_l2": 0.0,
+      "top1_matches": 32,
+      "trace_records": 12,
+      "checker_source_sha256": "9a83c40ae8b3a3484a7c4a3515f7f6537a168c1f85e30629bb9e81061a9c585c",
+      "localization_source_sha256": "5267843ceeb54619299b56a1014274d2b14840299d3157535131d03fe2e0f148",
+      "legacy_writer_shape": false
+    },
+    {
+      "role": "attention_candidate",
+      "report": "numerical-localization-20261018/attention1-layer0.json",
+      "comparison_reference_file": "private-layer0-preservation-reference.bin",
+      "positions": 32,
+      "max_abs_logit_error": 0.0,
+      "relative_l2": 0.0,
+      "top1_matches": 32,
+      "trace_records": 12,
+      "checker_source_sha256": "9a83c40ae8b3a3484a7c4a3515f7f6537a168c1f85e30629bb9e81061a9c585c",
+      "localization_source_sha256": "5267843ceeb54619299b56a1014274d2b14840299d3157535131d03fe2e0f148",
+      "legacy_writer_shape": false
+    },
+    {
+      "role": "rounding_cpu",
+      "report": "numerical-localization-20261018/rounding1-cpu-reference.json",
+      "comparison_reference_file": "coding-native-reference.bin",
+      "positions": 32,
+      "max_abs_logit_error": 0.0,
+      "relative_l2": 0.0,
+      "top1_matches": 32,
+      "trace_records": 6,
+      "checker_source_sha256": "cad48df82ae301d2e95eb04738b5e6c9ea6995106cad97d8ba40c704c5fd24ba",
+      "localization_source_sha256": "4cc1fa4c1c285639a2a5fb51e3e9c1ee342816334dfa9846e760b1b6a218b93d",
+      "legacy_writer_shape": false
+    },
+    {
+      "role": "rounding_candidate",
+      "report": "numerical-localization-20261018/rounding1-layer0.json",
+      "comparison_reference_file": "private-layer0-preservation-reference.bin",
+      "positions": 32,
+      "max_abs_logit_error": 0.0,
+      "relative_l2": 0.0,
+      "top1_matches": 32,
+      "trace_records": 6,
+      "checker_source_sha256": "cad48df82ae301d2e95eb04738b5e6c9ea6995106cad97d8ba40c704c5fd24ba",
+      "localization_source_sha256": "4cc1fa4c1c285639a2a5fb51e3e9c1ee342816334dfa9846e760b1b6a218b93d",
+      "legacy_writer_shape": false
+    }
+  ],
+  "observer_scope_note": "CPU traces match the capture-free CPU control. Candidate traces match capture-free candidate logits under the same external continuation, not native-model equivalence.",
+  "default_off_regression": {
+    "optimized_profile": true,
+    "positions": 96,
+    "max_abs_logit_error": 0.0,
+    "relative_l2": 0.0,
+    "passed": true
+  },
+  "unchanged_native_gate": {
+    "max_abs": 0.01,
+    "relative_l2": 0.001,
+    "candidate_max_abs": 6.331846714019775,
+    "candidate_relative_l2": 0.18680448096570354,
+    "candidate_top1_matches": 31,
+    "positions": 32,
+    "passed": false
+  },
+  "seed": {
+    "layer0_inputs_routes_probabilities_identical": true,
+    "ffn_output": {
+      "component": "output",
+      "different_values": 267246,
+      "first_different_row": 1,
+      "layer": 0,
+      "max_abs": 5.7220458984375e-06,
+      "reference_max_abs": 97.83353424072266,
+      "relative_l2": 4.3635570603856686e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 2880
+    }
+  },
+  "attention_checkpoints": [
+    {
+      "component": "residual0",
+      "different_values": 153522,
+      "first_different_row": 1,
+      "layer": 0,
+      "max_abs": 7.62939453125e-06,
+      "reference_max_abs": 111.72593688964844,
+      "relative_l2": 1.8811625738245048e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 2880
+    },
+    {
+      "component": "attn_norm1",
+      "different_values": 163589,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 3.814697265625e-06,
+      "reference_max_abs": 28.26609992980957,
+      "relative_l2": 2.720602045010955e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 2880
+    },
+    {
+      "component": "q_projection1",
+      "different_values": 287414,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 1.9073486328125e-06,
+      "reference_max_abs": 9.846318244934082,
+      "relative_l2": 3.483701831720099e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 4096
+    },
+    {
+      "component": "q_biased1",
+      "different_values": 241586,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 1.9073486328125e-06,
+      "reference_max_abs": 10.38155746459961,
+      "relative_l2": 3.141890198994438e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 4096
+    },
+    {
+      "component": "k_projection1",
+      "different_values": 27196,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 1.52587890625e-05,
+      "reference_max_abs": 102.67727661132812,
+      "relative_l2": 2.3498627872607788e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 512
+    },
+    {
+      "component": "k_biased1",
+      "different_values": 27196,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 1.52587890625e-05,
+      "reference_max_abs": 102.67727661132812,
+      "relative_l2": 2.3498627872607788e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 512
+    },
+    {
+      "component": "v_projection1",
+      "different_values": 37818,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 9.5367431640625e-07,
+      "reference_max_abs": 7.542433738708496,
+      "relative_l2": 3.933898485893112e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 512
+    },
+    {
+      "component": "v_biased1",
+      "different_values": 36343,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 9.5367431640625e-07,
+      "reference_max_abs": 7.581984519958496,
+      "relative_l2": 3.88502495713477e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 512
+    },
+    {
+      "component": "attn_context1",
+      "different_values": 203525,
+      "first_different_row": 3,
+      "layer": 1,
+      "max_abs": 0.0018451213836669922,
+      "reference_max_abs": 7.517303466796875,
+      "relative_l2": 1.2267377696220992e-05,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 4096
+    },
+    {
+      "component": "attn_output1",
+      "different_values": 987985,
+      "first_different_row": 10,
+      "layer": 1,
+      "max_abs": 0.009820938110351562,
+      "reference_max_abs": 38.52655792236328,
+      "relative_l2": 7.983862688714364e-05,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 2880
+    },
+    {
+      "component": "ffn_residual1",
+      "different_values": 836079,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 0.009817123413085938,
+      "reference_max_abs": 122.11151885986328,
+      "relative_l2": 2.1273967035751316e-05,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 2880
+    },
+    {
+      "component": "postnorm1",
+      "different_values": 831360,
+      "first_different_row": 1,
+      "layer": 1,
+      "max_abs": 0.0010810643434524536,
+      "reference_max_abs": 2.5368874073028564,
+      "relative_l2": 7.011317064579513e-05,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 2880
+    }
+  ],
+  "attention_tensor_metadata": [
+    {
+      "name": "blk.1.attn_k.bias",
+      "type": "f32",
+      "shape": [
+        512,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "blk.1.attn_k.weight",
+      "type": "q8_0",
+      "shape": [
+        2880,
+        512,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "blk.1.attn_norm.weight",
+      "type": "f32",
+      "shape": [
+        2880,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "blk.1.attn_output.bias",
+      "type": "f32",
+      "shape": [
+        2880,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "blk.1.attn_output.weight",
+      "type": "q8_0",
+      "shape": [
+        4096,
+        2880,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "blk.1.attn_q.bias",
+      "type": "f32",
+      "shape": [
+        4096,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "blk.1.attn_q.weight",
+      "type": "q8_0",
+      "shape": [
+        2880,
+        4096,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "blk.1.attn_sinks.weight",
+      "type": "f32",
+      "shape": [
+        64,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "blk.1.attn_v.bias",
+      "type": "f32",
+      "shape": [
+        512,
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "name": "blk.1.attn_v.weight",
+      "type": "q8_0",
+      "shape": [
+        2880,
+        512,
+        1,
+        1
+      ]
+    }
+  ],
+  "native_fp16_state": {
+    "rotated_key_input": {
+      "component": "k_rope1",
+      "different_values": 25827,
+      "first_different_row": 1,
+      "fp16_rounding": {
+        "actual_cache_storage": false,
+        "different_codes": 19,
+        "effective_max_abs": 0.001953125,
+        "effective_relative_l2": 6.06211381292265e-07,
+        "first_different_row": 5
+      },
+      "layer": 1,
+      "max_abs": 2.288818359375e-05,
+      "reference_max_abs": 138.26797485351562,
+      "relative_l2": 2.4566544183714582e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 512
+    },
+    "value_input": {
+      "component": "v_biased1",
+      "different_values": 36343,
+      "first_different_row": 1,
+      "fp16_rounding": {
+        "actual_cache_storage": false,
+        "different_codes": 30,
+        "effective_max_abs": 0.0009765625,
+        "effective_relative_l2": 2.1421047902842965e-06,
+        "first_different_row": 3
+      },
+      "layer": 1,
+      "max_abs": 9.5367431640625e-07,
+      "reference_max_abs": 7.581984519958496,
+      "relative_l2": 3.88502495713477e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 512
+    },
+    "actual_key_store": {
+      "component": "stored_k1",
+      "different_values": 19,
+      "first_different_row": 5,
+      "fp16_rounding": {
+        "actual_cache_storage": true,
+        "different_codes": 19,
+        "effective_max_abs": 0.001953125,
+        "effective_relative_l2": 6.06211381292265e-07,
+        "first_different_row": 5
+      },
+      "layer": 1,
+      "max_abs": 0.001953125,
+      "native_storage_type": "f16",
+      "reference_max_abs": 138.25,
+      "relative_l2": 6.06211381292265e-07,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 512
+    },
+    "actual_value_store": {
+      "component": "stored_v1",
+      "different_values": 30,
+      "first_different_row": 3,
+      "fp16_rounding": {
+        "actual_cache_storage": true,
+        "different_codes": 30,
+        "effective_max_abs": 0.0009765625,
+        "effective_relative_l2": 2.1421047902842965e-06,
+        "first_different_row": 3
+      },
+      "layer": 1,
+      "max_abs": 0.0009765625,
+      "native_storage_type": "f16",
+      "reference_max_abs": 7.58203125,
+      "relative_l2": 2.1421047902842965e-06,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 512
+    },
+    "query_rounding_replay": {
+      "component": "q_rope1",
+      "different_values": 246356,
+      "first_different_row": 1,
+      "fp16_rounding": {
+        "actual_cache_storage": false,
+        "different_codes": 195,
+        "effective_max_abs": 0.00390625,
+        "effective_relative_l2": 3.306784799471589e-06,
+        "first_different_row": 1
+      },
+      "layer": 1,
+      "max_abs": 2.86102294921875e-06,
+      "reference_max_abs": 13.978631019592285,
+      "relative_l2": 3.380692905433726e-08,
+      "request": "heldout-staging-review",
+      "rows": 512,
+      "type": "f32",
+      "width": 4096
+    },
+    "actual_query_conversion_captured": false,
+    "verification": "All sampled actual native K/V codes match their original F32 sources rounded to IEEE F16, with cache row indices checked against first-batch positions. Values are only read, not changed.",
+    "verified_stores_per_run": 2,
+    "runs": 2,
+    "cells_per_store": 262144,
+    "total_native_cell_checks": 1048576,
+    "query_note": "195 query F16 differences are a rounding replay, not a captured native query buffer."
+  },
+  "supporting_raw_operator_evidence": {
+    "path": "actual-prefill-split-20261018/final-routed-replay-0.json",
+    "scope": "Earlier separate 64-row actual-input replay; supports raw down projection as the first operator difference, not a new same-batch capture.",
+    "cpu_gate_up_activation_max_error": 0.0,
+    "gpu_down_projection": {
+      "backend": "gpu_down_stage",
+      "max_abs_error": 1.33514404296875e-05,
+      "operator": "down_projection",
+      "passed": true,
+      "reference_max_abs": 45.66334915161133,
+      "relative_l2_error": 1.4229524162501986e-07,
+      "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+    }
+  },
+  "synthetic_rounding_check": {
+    "fp32_separation": 2.384185791015625e-07,
+    "fp16_separation": 0.0009765625,
+    "expected_nearest_even_codes_verified": true,
+    "synthetic_scalar_only": true
+  },
+  "next_advancements_to_test": [
+    {
+      "priority": 1,
+      "name": "CPU-reference-compatible down arithmetic and packed native Q8 input",
+      "status": "proposed, not implemented or timed",
+      "rationale": "A tiny down-projection seed can change native quantized attention state. Test CPU-compatible accumulation/order and CPU post-ops, not just smaller local L2.",
+      "input_format_byte_ratio_f32_over_q8_0": 3.764705882352941,
+      "ratio_scope": "Format-only input byte reduction, not an inference speed prediction.",
+      "gates": [
+        "Raw CPU/GPU and quantized-state compatibility on actual/adversarial inputs",
+        "Unchanged native full-logit gates",
+        "Transfer/preparation-inclusive cost break-even"
+      ]
+    },
+    {
+      "priority": 2,
+      "name": "Fusion-preserving graph integration",
+      "status": "separate unresolved issue",
+      "rationale": "The optimized-profile CPU-only graph control still fails; use non-intrusive fusion/kernel-choice diagnostics before accepting a changed dispatch graph."
+    },
+    {
+      "priority": 3,
+      "name": "Compact resident-aware prefill dispatch and bounded overlap",
+      "status": "blocked on numerical qualification",
+      "rationale": "Remove padded token/rank work only after native numerical and fusion controls pass; preserve decoding and resident bank, then measure real request time."
+    }
+  ],
+  "source_constraints": {
+    "native_fattn_fp32_kv_can_convert_to_f16": true,
+    "fattn_source": "https://github.com/ggml-org/llama.cpp/blob/620d2225cc436ab0b001e3200e590e3b286ef9ab/ggml/src/ggml-cuda/fattn.cu",
+    "cpu_native_dot_source": "https://github.com/ggml-org/llama.cpp/blob/620d2225cc436ab0b001e3200e590e3b286ef9ab/ggml/src/ggml-cpu/arch/x86/quants.c#L982",
+    "note": "Global F32 KV selection or higher precision alone is not a validated native-reference fix."
+  },
+  "tooling": {
+    "diagnostic_overlay": "third_party/patches/llama-b11669-prefill-localization-experimental.patch",
+    "diagnostic_overlay_sha256": "8e1b1554a82214171fc6dfd8ae3faea77dfe1e54f89fecc05a03b71ec0ed06b1",
+    "stack": [
+      "llama-b11669-hybrid-experts.patch",
+      "llama-b11669-resident-down-prefill-experimental.patch",
+      "llama-b11669-prefill-localization-experimental.patch"
+    ],
+    "stack_reconstruction_verified": true,
+    "checker_input_and_scalar_self_test_methods": 22,
+    "research_and_ordinary_checker_tests_passed": true,
+    "teacher_forced_reference_export": "Stores candidate logits and supplied continuation; top1 compares reference logits argmax, not forced token IDs.",
+    "schema": "benchmarks/schema/vrambridge-prefill-localization.schema.json",
+    "source_sha256": {
+      "tools/trace/logit_check.cpp": "cad48df82ae301d2e95eb04738b5e6c9ea6995106cad97d8ba40c704c5fd24ba",
+      "tools/trace/prefill_localization.h": "4cc1fa4c1c285639a2a5fb51e3e9c1ee342816334dfa9846e760b1b6a218b93d",
+      "tests/test_logit_checker.py": "6425a3cb332193e7988919b3b12272b365ea5ef11a1c991f362f815c90f7ca2c",
+      "CMakeLists.txt": "35d3a6fca325c2ff487ba9d0571caed6faf62a2fac8da4e8c1489d711e48b244"
+    },
+    "measured_revision_note": "Tooling gained attention/rounding focuses during the study. Each immutable raw report retains its measured checker/header source hashes; final source hashes are not retroactively attributed to earlier runs."
+  },
+  "backend": {
+    "installed_library_sha256": {
+      "cpu": "155a87103fdc442b309b656862bb2ea9b9f77be88f3434f9c044b71a572279e4",
+      "cuda": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+      "baseline_llama": "148c134928fce83224465faddde52febed9d4f4c6da8e6b159ac88448b2f9eb4"
+    },
+    "installed_libraries_changed": false,
+    "application_defaults_changed": false,
+    "experimental_cuda_parity_patch_required": false
+  },
+  "limitations": [
+    "One controlled-profile workload and first-batch windows, not broad model-quality or all-context coverage.",
+    "Actual K/V storage is verified; native internal query conversion is not captured and Q/K/V contributions are not separately ablated.",
+    "The production optimized-fusion discrepancy remains open independently of the observed KV/Q8 amplification.",
+    "No new kernel, packed-transfer path, compact dispatcher or real-request speedup is qualified.",
+    "Local small floating-point error does not establish preservation of discrete attention/quantization/routing state."
+  ],
+  "privacy": {
+    "raw_activations_routing_logits_or_token_ids_published": false,
+    "private_directory_permissions": "0700",
+    "private_data_permissions": "0600"
+  },
+  "public_evidence_index": [
+    {
+      "path": "numerical-localization-20261018/cpu-reference-trace.json",
+      "sha256": "1db1945437a442a10b3615db0252302b06fa281dd9417b6b5c8ded40e9c4264d"
+    },
+    {
+      "path": "numerical-localization-20261018/cpu-reference-trace.log",
+      "sha256": "e812c3772023ef3b9454ccf6c046c22950d2f6d56c73a3c582d4be2b775c49f1"
+    },
+    {
+      "path": "numerical-localization-20261018/layer0-localized-final.json",
+      "sha256": "0afe6000567e8e7ab812a8fbdf6a36fdeb6609380bb6c06c11dfe80985764133"
+    },
+    {
+      "path": "numerical-localization-20261018/layer0-localized-final.log",
+      "sha256": "0c995414e88443e4941cd6866a16adece5b2e21e6bf05f0dfe154a38b37b285a"
+    },
+    {
+      "path": "numerical-localization-20261018/attention1-cpu-reference.json",
+      "sha256": "044a10e6f5cb17b02dc8395aed3cb01a06285939138695ebad182c2faea9e127"
+    },
+    {
+      "path": "numerical-localization-20261018/attention1-cpu-reference.log",
+      "sha256": "91e6f7ea6399f806ef94005e044ce2da81d1ed0533d5d7384d00a0e6ac962ba1"
+    },
+    {
+      "path": "numerical-localization-20261018/attention1-layer0.json",
+      "sha256": "7a7df3cf3b38a30c5ae5e26df89aebed2820ffdaa3cbb075703f5fa9095fee92"
+    },
+    {
+      "path": "numerical-localization-20261018/attention1-layer0.log",
+      "sha256": "87545d980bb656db2aaa4d238871945a588118a69840cff254ead02c03ec2843"
+    },
+    {
+      "path": "numerical-localization-20261018/rounding1-cpu-reference.json",
+      "sha256": "2d310c58c1d0be0d9da514eeff16b3fe9f630ce1731b2adc443ca8f3a9672817"
+    },
+    {
+      "path": "numerical-localization-20261018/rounding1-cpu-reference.log",
+      "sha256": "3f6b532c5e3f02120a0dc4a0ea89d4cfd3d8bbb45f3c4cb44bf321790a25b268"
+    },
+    {
+      "path": "numerical-localization-20261018/rounding1-layer0.json",
+      "sha256": "9e05001e971c15049f19cb3d982aaba26a5fbeac8980b5c1b46aa790942b6e35"
+    },
+    {
+      "path": "numerical-localization-20261018/rounding1-layer0.log",
+      "sha256": "b591d59689ca0e85ba8c5e1c64cb7375fca55ce852a5253a5b27fbda3fa14cad"
+    },
+    {
+      "path": "numerical-localization-20261018/layer0-unobserved.json",
+      "sha256": "efc343fd0309b757db0a597c9ca8b79e33a53a41a2fa15418cdd3ac860c5c2e6"
+    },
+    {
+      "path": "numerical-localization-20261018/layer0-unobserved.log",
+      "sha256": "841fb44d3e69d2e8b8f135c31ca65cfee07d2899e79469541b2b6e0486c3eaa2"
+    },
+    {
+      "path": "numerical-localization-20261018/diagnostic-overlay-default-off.json",
+      "sha256": "88a4bdb26e3c70ff586c016de3d1a170f34e6d82178e74c77e92f1f246193b9e"
+    },
+    {
+      "path": "numerical-localization-20261018/diagnostic-overlay-default-off.log",
+      "sha256": "a9ebab30547d70e7e50245befec3c74d222917a1087ec8b66d871bc2438291d5"
+    },
+    {
+      "path": "numerical-localization-20261018/attention1-tensor-metadata.json",
+      "sha256": "18d657624bb1f1e62d200049e0ff96ffa40127b15a327e78ad342d22e06e0431"
+    },
+    {
+      "path": "numerical-localization-20261018/reference-extraction.json",
+      "sha256": "dbf5f450adbbe754cf383345d3e1c6535d865d7fb08087d4a47c014a4da352ca"
+    },
+    {
+      "path": "numerical-localization-20261018/ieee-fp16-boundary-self-test.json",
+      "sha256": "74e4647b003eb5b7b402a60338486ef8be50de4cc2b6612edf05d348a37ef411"
+    },
+    {
+      "path": "actual-prefill-split-20261018/final-routed-replay-0.json",
+      "sha256": "cb63b8a54df219ee9622a499840da725231076bcf175fb7d06e7c6358ca37700"
+    }
+  ],
+  "private_evidence_metadata": [
+    {
+      "path": "numerical-localization-20261018/coding-corpus.jsonl",
+      "sha256": "8757ea14157d379333cfe1678c294b7e6a9a10a6566cd8661910ec86cc0e3f70",
+      "bytes": 16022,
+      "publish": false
+    },
+    {
+      "path": "numerical-localization-20261018/coding-native-reference.bin",
+      "sha256": "cdbaf9ce98646d963dd14729f8737723792c02d4c526a733ffb58f04f06d9c78",
+      "bytes": 25753961,
+      "publish": false
+    },
+    {
+      "path": "numerical-localization-20261018/private-layer0-preservation-reference.bin",
+      "sha256": "3a11af59c4ef60ab3f7d3e525cb1fe26b205bc7af0bd041f4e77c58f57252e41",
+      "bytes": 25753961,
+      "publish": false
+    },
+    {
+      "path": "numerical-localization-20261018/private-prefill-reference.bin",
+      "sha256": "10f0184c2327cb9ac107aaeba0591903165c6350b861d7bef44decbd67b12599",
+      "bytes": 422669265,
+      "publish": false
+    },
+    {
+      "path": "numerical-localization-20261018/private-attention1-reference.bin",
+      "sha256": "860a5621dc365e4d84d0df9c2b7f3bfefffe17ea29fbb26739229d7e124b2c3e",
+      "bytes": 58853013,
+      "publish": false
+    },
+    {
+      "path": "numerical-localization-20261018/private-rounding1-reference.bin",
+      "sha256": "ef98b79f147742fe8c843c3df37abfcf56110530c6bf6495a22966ff6c46e685",
+      "bytes": 20972545,
+      "publish": false
+    }
+  ]
+}

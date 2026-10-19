@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "status": "cpu_chunk_controls_match_gpu_numerics_still_unqualified",
+  "research_question": "Does changing the native CPU expert branch's row grouping reproduce the remaining prefill numerical differences?",
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "probe_source_sha256": "5aaa287ffbc13333c49714d972193f4028f96991466ca59438049d08f3c36414",
+  "model": "gpt-oss-120b-MXFP4-00001-of-00002.gguf",
+  "protocol": {
+    "layers": [0, 17, 35],
+    "rows_per_expert": 32,
+    "selected_expert_ids": [0, 7, 42, 113],
+    "routing_weights": [0.05, 0.15, 0.30, 0.50],
+    "cpu_threads": 16,
+    "activation_samples": 3,
+    "repetitions_per_schedule": 6,
+    "candidate_cpu_gpu_row_limits": [[0, 0], [0, 1], [1, 1], [4, 4]],
+    "zero_row_limit_means_full_row_graph": true,
+    "reference": "Unchanged unsplit full-row native CPU graph.",
+    "cuda_mmq_precision_override": "auto",
+    "weight_uploads_in_timing": false,
+    "reports": 12,
+    "reports_passing_every_partition": 3,
+    "local_report_pattern": "prefill-20261018/cpu-isolation-layer*-rows32-cpu*-gpu*.json",
+    "gate": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001",
+    "target_weights_or_probabilities_changed": false,
+    "application_or_installed_backend_changed": false
+  },
+  "cpu_controls": {
+    "all_cpu_partitions_checked": 12,
+    "new_chunked_cpu_controls": 6,
+    "candidate_cpu_chunk_limits": [1, 4],
+    "all_maximum_absolute_errors": 0,
+    "all_relative_l2_errors": 0,
+    "interpretation": "In these fixed 32-row real-weight cases, CPU chunk grouping does not reproduce the observed numerical error. This is numerical equality under the probe, not a claim of bitwise identity or universal native CPU equivalence."
+  },
+  "all_gpu_controls": [
+    {
+      "layer": 0,
+      "full_row": {"max_abs_error": 0.3322000503540039, "relative_l2_error": 0.020971550894710672, "passed": false},
+      "single_row_chunks": {"max_abs_error": 0.0009832382202148438, "relative_l2_error": 0.000033294606945571056, "passed": true}
+    },
+    {
+      "layer": 17,
+      "full_row": {"max_abs_error": 9.828086853027344, "relative_l2_error": 0.05601815472054578, "passed": false},
+      "single_row_chunks": {"max_abs_error": 0.059539794921875, "relative_l2_error": 0.0000873425854286654, "passed": false},
+      "remaining_failure": "Maximum-absolute gate fails even though relative L2 is below 0.0001."
+    },
+    {
+      "layer": 35,
+      "full_row": {"max_abs_error": 60.368408203125, "relative_l2_error": 0.04126456318183448, "passed": false},
+      "single_row_chunks": {"max_abs_error": 0.1915283203125, "relative_l2_error": 0.00005671147494983473, "passed": false},
+      "remaining_failure": "One sample fails maximum-absolute gate despite relative L2 below 0.0001; it remains a failure."
+    }
+  ],
+  "conclusions": [
+    "Do not change CPU scheduling or loosen tolerances on the assumption that CPU row grouping is the demonstrated cause.",
+    "Smaller GPU chunks substantially reduce errors but are not a general fix.",
+    "Next isolate GPU projection, activation/quantization and fusion differences with observer effects explicitly controlled.",
+    "Continue to use independent target-graph gates before implementing a whole-model prefill scheduler."
+  ],
+  "validation": {
+    "ctest_targets": ["vrambridge-hybrid-layer-self-test", "vrambridge-hybrid-layer-inputs"],
+    "passed_against_builds": ["build/trace-release", "build/hybrid-tests"],
+    "cpu_and_gpu_chunk_boundaries_tested": {"rows": 256, "cpu_row_limit": 1, "gpu_row_limit": 1},
+    "ragged_chunk_reduction_strategies_checked": true
+  },
+  "limitations": [
+    "Fixed four-expert selections and synthetic activations, not a representative routing or hidden-state corpus.",
+    "Only three layers and 32 rows were measured in this follow-up.",
+    "Small diagnostic repetitions are not performance qualification or a new speedup.",
+    "No single GPU numerical root cause or full-model quality equivalence is established."
+  ],
+  "prefill_speedup_established": false,
+  "full_model_acceleration_claim": false
+}

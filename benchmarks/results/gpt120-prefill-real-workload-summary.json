@@ -1,0 +1,449 @@
+{
+  "schema_version": 1,
+  "study": "real_model_prefill_configuration_qualification",
+  "date": "2026-10-18",
+  "status": "research_handoff_complete_rollout_blocked",
+  "qualified_performance_improvement": false,
+  "full_model_acceleration_claim": false,
+  "new_defaults_recommended": false,
+  "research_repository": "https://github.com/appatalks/unified-memory-scheduler",
+  "research_base_commit": "1c7dc36d2f6429b99c3591824c22661ca4df47a6",
+  "research_changes_uncommitted_at_measurement": true,
+  "downstream": {
+    "repository": "https://github.com/appatalks/Synapse",
+    "verified_revision": "545a7ebf4a6dea3dd4a1ac04760057eed2de1b15",
+    "edited": false,
+    "pushed": false,
+    "installer_research_pin": "189db7f1ee3e087beccef790cf97cfcc9c0d335a"
+  },
+  "backend": {
+    "pinned_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+    "installed_hybrid_server_sha256": "895377f1aadaa82c7f456cfae1357db7a1195d0962d37b7cf074a8103e70fba4",
+    "installed_hybrid_llama_library_sha256": "148c134928fce83224465faddde52febed9d4f4c6da8e6b159ac88448b2f9eb4",
+    "installed_cuda_plugin_sha256": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+    "experimental_parity_patch_enabled": false,
+    "installed_libraries_changed": false
+  },
+  "hardware": {
+    "cpu": "AMD Ryzen 9 9950X",
+    "host_ram_gib": 123.48,
+    "gpu_query_fields": [
+      "name",
+      "driver_version",
+      "memory.total"
+    ],
+    "gpu_query": "NVIDIA GeForce RTX 5070 Ti, 595.58.03, 16303 MiB",
+    "weight_storage": "root Samsung 870 EVO SATA SSD",
+    "cache_state": "warm; no eviction or RAM disk"
+  },
+  "weights": {
+    "shards": [
+      {
+        "file": "gpt-oss-120b-MXFP4-00001-of-00002.gguf",
+        "sha256": "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+        "bytes": 39815566336
+      },
+      {
+        "file": "gpt-oss-120b-MXFP4-00002-of-00002.gguf",
+        "sha256": "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676",
+        "bytes": 23571779104
+      }
+    ],
+    "total_bytes": 63387345440,
+    "sha256_verified_read_only": true
+  },
+  "configuration": {
+    "context": 16384,
+    "cpu_threads": 8,
+    "batch_threads": 16,
+    "expert_cache_mib": 12000,
+    "logical_batch": 2048,
+    "baseline_physical_batch": 512,
+    "candidate_physical_batch": 1024,
+    "hybrid_plan_sha256": "6a679bec76f1a410ed65fa79c186d164a388fc76419d96dcad5978782343949c",
+    "transfer": "direct",
+    "decode_pipeline": true,
+    "async_ids": true
+  },
+  "request": {
+    "prompt_tokens": 3577,
+    "output_tokens": 256,
+    "temperature": 0,
+    "seed": 42,
+    "reasoning_effort": "low",
+    "ignore_eos": true,
+    "cache_prompt": false,
+    "prompt_sha256": "7e46754a6358c2d401942722e4f7c0d5d13ed032b198e7875d058d08eccb032e",
+    "frozen_context_sha256": "d7101c786f6853c48b183f8a365cd35f1e3d4b43d1532462a570f5cb40210ac7",
+    "frozen_context_origin": "tools/benchmark/vrambridge-model-staging.py",
+    "raw_prompt_recorded_in_public_summary": false
+  },
+  "pairs": [
+    {
+      "pair": 1,
+      "order": [
+        "baseline",
+        "candidate"
+      ],
+      "baseline": {
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-ubatch512-v4.json",
+          "sha256": "ed7c6ce875a60568ad8d4d6595bbae1089c086016ed36c1adc49a2059b3768d9"
+        },
+        "prompt_sha256": "7e46754a6358c2d401942722e4f7c0d5d13ed032b198e7875d058d08eccb032e",
+        "logical_batch": 2048,
+        "physical_batch": 512,
+        "load_seconds": 4.220691311000337,
+        "prompt_ms": 28928.085,
+        "first_text_seconds": 29.071161214998938,
+        "request_seconds": 35.009589682000296,
+        "launch_plus_request_seconds": 39.23028099300063,
+        "backend_decode_tok_s_unqualified_output": 42.037350928135254,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "physical_request_read_bytes": 0,
+        "request_major_faults": 0,
+        "endpoint_rss_bytes": 63590670336,
+        "endpoint_process_swap_bytes": 0
+      },
+      "candidate": {
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-ubatch1024-v4.json",
+          "sha256": "1982c0e4794ad91198515cc942eb45abbb2686c67f349dcbb3224125118021c7"
+        },
+        "prompt_sha256": "7e46754a6358c2d401942722e4f7c0d5d13ed032b198e7875d058d08eccb032e",
+        "logical_batch": 2048,
+        "physical_batch": 1024,
+        "load_seconds": 4.225888498998756,
+        "prompt_ms": 28245.082,
+        "first_text_seconds": 28.398751403999995,
+        "request_seconds": 34.09744732500076,
+        "launch_plus_request_seconds": 38.323335823999514,
+        "backend_decode_tok_s_unqualified_output": 43.70029412868554,
+        "output_sha256": "e9b5f3654ac32dfd33f48623ebe3db6749d443833ec2f1808f6e43b9700200ae",
+        "physical_request_read_bytes": 0,
+        "request_major_faults": 0,
+        "endpoint_rss_bytes": 63698718720,
+        "endpoint_process_swap_bytes": 0
+      }
+    },
+    {
+      "pair": 2,
+      "order": [
+        "candidate",
+        "baseline"
+      ],
+      "baseline": {
+        "evidence": {
+          "path": "real-workload-20261018/paired-staging-r2-ubatch512.json",
+          "sha256": "cf19d76709ffca0ecef2d4b35a3ed54053c431d7d44586043808a1e51b83332e"
+        },
+        "prompt_sha256": "7e46754a6358c2d401942722e4f7c0d5d13ed032b198e7875d058d08eccb032e",
+        "logical_batch": 2048,
+        "physical_batch": 512,
+        "load_seconds": 4.228200055998968,
+        "prompt_ms": 29321.472,
+        "first_text_seconds": 29.461437341999044,
+        "request_seconds": 35.29950513199947,
+        "launch_plus_request_seconds": 39.527705187998436,
+        "backend_decode_tok_s_unqualified_output": 42.77040160736201,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "physical_request_read_bytes": 0,
+        "request_major_faults": 0,
+        "endpoint_rss_bytes": 63591399424,
+        "endpoint_process_swap_bytes": 0
+      },
+      "candidate": {
+        "evidence": {
+          "path": "real-workload-20261018/paired-staging-r2-ubatch1024.json",
+          "sha256": "80e09db6a434b07d4349e71417a259ad933ee5914b1658ffc6c10842d91826ba"
+        },
+        "prompt_sha256": "7e46754a6358c2d401942722e4f7c0d5d13ed032b198e7875d058d08eccb032e",
+        "logical_batch": 2048,
+        "physical_batch": 1024,
+        "load_seconds": 4.215494753998428,
+        "prompt_ms": 28283.304,
+        "first_text_seconds": 28.433024748999742,
+        "request_seconds": 34.057643727999675,
+        "launch_plus_request_seconds": 38.2731384819981,
+        "backend_decode_tok_s_unqualified_output": 44.29431855014794,
+        "output_sha256": "e9b5f3654ac32dfd33f48623ebe3db6749d443833ec2f1808f6e43b9700200ae",
+        "physical_request_read_bytes": 0,
+        "request_major_faults": 0,
+        "endpoint_rss_bytes": 63700881408,
+        "endpoint_process_swap_bytes": 0
+      }
+    },
+    {
+      "pair": 3,
+      "order": [
+        "baseline",
+        "candidate"
+      ],
+      "baseline": {
+        "evidence": {
+          "path": "real-workload-20261018/paired-staging-r3-ubatch512.json",
+          "sha256": "632984afaf756187771204b54c942922b43223acea698b7310be1d1f7f8aa16b"
+        },
+        "prompt_sha256": "7e46754a6358c2d401942722e4f7c0d5d13ed032b198e7875d058d08eccb032e",
+        "logical_batch": 2048,
+        "physical_batch": 512,
+        "load_seconds": 4.228697524000381,
+        "prompt_ms": 29414.262,
+        "first_text_seconds": 29.562817856000038,
+        "request_seconds": 35.398831185000745,
+        "launch_plus_request_seconds": 39.627528709001126,
+        "backend_decode_tok_s_unqualified_output": 42.73570880189686,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "physical_request_read_bytes": 0,
+        "request_major_faults": 0,
+        "endpoint_rss_bytes": 63590547456,
+        "endpoint_process_swap_bytes": 0
+      },
+      "candidate": {
+        "evidence": {
+          "path": "real-workload-20261018/paired-staging-r3-ubatch1024.json",
+          "sha256": "9e6c895d1d3c5eae0af6309dc838acf7a943b6464d3e23bf3c28668f77262ec3"
+        },
+        "prompt_sha256": "7e46754a6358c2d401942722e4f7c0d5d13ed032b198e7875d058d08eccb032e",
+        "logical_batch": 2048,
+        "physical_batch": 1024,
+        "load_seconds": 4.225378634999288,
+        "prompt_ms": 28646.477,
+        "first_text_seconds": 28.788796134000222,
+        "request_seconds": 34.52128548899964,
+        "launch_plus_request_seconds": 38.746664123998926,
+        "backend_decode_tok_s_unqualified_output": 43.52418946438109,
+        "output_sha256": "e9b5f3654ac32dfd33f48623ebe3db6749d443833ec2f1808f6e43b9700200ae",
+        "physical_request_read_bytes": 0,
+        "request_major_faults": 0,
+        "endpoint_rss_bytes": 63698706432,
+        "endpoint_process_swap_bytes": 0
+      }
+    }
+  ],
+  "medians": {
+    "512": {
+      "load_seconds": 4.228200055998968,
+      "prompt_ms": 29321.472,
+      "first_text_seconds": 29.461437341999044,
+      "request_seconds": 35.29950513199947,
+      "launch_plus_request_seconds": 39.527705187998436,
+      "backend_decode_tok_s_unqualified_output": 42.73570880189686
+    },
+    "1024": {
+      "load_seconds": 4.225378634999288,
+      "prompt_ms": 28283.304,
+      "first_text_seconds": 28.433024748999742,
+      "request_seconds": 34.09744732500076,
+      "launch_plus_request_seconds": 38.323335823999514,
+      "backend_decode_tok_s_unqualified_output": 43.70029412868554
+    }
+  },
+  "observed_unqualified_latency_reduction_percent": {
+    "prompt_ms": 3.5406407972969456,
+    "first_text_seconds": 3.4907074663775406,
+    "request_seconds": 3.405310648134352
+  },
+  "accepted_output_goodput_comparison_valid": false,
+  "numerical_qualification": {
+    "kind": "separate long held-out rendered prompt; matched-baseline teacher forcing",
+    "not_identical_http_render": true,
+    "render_difference": "Checker uses helpful-assistant system message and epoch zero; HTTP sampler is user-only with server template date.",
+    "rendered_prompt_tokens": 3590,
+    "context": 16384,
+    "positions": 32,
+    "vocabulary_entries_per_position": 201088,
+    "gate": {
+      "max_abs": 0.01,
+      "relative_l2": 0.001
+    },
+    "control": {
+      "evidence": {
+        "path": "real-workload-20261018/logits-staging-capped-control.json",
+        "sha256": "96ee24b68e9742f5ffd1251786ffb7d069a13fb0167de652eab08a63bb1a7892"
+      },
+      "all_checks_passed": true,
+      "max_abs": 0.0,
+      "relative_l2": 0.0
+    },
+    "candidate": {
+      "evidence": {
+        "path": "real-workload-20261018/logits-staging-capped-candidate1024.json",
+        "sha256": "3be35ca2edad587a5909a7ad32c23a3b641be59d2c5a6cc13f5a1a1329c65d09"
+      },
+      "all_checks_passed": false,
+      "max_abs_logit_error": 12.252996921539307,
+      "max_relative_l2": 0.33433410537223096,
+      "passed": false,
+      "positions": 32,
+      "prompt_tokens": 3590,
+      "top1_matches": 29,
+      "position_zero": {
+        "cumulative_max_abs": 1.364848017692566,
+        "cumulative_relative_l2": 0.0526218952055062,
+        "position": 0
+      }
+    },
+    "general_model_quality_established": false,
+    "cpu_reference_equivalence_established": false
+  },
+  "thread_screens": {
+    "qualification": "one sample per configuration; not promotion-quality",
+    "retained_batch_threads": 16,
+    "samples": [
+      {
+        "batch_threads": 8,
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-batch8.json",
+          "sha256": "8d6c0787d4890aaee98d9e8f124ae8f0de5d4f53db167bd07c6837d57561e24b"
+        },
+        "prompt_ms": 47923.023,
+        "first_text_seconds": 48.06176173300082,
+        "request_seconds": 53.938669659999505,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "explicit_batches_confirmed": false
+      },
+      {
+        "batch_threads": 12,
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-batch12.json",
+          "sha256": "c4247a07ca42cb121099a1ec9970ec01d69c812f617075ede300ca71ef1beea1"
+        },
+        "prompt_ms": 35597.201,
+        "first_text_seconds": 35.74695801599955,
+        "request_seconds": 41.60137934999875,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "explicit_batches_confirmed": false
+      },
+      {
+        "batch_threads": 16,
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-batch16.json",
+          "sha256": "19f0ebe6b45f7b36baddbb3420a9c2b96e36962f80c420a24603b6f2b9246249"
+        },
+        "prompt_ms": 28858.683,
+        "first_text_seconds": 29.01250521899965,
+        "request_seconds": 34.605007361999014,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "explicit_batches_confirmed": false
+      },
+      {
+        "batch_threads": 20,
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-batch20-explicit512.json",
+          "sha256": "951c1bc3e6e069084b2235461529c2d2fc26e0044fcb3454fb3e766892bbf2a9"
+        },
+        "prompt_ms": 28955.029,
+        "first_text_seconds": 29.100983065000037,
+        "request_seconds": 34.88095025700022,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "explicit_batches_confirmed": true
+      },
+      {
+        "batch_threads": 24,
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-batch24-explicit512.json",
+          "sha256": "4596d8ecaed3b93099972029fb2c5de4c2f66ff45be3146a74de45097c3bac1e"
+        },
+        "prompt_ms": 29342.834,
+        "first_text_seconds": 29.49259294100011,
+        "request_seconds": 35.398810763001165,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "explicit_batches_confirmed": true
+      },
+      {
+        "batch_threads": 32,
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-batch32.json",
+          "sha256": "28ebf1c6701eae99c4e43911dda0adc8b4d97e70b0fcd4a8b9fe098341c0b539"
+        },
+        "prompt_ms": 35628.169,
+        "first_text_seconds": 35.77451467699939,
+        "request_seconds": 41.70387536299859,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "explicit_batches_confirmed": false
+      }
+    ]
+  },
+  "logical_batch_screens": {
+    "qualification": "one sample per configuration; no demonstrated prompt improvement beyond baseline variability",
+    "samples": [
+      {
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-logical512-physical512.json",
+          "sha256": "8a67ce51298f0ec9fc763ed897f5252a6f478fd07a3f02ca53b6cd36b960dbe4"
+        },
+        "prompt_sha256": "7e46754a6358c2d401942722e4f7c0d5d13ed032b198e7875d058d08eccb032e",
+        "logical_batch": 512,
+        "physical_batch": 512,
+        "load_seconds": 4.2215456159992755,
+        "prompt_ms": 29087.402,
+        "first_text_seconds": 29.237534240999594,
+        "request_seconds": 34.63680936200035,
+        "launch_plus_request_seconds": 38.858354977999625,
+        "backend_decode_tok_s_unqualified_output": 46.08786334858149,
+        "output_sha256": "9f0905212ecd097778f32d5418983e625b70d7d147bd8abf25d1e80167344e1c",
+        "physical_request_read_bytes": 0,
+        "request_major_faults": 0,
+        "endpoint_rss_bytes": 63589601280,
+        "endpoint_process_swap_bytes": 0,
+        "baseline_output_hash_matches": false
+      },
+      {
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-logical1024-physical512.json",
+          "sha256": "48b0166d08cd11cd28fb7e31d030c83381bf09b4f0f1237a82b6f1f6f5eb96d8"
+        },
+        "prompt_sha256": "7e46754a6358c2d401942722e4f7c0d5d13ed032b198e7875d058d08eccb032e",
+        "logical_batch": 1024,
+        "physical_batch": 512,
+        "load_seconds": 4.217618693999611,
+        "prompt_ms": 29180.828,
+        "first_text_seconds": 29.333255423000082,
+        "request_seconds": 35.201069942000686,
+        "launch_plus_request_seconds": 39.4186886360003,
+        "backend_decode_tok_s_unqualified_output": 42.47704823493706,
+        "output_sha256": "2379fc883df54ebe6c81c80c5d244b95b370dbc44ffcc7bf293c0753a92f9eb6",
+        "physical_request_read_bytes": 0,
+        "request_major_faults": 0,
+        "endpoint_rss_bytes": 63589515264,
+        "endpoint_process_swap_bytes": 0,
+        "baseline_output_hash_matches": true
+      }
+    ]
+  },
+  "tooling": {
+    "source_sha256": {
+      "tools/vrambridge/app.py": "f11e98bc2cb2901b37ae25feeb891b952cf08e961ebf461122db60397d94b369",
+      "tools/benchmark/vrambridge-io-study.py": "f6e9ad3db1f8ce0204b67a7467532dd65b6a59a371427ae0c1cbf85d4a24a077",
+      "tools/benchmark/vrambridge-execution-sweep.py": "2ffb113d8d5526d8d5e33cfb3d4325afe6023a1a189503e2b8cef51f215974eb",
+      "tools/trace/logit_check.cpp": "cd6b325fa9f0e854227db987c25ca9fe2d295ca7a5089317107c241c23383e68"
+    },
+    "checker_binary_sha256": "8e2c05f3c0443a3b209fa7ee61481f3e1ec2a29f94c1526ebfacf848bdfbd53e",
+    "output_reservation_fix": "Cap both total and per-sequence output slots to decode group without reducing vocabulary, positions, context or bank.",
+    "retained_failures": [
+      {
+        "kind": "verbosity 3 did not confirm batch sizes",
+        "evidence": {
+          "path": "real-workload-20261018/screen-staging-review-ubatch512.json",
+          "sha256": "d9afca7a46caec84132a1a31659ac4d7a6ee25ec9ae3d8dcd8cef3652dc17b6b"
+        }
+      },
+      {
+        "kind": "uncapped checker CUDA workspace allocation OOM before prompt decode",
+        "evidence": {
+          "path": "real-workload-20261018/logits-staging-reference.log",
+          "sha256": "ce728f3ed908e614cd3d1b14bb05ebbcd8e5b6fe9a045502e085b59e1b4cdf8c"
+        }
+      }
+    ]
+  },
+  "limitations": [
+    "One model, one frozen technical-review context and one host; broader accepted-answer qualification not completed.",
+    "Candidate output differs and numerical gates fail; observed speed is not eligible for deployment.",
+    "Memory is endpoint-only; no continuously measured peak, graphics-idle or power/thermal-control claim.",
+    "Fresh-process cache-warm loading is not cold physical-disk performance.",
+    "Separate default-off CUDA parity prototype remains unqualified at 57/60 configurations."
+  ],
+  "decision": "Keep existing defaults and installed backend. Do not promote larger physical batching or the experimental parity patch. See docs/synapse-prefill-handoff.md."
+}

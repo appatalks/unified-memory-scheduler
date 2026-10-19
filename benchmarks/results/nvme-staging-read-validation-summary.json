@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "status": "read_comparison_complete_writable_staging_blocked_dirty_ntfs",
+  "purpose": "Select a candidate fast persistent staging device for temporarily used model copies while retaining durable originals.",
+  "authorization": {
+    "mount_and_validation_requested_by_user": true,
+    "assistant_noninteractive_mount_denied": true,
+    "user_mounted_samsung_read_only": true,
+    "raw_benchmark_run_by_user_in_authorized_terminal": true,
+    "devices_formatted_or_repartitioned": false,
+    "existing_files_deleted": false,
+    "model_copies_made": false
+  },
+  "protocol": {
+    "fio_version": "fio-3.39",
+    "jobfile": "../nvme-readonly-comparison.fio",
+    "jobfile_sha256": "7e3814228fe5ccc8e14f1c26094f73e07039110484617d015feacd81c65a39f2",
+    "raw_result_sha256": "7a10fa885c726db84f6eeb258e3a0b7f2baa031a602d71419e98e9e25ae0609f",
+    "raw_result_location": "Session files/nvme-readonly-comparison.json",
+    "cli_guard": "--readonly",
+    "rw": "read",
+    "direct": true,
+    "ioengine": "libaio",
+    "block_size_bytes": 1048576,
+    "start_offset_bytes": 4294967296,
+    "region_size_bytes": 8589934592,
+    "runtime_seconds_per_job": 4,
+    "ramp_seconds_per_job": 1,
+    "queue_depths": [1, 16],
+    "repetitions_per_device_and_depth": 3,
+    "job_count": 12,
+    "jobs_run_serially": true,
+    "drive_order_alternated": true,
+    "allow_file_create": false,
+    "all_job_errors": 0,
+    "all_job_write_bytes": 0,
+    "all_job_trim_bytes": 0,
+    "device_wide_write_ios_during_benchmark": 0,
+    "reported_measured_read_bytes_excluding_ramp": 106638082048
+  },
+  "devices": [
+    {
+      "name": "Samsung SSD 990 PRO 2TB",
+      "controller": "nvme1",
+      "partition": "/dev/nvme1n1p3",
+      "link": {"speed_gt_s": 16, "width": 4, "generation": "PCIe 4.0"},
+      "filesystem": "ntfs3",
+      "mounted_read_only": true,
+      "mount_path_accessible_to_research_user": false,
+      "free_space_verified": false,
+      "measurements": [
+        {"queue_depth": 1, "read_bytes_per_second": [2388845348, 2415577353, 2403783822], "median_bytes_per_second": 2403783822, "median_mib_per_second_rounded": 2292.4, "median_decimal_gb_per_second_rounded": 2.404},
+        {"queue_depth": 16, "read_bytes_per_second": [6029770408, 6015363293, 6035271306], "median_bytes_per_second": 6029770408, "median_mib_per_second_rounded": 5750.4, "median_decimal_gb_per_second_rounded": 6.030}
+      ],
+      "post_benchmark_composite_temperature_c": 35.85
+    },
+    {
+      "name": "WD_BLACK SN850XE 2000GB",
+      "controller": "nvme0",
+      "partition": "/dev/nvme0n1p1",
+      "link": {"speed_gt_s": 16, "width": 4, "generation": "PCIe 4.0"},
+      "filesystem": "exfat",
+      "mounted_read_only": false,
+      "mount_path_accessible_to_research_user": true,
+      "free_space_gib_approximately": 938,
+      "measurements": [
+        {"queue_depth": 1, "read_bytes_per_second": [186366977, 179913014, 182395176], "median_bytes_per_second": 182395176, "median_mib_per_second_rounded": 173.9, "median_decimal_gb_per_second_rounded": 0.182},
+        {"queue_depth": 16, "read_bytes_per_second": [267488556, 267360796, 267365992], "median_bytes_per_second": 267365992, "median_mib_per_second_rounded": 255.0, "median_decimal_gb_per_second_rounded": 0.267}
+      ],
+      "post_benchmark_composite_temperature_c": 35.85,
+      "unexpectedly_low_read_performance": true,
+      "cause_established": false
+    }
+  ],
+  "comparison": {
+    "samsung_over_wd_qd1_ratio": 13.178987924549057,
+    "samsung_over_wd_qd16_ratio": 22.552495786375104,
+    "recommended_candidate_device": "Samsung SSD 990 PRO 2TB",
+    "basis": "Repeated direct sequential read performance in this bounded test, not advertised specifications or complete model-loading measurements."
+  },
+  "additional_observations": {
+    "both_nvme_controllers_live": true,
+    "background_device_counters_unchanged_during_short_post_test_observation": true,
+    "temperature_caution": "Temperatures were sampled after the test, not continuously during it; absence of thermal throttling during the benchmark is not established.",
+    "filesystem_caution": "Raw direct-device reads bypass exFAT/NTFS data paths. The WD slowdown is not explained solely by its filesystem.",
+    "hardware_caution": "No SMART/firmware diagnosis or tests across multiple device regions were completed; do not infer a defective drive."
+  },
+  "staging_recommendation": {
+    "prepare_candidate_only_after": [
+      "An explicitly authorized, safely writable mount accessible to the research user; do not force dirty or hibernated NTFS writable.",
+      "Verify usable free space and reserve host-disk headroom.",
+      "Validate bounded filesystem copy/write/read behavior before moving large model working sets."
+    ],
+    "workflow": [
+      "Keep durable model originals in the archive.",
+      "Stage complete models, including every GGUF shard, in a dedicated owned directory.",
+      "Verify staged copy hashes and completeness before using the staged path.",
+      "Record source, staged path, hashes and ownership in a staging manifest.",
+      "Evict only explicitly selected staged copies after confirming no inference process is using them; never delete archive originals.",
+      "Measure archive-to-stage copy cost and cold-load benefit separately from already-cached generation."
+    ],
+    "wd_policy": "Do not select the WD as the fast tier until its low read result is understood or contradicted by representative retesting.",
+    "no_filesystem_conversion_or_remount_performed": true
+  },
+  "subsequent_mount_setup": {
+    "user_selected_preserving_ntfs_and_existing_data": true,
+    "intended_persistent_mount": "/mnt/nvme-models",
+    "intended_staging_directory": "/mnt/nvme-models/model-staging",
+    "status": "blocked_dirty_ntfs",
+    "ntfs_3g_readwrite_mountability_probe_passed": true,
+    "ntfs3_writable_mount_succeeded": false,
+    "kernel_diagnostic_reported_by_user": "volume is dirty and \"force\" flag is not set!",
+    "kernel_recommendation_reported_by_user": "It is recommened to use chkdsk.",
+    "fstab_modified": false,
+    "mount_state_after_failed_setup_verified": "unmounted",
+    "persistent_entry_count_verified": 0,
+    "force_mount_attempted": false,
+    "filesystem_repair_attempted": false,
+    "filesystem_formatted": false,
+    "original_data_deleted": false,
+    "rollback_note": "UDisks removed the former temporary mountpoint after unmounting, so the first rollback could not restore it. The setup script now recreates the validated prior directory before attempting restoration.",
+    "required_next_step": "Prefer native Windows chkdsk on the correctly identified Samsung volume and a clean shutdown before retrying persistent read/write setup; ask about Windows availability rather than bypassing the kernel guard."
+  },
+  "subsequent_user_decision": {
+    "use_existing_root_drive_for_staging_instead": true,
+    "samsung_remounted_read_only_for_user_requested_inventory": true,
+    "samsung_fstab_entry_added": false,
+    "samsung_data_repaired_formatted_or_deleted": false,
+    "active_staging_record": "root-drive-model-staging-summary.json"
+  },
+  "limitations": [
+    "Short time-based reads cover different byte extents within the same bounded region because device speeds differ.",
+    "Direct raw read bandwidth is not filesystem staging-write throughput, GGUF parsing time, or a full cold-load speedup.",
+    "Only one region and one block size were tested.",
+    "The benchmark did not change either filesystem's contents. A later authorized persistent-mount attempt was blocked by dirty NTFS; Samsung was subsequently remounted read-only for inventory and the user selected the existing root drive for staging.",
+    "The result does not change the earlier finding of zero physical disk reads during cache-warm GPT generation."
+  ],
+  "generation_speedup_established": false,
+  "staging_workflow_implemented": false,
+  "full_model_acceleration_claim": false
+}

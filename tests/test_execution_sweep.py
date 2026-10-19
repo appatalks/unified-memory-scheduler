@@ -85,6 +85,22 @@ class SweepTests(unittest.TestCase):
         self.assertFalse(report["performance_target_met"])
         self.assertNotIn("/private/", self.output.read_text())
 
+    def test_first_token_observer_runs_once_and_propagates_failure(self):
+        event = {"choices": [{"delta": {"content": "output"}}],
+                 "timings": {"predicted_n": 512, "prompt_ms": 1000, "predicted_ms": 20000,
+                             "predicted_per_second": 25.55}, "usage": {"completion_tokens": 512}}
+        data = (b"data: " + json.dumps(event).encode() + b"\n\n") * 2 + b"data: [DONE]\n\n"
+        observer = mock.Mock()
+        with mock.patch.object(sweep.urllib.request, "urlopen", return_value=io.BytesIO(data)), \
+                mock.patch.object(sweep.time, "monotonic", side_effect=[1.0, 1.5, 22.0]):
+            sweep.sample("http://127.0.0.1:12345", 512, on_first_token=observer)
+        observer.assert_called_once_with()
+        with mock.patch.object(sweep.urllib.request, "urlopen", return_value=io.BytesIO(data)), \
+                mock.patch.object(sweep.time, "monotonic", side_effect=[1.0, 1.5]):
+            with self.assertRaisesRegex(RuntimeError, "observer failed"):
+                sweep.sample("http://127.0.0.1:12345", 512,
+                             on_first_token=mock.Mock(side_effect=RuntimeError("observer failed")))
+
     def test_natural_workload_keeps_exact_count_gate(self):
         event = {"choices": [{"delta": {"content": "output"}}],
                  "timings": {"predicted_n": 512, "prompt_ms": 1000, "predicted_ms": 20000,

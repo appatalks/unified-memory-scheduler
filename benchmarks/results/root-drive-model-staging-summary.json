@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "status": "root_drive_staging_ready",
+  "user_decisions": {
+    "use_existing_root_drive_instead_of_samsung": true,
+    "minimum_free_space_gib": 16,
+    "automatic_eviction_enabled": false
+  },
+  "storage": {
+    "directory": "/models/model-staging",
+    "directory_sanitized_for_publication": true,
+    "filesystem": "ext4",
+    "filesystem_device": 2065,
+    "storage_device_kind": "SATA SSD",
+    "storage_device_model": "Samsung SSD 870 EVO 1TB",
+    "owner_uid": 1000,
+    "directory_mode": "0700",
+    "reserve_free_bytes": 17179869184,
+    "copy_metadata_headroom_bytes": 16777216,
+    "observed_free_bytes_after_fixture_cleanup": 109983371264
+  },
+  "samsung": {
+    "left_read_only": true,
+    "fstab_entries_added": 0,
+    "filesystem_repaired_or_formatted": false,
+    "existing_data_deleted": false,
+    "not_selected_for_staging": true
+  },
+  "workflow": {
+    "tool": "../../tools/benchmark/vrambridge-model-staging.py",
+    "tool_source_sha256": "d7101c786f6853c48b183f8a365cd35f1e3d4b43d1532462a570f5cb40210ac7",
+    "commands": ["init", "plan", "stage", "list", "verify", "evict"],
+    "complete_standard_gguf_shard_names_required": true,
+    "metadata_split_count_checked": true,
+    "destination_sha256_readback_required": true,
+    "archive_originals_verified_before_eviction": true,
+    "explicit_confirm_unloaded_required": true,
+    "in_use_check": "fuser -I; errors or uncertainty block eviction",
+    "same_filesystem_sources_reused_without_copy": true,
+    "unmanaged_or_orphaned_entries_automatically_deleted": false
+  },
+  "validation": {
+    "ctest_target": "vrambridge-model-staging",
+    "passed_against_builds": ["build/trace-release", "build/hybrid-tests"],
+    "unit_methods": 10,
+    "cases": [
+      "Complete two-shard copy and SHA256 verification",
+      "Zero-copy reuse for existing SSD files",
+      "Missing/non-first shards rejected",
+      "16 GiB reserve plus metadata allowance: one-byte-below rejected and exact boundary accepted",
+      "Changed source and destination checksum failure remove only owned partial copies",
+      "An earlier source shard changing during a later copy blocks publication",
+      "Changed archive originals or staged symlinks block eviction",
+      "Explicit unload confirmation and live open-file guard",
+      "Unexpected files and path escapes block deletion",
+      "Unmarked nonempty directories are not adopted"
+    ],
+    "real_cross_filesystem_fixture": {
+      "copied_bytes": 1048766,
+      "synthetic_shards": 2,
+      "hash_verification_passed": true,
+      "live_open_file_blocked_eviction": true,
+      "explicit_eviction_preserved_source_shards": true,
+      "fixture_cache_and_source_test_data_cleaned": true,
+      "final_staged_model_entries": 0,
+      "final_unmanaged_entries": 0
+    },
+    "actual_gpt120_plan": {
+      "complete_shards": 2,
+      "existing_file_bytes": 63387345440,
+      "status": "reuse_existing_copy",
+      "copied_bytes": 0,
+      "existing_model_path_changed": false
+    }
+  },
+  "retained_initial_failure": {
+    "scope": "Small synthetic fixture integration test, not user model data.",
+    "reason": "The installed fuser did not accept the -- separator as used by the initial helper.",
+    "failure_was_explicit_and_no_eviction_occurred": true,
+    "fix": "Use supported fuser -I with absolute paths; add a real open-file process test.",
+    "synthetic_test_data_recovered_and_cleaned": true
+  },
+  "limitations": [
+    "No full-model archive-to-SSD copy was necessary or benchmarked.",
+    "Same-filesystem reuse assumes the explicitly selected staging filesystem is the intended working tier.",
+    "GGUF filename/count checks and byte hashes do not establish semantic checkpoint correctness.",
+    "Free-space checks do not reserve capacity against independent writers.",
+    "The unload confirmation and external in-use check are not a universal concurrent inference lease.",
+    "This setup does not improve already-cached generation by itself."
+  ],
+  "synapse_modified": false,
+  "full_model_acceleration_claim": false
+}

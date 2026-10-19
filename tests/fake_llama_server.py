@@ -23,6 +23,9 @@ parser.add_argument("--fit-margin")
 parser.add_argument("--no-mmap", action="store_true")
 parser.add_argument("--threads")
 parser.add_argument("--threads-batch")
+parser.add_argument("--batch-size", type=int)
+parser.add_argument("--ubatch-size", type=int)
+parser.add_argument("--verbosity", type=int)
 parser.add_argument("--load-mode", default="auto")
 parser.add_argument("--moe-cache-mib", default="0")
 parser.add_argument("--cpu-moe", action="store_true")
@@ -55,6 +58,9 @@ print(json.dumps({
     "no_mmap": args.no_mmap,
     "threads": args.threads,
     "batch_threads": args.threads_batch,
+    "batch_size": args.batch_size,
+    "ubatch_size": args.ubatch_size,
+    "verbosity": args.verbosity,
     "load_mode": args.load_mode,
     "expert_cache_mib": args.moe_cache_mib,
     "cpu_moe": args.cpu_moe,
@@ -83,6 +89,9 @@ print(json.dumps({
     "no_repack": args.no_repack,
     "no_host": args.no_host,
 }), flush=True)
+if args.batch_size is not None and args.ubatch_size is not None:
+    print(f"0.00.000.001 I ctx llama_contex: n_batch = {args.batch_size}", flush=True)
+    print(f"0.00.000.002 I ctx llama_contex: n_ubatch = {args.ubatch_size}", flush=True)
 if os.getenv("VRAMBRIDGE_HYBRID_PLAN") and Path(args.model).stem != "hybrid-no-markers":
     plan = os.environ["VRAMBRIDGE_HYBRID_PLAN"]
     selected = 0 if plan == "auto" else sum(bool(line) and not line.startswith("#")

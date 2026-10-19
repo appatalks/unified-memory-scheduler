@@ -1,0 +1,505 @@
+diff --git a/include/llama.h b/include/llama.h
+index 3af6e22..2bd8a98 100644
+--- a/include/llama.h
++++ b/include/llama.h
+@@ -1099,6 +1099,9 @@ extern "C" {
+     // n_threads_batch is the number of threads used for prompt and batch processing (multiple tokens)
+     LLAMA_API void llama_set_n_threads(struct llama_context * ctx, int32_t n_threads, int32_t n_threads_batch);
+ 
++#define LLAMA_VRAMBRIDGE_PREFILL_DOWN_API 1
++    LLAMA_API void llama_set_prefill_phase(struct llama_context * ctx, bool prefill);
++
+     // Get the number of threads used for generation of a single token.
+     LLAMA_API int32_t llama_n_threads(struct llama_context * ctx);
+ 
+diff --git a/src/llama-context.cpp b/src/llama-context.cpp
+index 961a8f4..fe78d37 100644
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -567,6 +567,41 @@ llama_context::llama_context(
+             }
+         }
+ 
++        if (const char * mode = std::getenv("VRAMBRIDGE_HYBRID_PREFILL_DOWN")) {
++            if (std::string(mode) != "0" && std::string(mode) != "1") {
++                throw std::runtime_error("VRAMBRIDGE_HYBRID_PREFILL_DOWN must be 0 or 1");
++            }
++            prefill_down_enabled = std::string(mode) == "1";
++        }
++        if (prefill_down_enabled) {
++            if (!moe_cache || !moe_cache->is_frozen_hybrid() ||
++                model.arch != LLM_ARCH_OPENAI_MOE || model.hparams.n_embd != 2880 ||
++                model.hparams.n_layer() != 36 || cparams.n_ubatch > 2048 || params.cb_eval) {
++                throw std::runtime_error("Resident-down prefill requires the native GPT-OSS-120B hybrid profile, "
++                                         "at most 2048 physical rows, and no evaluation callback");
++            }
++            LLAMA_LOG_WARN("VRAMBridge experimental resident-down prefill enabled; explicit phase only, "
++                           "resident weights only, CPU boundary, unchanged decode\n");
++        }
++        if (const char * control = std::getenv("VRAMBRIDGE_HYBRID_PREFILL_DOWN_CPU_CONTROL")) {
++            if ((std::string(control) != "0" && std::string(control) != "1") ||
++                (std::string(control) == "1" && !prefill_down_enabled)) {
++                throw std::runtime_error("Prefill-down CPU control requires the enabled research mode and value 0 or 1");
++            }
++            if (const char * audit = std::getenv("VRAMBRIDGE_HYBRID_PREFILL_DOWN_AUDIT")) {
++                if ((std::string(audit) != "0" && std::string(audit) != "1") ||
++                    (std::string(audit) == "1" && !prefill_down_enabled)) {
++                    throw std::runtime_error("Prefill-down audit requires enabled research mode and value 0 or 1");
++                }
++                if (const char * selected = std::getenv("VRAMBRIDGE_HYBRID_PREFILL_DOWN_LAYER")) {
++                    size_t used = 0;
++                    const int layer = std::stoi(selected, &used);
++                    if (!prefill_down_enabled || used != std::string(selected).size() || layer < 0 || layer >= 35) {
++                        throw std::runtime_error("Prefill-down diagnostic layer must be 0-34 in enabled research mode");
++                    }
++                }
++            }
++        }
+         sched_reserve();
+ 
+         if (!cparams.flash_attn) {
+@@ -2716,6 +2751,12 @@ ggml_cgraph * llama_context::graph_reserve(
+     return gf;
+ }
+ 
++void llama_context::set_prefill_phase(bool prefill) {
++    if (!prefill_down_enabled || prefill_down_phase == prefill) return;
++    synchronize();
++    prefill_down_phase = prefill;
++}
++
+ llm_graph_params llama_context::graph_params(
+                         llm_graph_result * res,
+                       const llama_ubatch & ubatch,
+@@ -2740,6 +2781,7 @@ llm_graph_params llama_context::graph_params(
+         /*.n_outputs   =*/ n_outputs,
+         /*.cb          =*/ graph_get_cb(),
+         /*.res         =*/ res,
++        /*.prefill_down_phase =*/ prefill_down_phase,
+     };
+ }
+ 
+@@ -4217,6 +4259,10 @@ void llama_set_n_threads(llama_context * ctx, int32_t n_threads, int32_t n_threa
+     ctx->set_n_threads(n_threads, n_threads_batch);
+ }
+ 
++void llama_set_prefill_phase(llama_context * ctx, bool prefill) {
++    ctx->set_prefill_phase(prefill);
++}
++
+ int32_t llama_n_threads(llama_context * ctx) {
+     return ctx->n_threads();
+ }
+diff --git a/src/llama-context.h b/src/llama-context.h
+index 64a86db..82b244a 100644
+--- a/src/llama-context.h
++++ b/src/llama-context.h
+@@ -114,6 +114,7 @@ struct llama_context {
+     void detach_threadpool();
+ 
+     void set_n_threads(int32_t n_threads, int32_t n_threads_batch);
++    void set_prefill_phase(bool prefill);
+ 
+     void set_abort_callback(bool (*abort_callback)(void * data), void * abort_callback_data);
+ 
+@@ -300,6 +301,8 @@ private:
+     const llama_model & model;
+ 
+     llama_cparams cparams;
++    bool prefill_down_enabled = false;
++    bool prefill_down_phase = false;
+ 
+     llama_adapter_cvec_ptr  cvec;
+     llama_adapter_loras_ptr loras;
+diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
+index 640ea12..b8853eb 100644
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -1557,6 +1557,7 @@ llm_graph_context::llm_graph_context(const llm_graph_params & params) :
+     mctx             (params.mctx),
+     cross            (params.cross),
+     moe_cache        (params.moe_cache),
++    prefill_down_phase(params.prefill_down_phase),
+     prec_policy      (params.prec_policy),
+     hdmd             (params.hdmd),
+     samplers         (params.samplers),
+@@ -2327,10 +2328,46 @@ ggml_tensor * llm_graph_context::build_moe_ffn(
+     //call early so that topk-moe can be used
+     ggml_build_forward_expand(gf, weights);
+ 
++    auto finish_branch = [&](ggml_tensor * output, int first_node, ggml_backend_t backend) {
++        ggml_build_forward_expand(gf, output);
++        if (backend) {
++            for (int node = first_node; node < ggml_graph_n_nodes(gf); ++node) {
++                auto * operation = ggml_graph_node(gf, node);
++                if (operation->op == GGML_OP_VIEW || operation->op == GGML_OP_RESHAPE ||
++                    operation->op == GGML_OP_PERMUTE || operation->op == GGML_OP_TRANSPOSE) continue;
++                if (!ggml_backend_supports_op(backend, operation)) {
++                    throw std::runtime_error("Original expert operation is unsupported on the selected hybrid backend");
++                }
++                ggml_backend_sched_set_tensor_backend(sched, operation, backend);
++            }
++        }
++        return output;
++    };
++    auto down_branch = [&](ggml_tensor * activation, ggml_tensor * projection, ggml_tensor * bias,
++                           ggml_tensor * ids, ggml_tensor * bias_ids, ggml_tensor * weights,
++                           ggml_tensor * slots, bool q8, auto && record) {
++        auto * experts = build_lora_mm_id(projection, activation, ids, down_exps_s, slots);
++        if (arch == LLM_ARCH_MISTRAL4) ggml_prec_set_src(experts, GGML_PREC_F32, 1);
++        if (q8 && !ggml_prec_set_src(experts, GGML_PREC_Q8, 1)) {
++            throw std::runtime_error("Resident-down prefill cannot request Q8 activations");
++        }
++        record(experts, "ffn_moe_down", il);
++        if (down_exps_s) record(experts, "ffn_moe_down_scaled", il);
++        if (bias) {
++            experts = ggml_add_id(ctx0, experts, bias, bias_ids);
++            record(experts, "ffn_moe_down_biased", il);
++        }
++        if (!weight_before_ffn) {
++            experts = ggml_mul(ctx0, experts, weights);
++            record(experts, "ffn_moe_weighted", il);
++        }
++        return experts;
++    };
++
+     // Native and hybrid execution share the model's original expert math.
+     auto expert_branch = [&](ggml_tensor * cur, ggml_tensor * selected_experts, ggml_tensor * bias_ids,
+                              ggml_tensor * weights, ggml_tensor * slots, bool resident,
+-                             ggml_backend_t backend, bool prepared_input = false) {
++                             ggml_backend_t backend, bool prepared_input = false, bool activation_only = false) {
+         const int first_node = ggml_graph_n_nodes(gf);
+         auto tensor = [&](ggml_tensor * original) {
+             if (!original || !resident) return original;
+@@ -2515,42 +2552,81 @@ ggml_tensor * llm_graph_context::build_moe_ffn(
+                 GGML_ABORT("fatal error");
+         }
+ 
+-        experts = build_lora_mm_id(tensor(down_exps), cur, selected_experts, down_exps_s, slots); // [n_embd, n_expert_used, n_tokens]
+-        if (arch == LLM_ARCH_MISTRAL4) {
+-            // src1 can exceed F16 range
+-            ggml_prec_set_src(experts, GGML_PREC_F32, 1);
+-        }
+-        cb(experts, "ffn_moe_down", il);
++        if (activation_only) return finish_branch(cur, first_node, backend);
++        experts = down_branch(cur, tensor(down_exps), tensor(down_exps_b), selected_experts,
++                              bias_ids, weights, slots, false, cb);
++        return finish_branch(experts, first_node, backend);
++    };
+ 
+-        if (down_exps_s) {
+-            cb(experts, "ffn_moe_down_scaled", il);
++    if (prefill_down_phase && n_tokens > 1 && moe_cache && moe_cache->hybrid_layer_enabled(il)) {
++        if (arch != LLM_ARCH_OPENAI_MOE || type_op != LLM_FFN_SWIGLU_OAI_MOE || gate_up_exps ||
++            !gate_exps || !up_exps || !down_exps || down_exps->type != GGML_TYPE_MXFP4 ||
++            up_exps_s || gate_exps_s || down_exps_s || (loras && !loras->empty()) || hdmd) {
++            throw std::runtime_error("Unsupported resident-down prefill expert layout or adapter");
+         }
+-
+-        if (down_exps_b) {
+-            experts = ggml_add_id(ctx0, experts, tensor(down_exps_b), bias_ids);
+-            cb(experts, "ffn_moe_down_biased", il);
++        auto * cpu = backend_cpu;
++        auto * gpu = moe_cache->backend(il);
++        auto place = [&](ggml_tensor * value, ggml_backend_t backend) {
++            if (!ggml_backend_supports_op(backend, value)) {
++                throw std::runtime_error("Resident-down prefill operation is unsupported");
++            }
++            ggml_backend_sched_set_tensor_backend(sched, value, backend);
++            return value;
++        };
++        auto * map = moe_cache->resident_down_map(il, n_tokens, n_expert_used);
++        ggml_tensor * args[] = {selected_experts, map, weights};
++        auto * dispatch = place(ggml_custom_4d(ctx0, GGML_TYPE_F32, n_expert_used, 4, n_tokens, 1,
++            args, 3, llama_moe_cache::resident_down_dispatch, 1, moe_cache->hybrid_dispatch_state(il)), cpu);
++        auto * cpu_ids = place(ggml_cast(ctx0, ggml_view_2d(ctx0, dispatch, n_expert_used, n_tokens,
++            dispatch->nb[2], 0), GGML_TYPE_I32), cpu);
++        auto * gpu_ids = place(ggml_cast(ctx0, ggml_view_2d(ctx0, dispatch, n_expert_used, n_tokens,
++            dispatch->nb[2], dispatch->nb[1]), GGML_TYPE_I32), cpu);
++        auto * cold_weights = ggml_view_3d(ctx0, dispatch, 1, n_expert_used, n_tokens,
++            dispatch->nb[0], dispatch->nb[2], 2 * dispatch->nb[1]);
++        ggml_build_forward_expand(gf, cpu_ids);
++        ggml_build_forward_expand(gf, gpu_ids);
++        auto * activated = expert_branch(cur, selected_experts, selected_experts, weights,
++                                        nullptr, false, cpu, false, true);
++        auto * canonical = place(ggml_cast(ctx0, activated, GGML_TYPE_Q8_0), cpu);
++        canonical = place(ggml_cast(ctx0, canonical, GGML_TYPE_F32), cpu);
++        ggml_build_forward_expand(gf, canonical);
++        auto * cached_down = moe_cache->get_experts(down_exps);
++        auto * cached_bias = down_exps_b ? moe_cache->get_experts(down_exps_b) : nullptr;
++        if (!cached_down || (down_exps_b && !cached_bias)) {
++            throw std::runtime_error("Resident-down prefill is missing cached projection/bias");
+         }
+-
+-        if (!weight_before_ffn) {
+-            experts = ggml_mul(ctx0, experts, weights);
+-            cb(experts, "ffn_moe_weighted", il);
++        auto record = [&](ggml_tensor * value, const char * name, int layer) { this->cb(value, name, layer); };
++        int first = ggml_graph_n_nodes(gf);
++        auto * resident = down_branch(canonical, cached_down, cached_bias, gpu_ids, gpu_ids,
++                                      weights, nullptr, true, record);
++        resident = finish_branch(resident, first, gpu);
++        first = ggml_graph_n_nodes(gf);
++        auto * cold = down_branch(activated, down_exps, down_exps_b, cpu_ids, selected_experts,
++                                  cold_weights, nullptr, false, record);
++        cold = finish_branch(cold, first, cpu);
++        auto * joined = place(ggml_add(ctx0, cold, resident), cpu);
++        const char * audit = std::getenv("VRAMBRIDGE_HYBRID_PREFILL_DOWN_AUDIT");
++        if (audit && std::string(audit) == "1") {
++            first = ggml_graph_n_nodes(gf);
++            auto * oracle = down_branch(activated, down_exps, down_exps_b, selected_experts,
++                                        selected_experts, weights, nullptr, false, record);
++            oracle = finish_branch(oracle, first, cpu);
++            ggml_tensor * audit_args[] = {joined, oracle};
++            joined = place(ggml_custom_4d(ctx0, GGML_TYPE_F32, n_embd, n_expert_used, n_tokens, 1,
++                audit_args, 2, llama_moe_cache::resident_down_audit, 1,
++                moe_cache->hybrid_dispatch_state(il)), cpu);
+         }
+-
+-        ggml_build_forward_expand(gf, experts);
+-        if (backend) {
+-            for (int node = first_node; node < ggml_graph_n_nodes(gf); ++node) {
+-                auto * operation = ggml_graph_node(gf, node);
+-                // Views retain their source's storage; forcing them to another backend aliases device pointers.
+-                if (operation->op == GGML_OP_VIEW || operation->op == GGML_OP_RESHAPE ||
+-                    operation->op == GGML_OP_PERMUTE || operation->op == GGML_OP_TRANSPOSE) continue;
+-                if (!ggml_backend_supports_op(backend, operation)) {
+-                    throw std::runtime_error("Original expert operation is unsupported on the selected hybrid backend");
+-                }
+-                ggml_backend_sched_set_tensor_backend(sched, operation, backend);
+-            }
++        ggml_tensor * output = nullptr;
++        for (int64_t rank = 0; rank < n_expert_used; ++rank) {
++            auto * row = ggml_view_2d(ctx0, joined, n_embd, n_tokens, joined->nb[2], rank * joined->nb[1]);
++            output = output ? place(ggml_add(ctx0, output, row), cpu) : row;
++            ggml_build_forward_expand(gf, output);
+         }
+-        return experts;
+-    };
++        output = place(ggml_cont(ctx0, output), cpu);
++        cb(output, "ffn_moe_out", il);
++        LLAMA_LOG_DEBUG("VRAMBridge resident-down prefill graph layer=%d rows=%lld\n", il, (long long) n_tokens);
++        return output;
++    }
+ 
+     if (moe_cache && moe_cache->is_frozen_hybrid() && moe_cache->hybrid_layer_enabled(il) &&
+         n_tokens > 0 && n_tokens <= moe_cache->hybrid_batch_limit()) {
+diff --git a/src/llama-graph.h b/src/llama-graph.h
+index e853a02..2a4d2f2 100644
+--- a/src/llama-graph.h
++++ b/src/llama-graph.h
+@@ -828,10 +828,12 @@ struct llm_graph_params {
+     llm_graph_cb cb;
+ 
+     llm_graph_result * res;
++    bool prefill_down_phase = false;
+ 
+     // return true if the "other" params would result in a graph with the same topology as with the current params
+     //   having the same topology allows us to reuse the graph in some cases
+     bool allow_reuse(const llm_graph_params & other) const {
++        if (prefill_down_phase != other.prefill_down_phase) return false;
+         // first check the ubatch
+         bool can_reuse_ubatch =
+             ubatch.equal_seqs() == other.ubatch.equal_seqs() &&
+@@ -1055,6 +1057,7 @@ struct llm_graph_context {
+     const llama_cross            * cross;
+     const llama_moe_cache        * moe_cache;
+ 
++    const bool prefill_down_phase;
+     const llama_prec_policy * prec_policy;
+ 
+     const llama_hadamard * hdmd;
+diff --git a/src/llama-moe-cache.cpp b/src/llama-moe-cache.cpp
+index ee1d08d..c45f3cd 100644
+--- a/src/llama-moe-cache.cpp
++++ b/src/llama-moe-cache.cpp
+@@ -8,6 +8,7 @@
+ #include <algorithm>
+ #include <cmath>
+ #include <cstdlib>
++#include <cstring>
+ #include <deque>
+ #include <fstream>
+ #include <limits>
+@@ -290,6 +291,10 @@ struct llama_moe_cache::impl {
+     bool async_admissions = false;
+     bool direct_admissions = false;
+     int64_t batch_limit = 1;
++    size_t prefill_down_batches = 0;
++    size_t prefill_down_rows = 0;
++    size_t prefill_down_gpu_routes = 0;
++    size_t prefill_down_cpu_routes = 0;
+     source_registration source_pins;
+     std::vector<int> recent;
+     std::vector<int> seed_priority;
+@@ -381,6 +386,10 @@ struct llama_moe_cache::impl {
+         ggml_backend_event_ptr id_event;
+         bool ids_uploaded = false;
+         std::vector<int32_t> packet_ids;
++        size_t prefill_audit_calls = 0;
++        size_t prefill_audit_failures = 0;
++        double prefill_audit_abs = 0;
++        double prefill_audit_l2 = 0;
+     };
+ 
+     struct binding {
+@@ -985,6 +994,13 @@ struct llama_moe_cache::impl {
+         if (async_admissions || async_ids || cold_gpu) {
+             for (const auto & device : devices) ggml_backend_synchronize(device.backend);
+         }
++        if (prefill_down_batches) LLAMA_LOG_WARN("VRAMBridge resident-down prefill batches=%zu rows=%zu "
++            "GPU routes=%zu CPU routes=%zu admissions=0\n", prefill_down_batches, prefill_down_rows,
++            prefill_down_gpu_routes, prefill_down_cpu_routes);
++        for (const auto & l : layers) if (l.prefill_audit_calls) {
++            LLAMA_LOG_WARN("VRAMBridge resident-down audit layer=%d calls=%zu failures=%zu max_abs=%.9g relative_l2=%.9g\n",
++                l.index, l.prefill_audit_calls, l.prefill_audit_failures, l.prefill_audit_abs, l.prefill_audit_l2);
++        }
+         if (frozen_hybrid) LLAMA_LOG_WARN("%s: hybrid dispatches=%zu CPU experts=%zu GPU experts=%zu prior hits=%zu\n",
+             __func__, dispatch_calls, cpu_expert_calls, gpu_expert_calls, pre_admission_hits);
+         if (async_ids) LLAMA_LOG_WARN("%s: asynchronous ID uploads=%zu, bytes=%zu\n", __func__, id_uploads, id_upload_bytes);
+@@ -1022,7 +1038,8 @@ struct llama_moe_cache::impl {
+         log_stats();
+     }
+ 
+-    void write_dispatch(ggml_tensor * dst, const layer & l, bool count_prior_hits, int cold_rank = -1) {
++    void write_dispatch(ggml_tensor * dst, const layer & l, bool count_prior_hits, int cold_rank = -1,
++                        bool prefill = false, bool cpu_control = false) {
+         const auto * ids = dst->src[0];
+         const auto * weights = dst->src[2];
+         const auto & g = groups[l.ig];
+@@ -1032,9 +1049,15 @@ struct llama_moe_cache::impl {
+                 const int expert = *reinterpret_cast<const int32_t *>(
+                     static_cast<const char *>(ids->data) + token*ids->nb[1] + rank*ids->nb[0]);
+                 GGML_ASSERT(expert >= 0 && expert < l.n_expert);
+-                const int slot = token == 0 && rank == cold_rank ? g.n_slots : g.lru.slot_map[l.index][expert];
+-                if (slot >= 0) ++gpu_expert_calls;
+-                else ++cpu_expert_calls;
++                const int slot = cpu_control ? -1 :
++                    token == 0 && rank == cold_rank ? g.n_slots : g.lru.slot_map[l.index][expert];
++                if (prefill) {
++                    if (slot >= 0) ++prefill_down_gpu_routes;
++                    else ++prefill_down_cpu_routes;
++                } else {
++                    if (slot >= 0) ++gpu_expert_calls;
++                    else ++cpu_expert_calls;
++                }
+                 if (count_prior_hits) pre_admission_hits += slot >= 0;
+                 if ((payback_profile || probation_admission) && count_prior_hits && slot >= 0) record_admission_reuse(l.key_offset + expert);
+                 const float weight = *reinterpret_cast<const float *>(
+@@ -1416,6 +1439,65 @@ void * llama_moe_cache::hybrid_dispatch_state(int32_t il) const {
+     return &pimpl->layers[il];
+ }
+ 
++ggml_tensor * llama_moe_cache::resident_down_map(int32_t il, int64_t rows, int64_t active) const {
++    if (!is_frozen_hybrid() || !hybrid_layer_enabled(il) || rows <= 1 || rows > 2048 ||
++        active != pimpl->layers[il].n_active) {
++        throw std::runtime_error("Invalid resident-down prefill dispatch layout");
++    }
++    for (const auto * tensor : pimpl->layers[il].experts) {
++        if (is_cpu_repacked(tensor)) throw std::runtime_error("Resident-down prefill requires native CPU expert layout");
++    }
++    return pimpl->layers[il].slot_map;
++}
++
++void llama_moe_cache::resident_down_dispatch(ggml_tensor * dst, int ith, int, void * userdata) {
++    if (ith != 0) return;
++    auto & state = *static_cast<impl::layer *>(userdata);
++    const auto * ids = dst->src[0];
++    const auto * weights = dst->src[2];
++    GGML_ASSERT(ids->type == GGML_TYPE_I32 && ids->ne[0] == state.n_active &&
++                ids->ne[1] > 1 && ids->ne[1] <= 2048 &&
++                weights->type == GGML_TYPE_F32 && weights->ne[0] == 1 &&
++                weights->ne[1] == state.n_active && weights->ne[2] == ids->ne[1] &&
++                dst->ne[0] == state.n_active && dst->ne[1] == 4 && dst->ne[2] == ids->ne[1]);
++    const char * control = std::getenv("VRAMBRIDGE_HYBRID_PREFILL_DOWN_CPU_CONTROL");
++    const char * selected = std::getenv("VRAMBRIDGE_HYBRID_PREFILL_DOWN_LAYER");
++    const bool cpu_control = (control && std::string(control) == "1") ||
++        (selected && state.index != std::stoi(selected));
++    state.owner->write_dispatch(dst, state, false, -1, true, cpu_control);
++    ++state.owner->prefill_down_batches;
++    state.owner->prefill_down_rows += ids->ne[1];
++}
++
++void llama_moe_cache::resident_down_audit(ggml_tensor * dst, int ith, int, void * userdata) {
++    if (ith != 0) return;
++    auto & layer = *static_cast<impl::layer *>(userdata);
++    const auto * actual = dst->src[0];
++    const auto * expected = dst->src[1];
++    GGML_ASSERT(actual->type == GGML_TYPE_F32 && expected->type == GGML_TYPE_F32 &&
++                ggml_are_same_shape(actual, expected) && ggml_are_same_shape(actual, dst) &&
++                ggml_is_contiguous(actual) && ggml_is_contiguous(expected) && ggml_is_contiguous(dst) &&
++                actual->ne[0] == 2880 && actual->ne[1] == layer.n_active &&
++                actual->ne[2] > 1 && actual->ne[2] <= 2048 && actual->ne[3] == 1);
++    const auto * a = static_cast<const float *>(actual->data);
++    const auto * b = static_cast<const float *>(expected->data);
++    double maximum = 0, scale = 0, delta2 = 0, norm2 = 0;
++    for (int64_t i = 0; i < ggml_nelements(actual); ++i) {
++        GGML_ASSERT(std::isfinite(a[i]) && std::isfinite(b[i]));
++        const double delta = double(a[i]) - b[i];
++        maximum = std::max(maximum, std::abs(delta));
++        scale = std::max(scale, std::abs(double(b[i])));
++        delta2 += delta * delta;
++        norm2 += double(b[i]) * b[i];
++    }
++    const double relative = std::sqrt(delta2 / std::max(norm2, 1e-30));
++    ++layer.prefill_audit_calls;
++    layer.prefill_audit_failures += maximum > 0.00001 + 0.0001 * scale || relative > 0.0001;
++    layer.prefill_audit_abs = std::max(layer.prefill_audit_abs, maximum);
++    layer.prefill_audit_l2 = std::max(layer.prefill_audit_l2, relative);
++    std::memmove(dst->data, actual->data, ggml_nbytes(actual));
++}
++
+ void llama_moe_cache::hybrid_dispatch(ggml_tensor * dst, int ith, int, void * userdata) {
+     if (ith != 0) return;
+     auto * state = static_cast<impl::layer *>(userdata);
+diff --git a/src/llama-moe-cache.h b/src/llama-moe-cache.h
+index fc0a34b..edb4e35 100644
+--- a/src/llama-moe-cache.h
++++ b/src/llama-moe-cache.h
+@@ -65,6 +65,9 @@ public:
+     ggml_tensor * device_ids(int32_t il) const;
+     bool uses_route_packet() const;
+     void * hybrid_dispatch_state(int32_t il) const;
++    ggml_tensor * resident_down_map(int32_t il, int64_t rows, int64_t active) const;
++    static void resident_down_dispatch(ggml_tensor * dst, int ith, int nth, void * userdata);
++    static void resident_down_audit(ggml_tensor * dst, int ith, int nth, void * userdata);
+     static void hybrid_dispatch(ggml_tensor * dst, int ith, int nth, void * userdata);
+     static void hybrid_upload_ids(ggml_tensor * dst, int ith, int nth, void * userdata);
+ 
+diff --git a/tools/server/server-context.cpp b/tools/server/server-context.cpp
+index a18b754..ce56244 100644
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -4263,6 +4263,10 @@ private:
+         } else {
+             n_empty_consecutive = 0;
+         }
++        const char * prefill_mode = std::getenv("VRAMBRIDGE_HYBRID_PREFILL_DOWN");
++        if (spec && prefill_mode && std::string(prefill_mode) == "1") {
++            throw std::runtime_error("Resident-down prefill research mode is not qualified with speculation");
++        }
+ 
+         // TODO @ngxson : dft model may have different n_embd than the tgt model, so we check & reject if that's the case
+         // this case is not currently used by any models, but may need to be supported in the future
+@@ -4274,14 +4278,21 @@ private:
+         }
+ 
+         bool has_output = false;
++        bool prefill_only = true;
+         for (int i = off; i < off + batch.view.size(); ++i) {
+             has_output |= batch.tokens[i].output;
++            prefill_only &= batch.tokens[i].is_prompt;
+         }
+ 
+         // yield to the queue, so we can still handle metrics tasks while decoding
+         // note: the sync is done here too, so that the wait is also covered by the yield
+         int ret = 0;
+         queue_tasks.yield_to_queue([&]() {
++            struct phase_guard {
++                llama_context * ctx;
++                phase_guard(llama_context * value, bool prefill) : ctx(value) { llama_set_prefill_phase(ctx, prefill); }
++                ~phase_guard() { llama_set_prefill_phase(ctx, false); }
++            } phase(ctx_tgt, prefill_only && !spec);
+             ret = llama_process(ctx_tgt, LLAMA_PROCESS_TYPE_DECODE, batch.view.get());
+             if (ret == 0 && has_output) {
+                 llama_synchronize(ctx_tgt);

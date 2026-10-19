@@ -1,0 +1,40 @@
+diff --git a/include/llama.h b/include/llama.h
+index 2bd8a98..2032881 100644
+--- a/include/llama.h
++++ b/include/llama.h
+@@ -1100,6 +1100,7 @@ extern "C" {
+     LLAMA_API void llama_set_n_threads(struct llama_context * ctx, int32_t n_threads, int32_t n_threads_batch);
+ 
+ #define LLAMA_VRAMBRIDGE_PREFILL_DOWN_API 1
++#define LLAMA_VRAMBRIDGE_LOCALIZATION_API 1
+     LLAMA_API void llama_set_prefill_phase(struct llama_context * ctx, bool prefill);
+ 
+     // Get the number of threads used for generation of a single token.
+diff --git a/src/llama-context.cpp b/src/llama-context.cpp
+index fe78d37..98b9d7c 100644
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -573,10 +573,22 @@ llama_context::llama_context(
+             }
+             prefill_down_enabled = std::string(mode) == "1";
+         }
++        bool localization_allowed = false;
++        if (const char * localize = std::getenv("VRAMBRIDGE_HYBRID_PREFILL_DOWN_LOCALIZE")) {
++            if (std::string(localize) != "0" && std::string(localize) != "1") {
++                throw std::runtime_error("Prefill-down localization flag must be 0 or 1");
++            }
++            localization_allowed = std::string(localize) == "1";
++            const char * fusion = std::getenv("GGML_CUDA_DISABLE_FUSION");
++            if (localization_allowed && (!prefill_down_enabled || !fusion ||
++                                        std::string(fusion) != "1" || !params.cb_eval)) {
++                throw std::runtime_error("Prefill-down localization requires an active observer and matched fusion-off mode");
++            }
++        }
+         if (prefill_down_enabled) {
+             if (!moe_cache || !moe_cache->is_frozen_hybrid() ||
+                 model.arch != LLM_ARCH_OPENAI_MOE || model.hparams.n_embd != 2880 ||
+-                model.hparams.n_layer() != 36 || cparams.n_ubatch > 2048 || params.cb_eval) {
++                model.hparams.n_layer() != 36 || cparams.n_ubatch > 2048 || (params.cb_eval && !localization_allowed)) {
+                 throw std::runtime_error("Resident-down prefill requires the native GPT-OSS-120B hybrid profile, "
+                                          "at most 2048 physical rows, and no evaluation callback");
+             }

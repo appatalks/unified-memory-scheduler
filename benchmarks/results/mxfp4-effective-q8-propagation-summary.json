@@ -1,0 +1,670 @@
+{
+  "schema_version": 1,
+  "study": "effective_q8_propagation_on_retained_failures",
+  "date": "2026-10-18",
+  "default_off_parity_patch_sha256": "5fd38a7c3ccf38ab382b0b97ca98616a462e3273f7481caa58dec7d9f033bbf2",
+  "qualification_status_unchanged": "57/60 broader configurations pass; three retained failures remain",
+  "raw_activations_recorded": false,
+  "raw_codes_recorded": false,
+  "performance_measurement": false,
+  "full_model_acceleration_claim": false,
+  "cases": [
+    {
+      "case": "a",
+      "evidence": {
+        "path": "operator-isolation-20261018/activation-lesion-a.json",
+        "sha256": "5827c91fc93901506489c347e4000d5eae6481abffc612a5cb4ebc3dd6ab4dfa"
+      },
+      "probe_source_sha256": "9e1ecb7e8bfb226593a43d190e2f01c913c37854a2e5ec69f4466b8e4ebcd68f",
+      "layer": 17,
+      "rows_per_expert": 32,
+      "expert_ids": [
+        2,
+        31,
+        78,
+        127
+      ],
+      "all_checks_passed": false,
+      "samples": [
+        {
+          "sample": 0,
+          "cpu_q8_roundtrip_self_check": {
+            "blocks": 2880,
+            "different_code_blocks": 0,
+            "different_code_values": 0,
+            "different_scale_blocks": 0,
+            "effective_value_error": {
+              "max_abs_error": 0.0,
+              "passed": true,
+              "reference_max_abs": 0.19996356964111328,
+              "relative_l2_error": 0.0,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "effective_q8_propagation": {
+            "activation_only_vs_cpu": {
+              "blocks": 11520,
+              "different_code_blocks": 0,
+              "different_code_values": 0,
+              "different_scale_blocks": 2,
+              "effective_value_error": {
+                "max_abs_error": 0.0002422332763671875,
+                "passed": true,
+                "reference_max_abs": 4.39508056640625,
+                "relative_l2_error": 9.18842788988805e-06,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "chain_vs_cpu": {
+              "blocks": 11520,
+              "different_code_blocks": 1,
+              "different_code_values": 1,
+              "different_scale_blocks": 2,
+              "effective_value_error": {
+                "max_abs_error": 0.00250244140625,
+                "passed": false,
+                "reference_max_abs": 4.39508056640625,
+                "relative_l2_error": 4.145683926944615e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "cpu_down_with_chain_effective_input": {
+              "max_abs_error": 0.030029296875,
+              "passed": true,
+              "reference_max_abs": 339.427734375,
+              "relative_l2_error": 4.159869770584777e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "cpu_down_with_same_input_activation": {
+              "max_abs_error": 0.0072784423828125,
+              "passed": true,
+              "reference_max_abs": 339.427734375,
+              "relative_l2_error": 7.400258849293238e-06,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "gpu_down_vs_same_effective_cpu_input": {
+              "max_abs_error": 0.0001220703125,
+              "passed": true,
+              "reference_max_abs": 339.427734375,
+              "relative_l2_error": 1.1032556676883283e-07,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "first_failing_operator": "weighting"
+        },
+        {
+          "sample": 1,
+          "cpu_q8_roundtrip_self_check": {
+            "blocks": 2880,
+            "different_code_blocks": 0,
+            "different_code_values": 0,
+            "different_scale_blocks": 0,
+            "effective_value_error": {
+              "max_abs_error": 0.0,
+              "passed": true,
+              "reference_max_abs": 0.19996356964111328,
+              "relative_l2_error": 0.0,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "effective_q8_propagation": {
+            "activation_only_vs_cpu": {
+              "blocks": 11520,
+              "different_code_blocks": 1,
+              "different_code_values": 1,
+              "different_scale_blocks": 0,
+              "effective_value_error": {
+                "max_abs_error": 0.00130462646484375,
+                "passed": false,
+                "reference_max_abs": 5.61981201171875,
+                "relative_l2_error": 2.066181440507791e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "chain_vs_cpu": {
+              "blocks": 11520,
+              "different_code_blocks": 2,
+              "different_code_values": 2,
+              "different_scale_blocks": 0,
+              "effective_value_error": {
+                "max_abs_error": 0.001934051513671875,
+                "passed": false,
+                "reference_max_abs": 5.61981201171875,
+                "relative_l2_error": 4.035925518254072e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "cpu_down_with_chain_effective_input": {
+              "max_abs_error": 0.0232086181640625,
+              "passed": true,
+              "reference_max_abs": 347.78900146484375,
+              "relative_l2_error": 3.038996943163495e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "cpu_down_with_same_input_activation": {
+              "max_abs_error": 0.01568603515625,
+              "passed": true,
+              "reference_max_abs": 347.78900146484375,
+              "relative_l2_error": 1.3237770722842928e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "gpu_down_vs_same_effective_cpu_input": {
+              "max_abs_error": 6.103515625e-05,
+              "passed": true,
+              "reference_max_abs": 347.78900146484375,
+              "relative_l2_error": 1.0579802289579034e-07,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "first_failing_operator": null
+        },
+        {
+          "sample": 2,
+          "cpu_q8_roundtrip_self_check": {
+            "blocks": 2880,
+            "different_code_blocks": 0,
+            "different_code_values": 0,
+            "different_scale_blocks": 0,
+            "effective_value_error": {
+              "max_abs_error": 0.0,
+              "passed": true,
+              "reference_max_abs": 0.19996356964111328,
+              "relative_l2_error": 0.0,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "effective_q8_propagation": {
+            "activation_only_vs_cpu": {
+              "blocks": 11520,
+              "different_code_blocks": 1,
+              "different_code_values": 1,
+              "different_scale_blocks": 0,
+              "effective_value_error": {
+                "max_abs_error": 0.0022563934326171875,
+                "passed": false,
+                "reference_max_abs": 3.4087066650390625,
+                "relative_l2_error": 3.6735116243677674e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "chain_vs_cpu": {
+              "blocks": 11520,
+              "different_code_blocks": 2,
+              "different_code_values": 2,
+              "different_scale_blocks": 1,
+              "effective_value_error": {
+                "max_abs_error": 0.0022563934326171875,
+                "passed": false,
+                "reference_max_abs": 3.4087066650390625,
+                "relative_l2_error": 4.98468918022721e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "cpu_down_with_chain_effective_input": {
+              "max_abs_error": 0.02707672119140625,
+              "passed": true,
+              "reference_max_abs": 335.2488098144531,
+              "relative_l2_error": 3.743938580546204e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "cpu_down_with_same_input_activation": {
+              "max_abs_error": 0.02707672119140625,
+              "passed": true,
+              "reference_max_abs": 335.2488098144531,
+              "relative_l2_error": 2.7507283078835484e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "gpu_down_vs_same_effective_cpu_input": {
+              "max_abs_error": 0.0001220703125,
+              "passed": true,
+              "reference_max_abs": 335.2488098144531,
+              "relative_l2_error": 1.1000318826548432e-07,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "first_failing_operator": "weighting"
+        }
+      ]
+    },
+    {
+      "case": "b",
+      "evidence": {
+        "path": "operator-isolation-20261018/activation-lesion-b.json",
+        "sha256": "7e28c8030dfa274948063e9a5117f33d7c8f4589b058bb858d65f7b0aae834d1"
+      },
+      "probe_source_sha256": "9e1ecb7e8bfb226593a43d190e2f01c913c37854a2e5ec69f4466b8e4ebcd68f",
+      "layer": 17,
+      "rows_per_expert": 64,
+      "expert_ids": [
+        2,
+        31,
+        78,
+        127
+      ],
+      "all_checks_passed": false,
+      "samples": [
+        {
+          "sample": 0,
+          "cpu_q8_roundtrip_self_check": {
+            "blocks": 5760,
+            "different_code_blocks": 0,
+            "different_code_values": 0,
+            "different_scale_blocks": 0,
+            "effective_value_error": {
+              "max_abs_error": 0.0,
+              "passed": true,
+              "reference_max_abs": 0.19996356964111328,
+              "relative_l2_error": 0.0,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "effective_q8_propagation": {
+            "activation_only_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 0,
+              "different_code_values": 0,
+              "different_scale_blocks": 2,
+              "effective_value_error": {
+                "max_abs_error": 0.0002422332763671875,
+                "passed": true,
+                "reference_max_abs": 4.39508056640625,
+                "relative_l2_error": 6.497202690784296e-06,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "chain_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 2,
+              "different_code_values": 2,
+              "different_scale_blocks": 3,
+              "effective_value_error": {
+                "max_abs_error": 0.002574920654296875,
+                "passed": false,
+                "reference_max_abs": 4.39508056640625,
+                "relative_l2_error": 4.1978556521880924e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "cpu_down_with_chain_effective_input": {
+              "max_abs_error": 0.030029296875,
+              "passed": true,
+              "reference_max_abs": 339.427734375,
+              "relative_l2_error": 3.509435007040868e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "cpu_down_with_same_input_activation": {
+              "max_abs_error": 0.0072784423828125,
+              "passed": true,
+              "reference_max_abs": 339.427734375,
+              "relative_l2_error": 5.232747456553392e-06,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "gpu_down_vs_same_effective_cpu_input": {
+              "max_abs_error": 0.0001220703125,
+              "passed": true,
+              "reference_max_abs": 339.427734375,
+              "relative_l2_error": 1.0896558228488688e-07,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "first_failing_operator": "weighting"
+        },
+        {
+          "sample": 1,
+          "cpu_q8_roundtrip_self_check": {
+            "blocks": 5760,
+            "different_code_blocks": 0,
+            "different_code_values": 0,
+            "different_scale_blocks": 0,
+            "effective_value_error": {
+              "max_abs_error": 0.0,
+              "passed": true,
+              "reference_max_abs": 0.19996356964111328,
+              "relative_l2_error": 0.0,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "effective_q8_propagation": {
+            "activation_only_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 2,
+              "different_code_values": 2,
+              "different_scale_blocks": 0,
+              "effective_value_error": {
+                "max_abs_error": 0.00130462646484375,
+                "passed": false,
+                "reference_max_abs": 5.71282958984375,
+                "relative_l2_error": 1.7776248475838894e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "chain_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 3,
+              "different_code_values": 3,
+              "different_scale_blocks": 1,
+              "effective_value_error": {
+                "max_abs_error": 0.001934051513671875,
+                "passed": false,
+                "reference_max_abs": 5.71282958984375,
+                "relative_l2_error": 3.056863289782799e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "cpu_down_with_chain_effective_input": {
+              "max_abs_error": 0.0232086181640625,
+              "passed": true,
+              "reference_max_abs": 349.0677795410156,
+              "relative_l2_error": 2.3494253860388198e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "cpu_down_with_same_input_activation": {
+              "max_abs_error": 0.021514892578125,
+              "passed": true,
+              "reference_max_abs": 349.0677795410156,
+              "relative_l2_error": 1.3122840534713243e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "gpu_down_vs_same_effective_cpu_input": {
+              "max_abs_error": 0.0001220703125,
+              "passed": true,
+              "reference_max_abs": 349.0677795410156,
+              "relative_l2_error": 1.0755726687078358e-07,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "first_failing_operator": null
+        },
+        {
+          "sample": 2,
+          "cpu_q8_roundtrip_self_check": {
+            "blocks": 5760,
+            "different_code_blocks": 0,
+            "different_code_values": 0,
+            "different_scale_blocks": 0,
+            "effective_value_error": {
+              "max_abs_error": 0.0,
+              "passed": true,
+              "reference_max_abs": 0.19996356964111328,
+              "relative_l2_error": 0.0,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "effective_q8_propagation": {
+            "activation_only_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 3,
+              "different_code_values": 3,
+              "different_scale_blocks": 0,
+              "effective_value_error": {
+                "max_abs_error": 0.0022563934326171875,
+                "passed": false,
+                "reference_max_abs": 3.414520263671875,
+                "relative_l2_error": 3.329390695385018e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "chain_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 3,
+              "different_code_values": 3,
+              "different_scale_blocks": 4,
+              "effective_value_error": {
+                "max_abs_error": 0.0022563934326171875,
+                "passed": false,
+                "reference_max_abs": 3.414520263671875,
+                "relative_l2_error": 3.8937635266356877e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "cpu_down_with_chain_effective_input": {
+              "max_abs_error": 0.02707672119140625,
+              "passed": true,
+              "reference_max_abs": 335.2488098144531,
+              "relative_l2_error": 2.861554903628894e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "cpu_down_with_same_input_activation": {
+              "max_abs_error": 0.02707672119140625,
+              "passed": true,
+              "reference_max_abs": 335.2488098144531,
+              "relative_l2_error": 2.3750193183073574e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "gpu_down_vs_same_effective_cpu_input": {
+              "max_abs_error": 0.0001220703125,
+              "passed": true,
+              "reference_max_abs": 335.2488098144531,
+              "relative_l2_error": 1.085439050129146e-07,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "first_failing_operator": "weighting"
+        }
+      ]
+    },
+    {
+      "case": "c",
+      "evidence": {
+        "path": "operator-isolation-20261018/activation-lesion-c.json",
+        "sha256": "44a685b5bc44fcda82e7cf5fa1d2c484b3736238128f506c372a3ce8d49bf689"
+      },
+      "probe_source_sha256": "9e1ecb7e8bfb226593a43d190e2f01c913c37854a2e5ec69f4466b8e4ebcd68f",
+      "layer": 26,
+      "rows_per_expert": 64,
+      "expert_ids": [
+        4,
+        19,
+        55,
+        102
+      ],
+      "all_checks_passed": false,
+      "samples": [
+        {
+          "sample": 0,
+          "cpu_q8_roundtrip_self_check": {
+            "blocks": 5760,
+            "different_code_blocks": 0,
+            "different_code_values": 0,
+            "different_scale_blocks": 0,
+            "effective_value_error": {
+              "max_abs_error": 0.0,
+              "passed": true,
+              "reference_max_abs": 0.19996356964111328,
+              "relative_l2_error": 0.0,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "effective_q8_propagation": {
+            "activation_only_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 1,
+              "different_code_values": 1,
+              "different_scale_blocks": 0,
+              "effective_value_error": {
+                "max_abs_error": 0.001735687255859375,
+                "passed": false,
+                "reference_max_abs": 1.0832672119140625,
+                "relative_l2_error": 2.2726858007774352e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "chain_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 4,
+              "different_code_values": 4,
+              "different_scale_blocks": 3,
+              "effective_value_error": {
+                "max_abs_error": 0.002529144287109375,
+                "passed": false,
+                "reference_max_abs": 1.0832672119140625,
+                "relative_l2_error": 4.938413374584885e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "cpu_down_with_chain_effective_input": {
+              "max_abs_error": 0.0809326171875,
+              "passed": true,
+              "reference_max_abs": 1800.189453125,
+              "relative_l2_error": 2.7736921814807124e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "cpu_down_with_same_input_activation": {
+              "max_abs_error": 0.0416259765625,
+              "passed": true,
+              "reference_max_abs": 1800.189453125,
+              "relative_l2_error": 8.597055032836286e-06,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "gpu_down_vs_same_effective_cpu_input": {
+              "max_abs_error": 0.0010986328125,
+              "passed": true,
+              "reference_max_abs": 1800.189453125,
+              "relative_l2_error": 1.3363966413585498e-07,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "first_failing_operator": null
+        },
+        {
+          "sample": 1,
+          "cpu_q8_roundtrip_self_check": {
+            "blocks": 5760,
+            "different_code_blocks": 0,
+            "different_code_values": 0,
+            "different_scale_blocks": 0,
+            "effective_value_error": {
+              "max_abs_error": 0.0,
+              "passed": true,
+              "reference_max_abs": 0.19996356964111328,
+              "relative_l2_error": 0.0,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "effective_q8_propagation": {
+            "activation_only_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 2,
+              "different_code_values": 2,
+              "different_scale_blocks": 1,
+              "effective_value_error": {
+                "max_abs_error": 0.0023365020751953125,
+                "passed": false,
+                "reference_max_abs": 1.0212554931640625,
+                "relative_l2_error": 3.8638954284029725e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "chain_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 4,
+              "different_code_values": 4,
+              "different_scale_blocks": 2,
+              "effective_value_error": {
+                "max_abs_error": 0.0023365020751953125,
+                "passed": false,
+                "reference_max_abs": 1.0212554931640625,
+                "relative_l2_error": 4.379576503513422e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "cpu_down_with_chain_effective_input": {
+              "max_abs_error": 0.05609130859375,
+              "passed": true,
+              "reference_max_abs": 1774.181396484375,
+              "relative_l2_error": 2.2223893096957093e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "cpu_down_with_same_input_activation": {
+              "max_abs_error": 0.05609130859375,
+              "passed": true,
+              "reference_max_abs": 1774.181396484375,
+              "relative_l2_error": 1.911724707061155e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "gpu_down_vs_same_effective_cpu_input": {
+              "max_abs_error": 0.000732421875,
+              "passed": true,
+              "reference_max_abs": 1774.181396484375,
+              "relative_l2_error": 1.3241618937410948e-07,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "first_failing_operator": null
+        },
+        {
+          "sample": 2,
+          "cpu_q8_roundtrip_self_check": {
+            "blocks": 5760,
+            "different_code_blocks": 0,
+            "different_code_values": 0,
+            "different_scale_blocks": 0,
+            "effective_value_error": {
+              "max_abs_error": 0.0,
+              "passed": true,
+              "reference_max_abs": 0.19996356964111328,
+              "relative_l2_error": 0.0,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "effective_q8_propagation": {
+            "activation_only_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 1,
+              "different_code_values": 1,
+              "different_scale_blocks": 1,
+              "effective_value_error": {
+                "max_abs_error": 0.0025463104248046875,
+                "passed": false,
+                "reference_max_abs": 1.1346206665039062,
+                "relative_l2_error": 3.345595426650705e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "chain_vs_cpu": {
+              "blocks": 23040,
+              "different_code_blocks": 4,
+              "different_code_values": 4,
+              "different_scale_blocks": 2,
+              "effective_value_error": {
+                "max_abs_error": 0.0023250579833984375,
+                "passed": false,
+                "reference_max_abs": 1.1346206665039062,
+                "relative_l2_error": 4.732926781286926e-05,
+                "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+              }
+            },
+            "cpu_down_with_chain_effective_input": {
+              "max_abs_error": 1.73583984375,
+              "passed": false,
+              "reference_max_abs": 1898.91455078125,
+              "relative_l2_error": 7.547495269358758e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "cpu_down_with_same_input_activation": {
+              "max_abs_error": 0.1221923828125,
+              "passed": true,
+              "reference_max_abs": 1898.91455078125,
+              "relative_l2_error": 1.1334794033750154e-05,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            },
+            "gpu_down_vs_same_effective_cpu_input": {
+              "max_abs_error": 0.000732421875,
+              "passed": true,
+              "reference_max_abs": 1898.91455078125,
+              "relative_l2_error": 1.3371642635615034e-07,
+              "tolerance": "max_abs <= 0.00001 + 0.0001 * reference_max_abs; relative_l2 <= 0.0001"
+            }
+          },
+          "first_failing_operator": "down_projection"
+        }
+      ]
+    }
+  ],
+  "finding": "CPU down replay with the GPU chain effective Q8 input reproduces the residual error; GPU down with the same effective input is accurate near 1e-7 relative L2. Activation-only and complete-chain lesions differ, so a SwiGLU-only fix is not established.",
+  "next_experiment_unimplemented": "Test precise activation evaluation or CPU gate/up/activation plus GPU down; charge canonicalization, transfers and preparation inside performance timing.",
+  "limits": [
+    "Aggregate synthetic-layer diagnostics, not actual-activation/full-model quality or serving speed qualification.",
+    "No tolerance widening, expert substitution, installed library replacement or Synapse changes."
+  ]
+}

@@ -65,6 +65,37 @@ and asynchronous GPU graph run independently. A separate backend stream receives
 the CPU result through a small reusable pinned buffer, establishes the GPU branch
 copy dependency, combines contributions, and synchronizes before reuse.
 
+### Stage-aware Prefill Calibration
+
+The isolated layer probe can calibrate 1-256 synthetic rows per selected expert
+and optionally include synchronous pageable weight uploads in its timed path.
+Its same-expert row reuse is an explicit microbenchmark assumption, not measured
+prefill routing. Optional GPU row chunks share weights while the CPU reference
+retains its full-row graph. Per-mode and per-partition gates include all warm-up
+and timed executions; failed fast variants are not qualified improvements.
+The trace collector separately supports observed prefill row histograms with
+explicit final-layer pruning coverage. Instrumented collection is not a speed
+measurement. Neither probe changes the whole-model dispatch batch limit,
+installed backend, or application defaults. Stage-aware prefill scheduling still
+requires representative numerical checks and complete target-graph qualification;
+see the [calibration boundary](../benchmarks/README.md#stage-aware-prefill-calibration).
+
+### CPU-compatible Packed-down Research
+
+An explicitly enabled CUDA build of the layer probe also tests native packed
+Q8_0 inputs with a host-specific MXFP4 dot contract. Scalar and packed-integer
+implementations retain the pinned CPU's paired FMA lanes and horizontal sum;
+original bias, probability weighting and ordered reduction remain on CPU.
+This avoids treating a small operator L2 error as sufficient model-state
+parity. The probe checks raw bits and native FFN boundary bits, and charges
+quantization, transfers and synchronization in raw-stage timings.
+
+The [evidence](../benchmarks/results/cpu-compatible-packed-down-summary.json)
+does not change runtime dispatch, installed plugins or engine capability
+detection. Its all-required-experts GPU replay is not the deployed residency
+plan. Full-model normal-fusion, KV/Q8 state, mixed-routing and request-latency
+gates still precede compact dispatch or a Synapse integration recommendation.
+
 ## Model-Agnostic Engine Contract
 
 The scheduler is not allowed to encode a particular checkpoint's layer count,
@@ -112,6 +143,45 @@ quality or generation speed. The separate 60 tok/s 120B goal remains unmet;
 no universal speedup follows merely from model-agnostic dispatch.
 
 ### Guarded Decode Overlap
+
+The [handoff follow-up](../benchmarks/results/handoff-critical-path-summary.json)
+partitions native CPU graph, GPU execution and CUDA API intervals instead of
+equating API wait time with removable latency. The native path already uses
+pinned intermediates and CUDA graph replay. A separate default-off interposer
+tests one worker only for small scalar dispatch/copy graphs, retaining the
+original expert plans and all native operations. It passes exact long-prompt
+logit checks but has mixed cross-workload timings, so is not installed or
+recommended as a general improvement. Existing Q/K/V graph optimization and
+CUDA wait-policy screens also establish no new speedup.
+
+The [GPU-window CPU-cache study](../benchmarks/results/gpu-window-cpu-cache-summary.json)
+separately investigates warming original CPU expert weights while the GPU is
+busy. Same-CCD warming substantially reduces isolated cold FFN latency, but
+serial warming loses and cross-CCD warming is harmful. Timestamp-aligned
+CUDA/CPU traces leave optimistic oracle headroom, not an executable scheduler:
+current route-ready hints arrive too late and previous-cold-set prediction is
+poor. No warmer, predictor, new placement or cache flush is enabled in the
+runtime. CPU L2/L3 residency is distinct from Linux page cache and GPU VRAM.
+
+The subsequent [live prototype](../benchmarks/results/live-cpu-cache-warmer-summary.json)
+implements dispatch-triggered warming in a separate opt-in CPU interposer.
+It reads bounded prefixes of original host expert buffers, never changes
+graph math or routing, and cancels at CPU expert entry without waiting for
+completion. Buffer release drains the reader before source memory is freed.
+Current pre-admission hints can include experts later admitted to GPU; those
+bytes are accounted separately. Native/noop/read request controls and exact
+logit gates pass, but repeated requests show no throughput improvement.
+Actual helper intervals mostly precede GPU compute, so this is not a
+GPU-activity-gated scheduler or an installed optimization.
+
+CPU utilization is not a measurement of useful expert computation. The
+[CPU decode follow-up](../benchmarks/results/cpu-decode-efficiency-summary.json)
+finds GNU OpenMP workers consuming CPU between graph calls. An opt-in child
+`GOMP_SPINCOUNT=1000` policy preserves the checked logits/output sequences
+while reducing CPU-seconds at a small measured latency cost; it is not a
+faster default or an energy claim. Native pthread polling is a different
+control. Diagnostic graph shims, negative VNNI kernels and alternative CPU
+builds remain research tools, not runtime capabilities or installed defaults.
 
 An optional pipeline prepares the exact three-dimensional CPU hidden-input
 view as a dispatcher dependency. The scheduler can then reuse that host copy

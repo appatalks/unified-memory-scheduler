@@ -1,0 +1,1085 @@
+{
+  "schema_version": 1,
+  "study": "native_handoff_critical_path_and_scalar_control_threads",
+  "date": "2026-10-19",
+  "generated_at_utc": "2026-10-19T15:03:47.053024+00:00",
+  "status": "measured_handoff_budget_exact_candidate_mixed_performance_no_general_promotion",
+  "research_repository": "https://github.com/appatalks/unified-memory-scheduler",
+  "downstream_repository": "https://github.com/appatalks/Synapse",
+  "downstream_revision_read_only": "545a7ebf4a6dea3dd4a1ac04760057eed2de1b15",
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "research_base_commit": "1c7dc36d2f6429b99c3591824c22661ca4df47a6",
+  "changes_uncommitted": true,
+  "full_model_acceleration_claim": false,
+  "qualified_general_speedup": false,
+  "goal60tok_s_met": false,
+  "installed_backends_changed": false,
+  "synapse_changed": false,
+  "app_defaults_changed": false,
+  "weights_or_routing_changed": false,
+  "configuration": {
+    "model": "gpt-oss-120b-MXFP4",
+    "cpu": "Ryzen9 9950X",
+    "gpu": "RTX5070Ti16GB",
+    "context": 16384,
+    "expert_cache_mib": 12000,
+    "generation_threads": 8,
+    "batch_threads": 16,
+    "logical_batch": 2048,
+    "physical_batch": 512,
+    "normal_fusion": true,
+    "transfer": "direct",
+    "decode_pipeline": true,
+    "async_ids": true,
+    "plan_sha256": "6a679bec76f1a410ed65fa79c186d164a388fc76419d96dcad5978782343949c",
+    "cpu_affinity_override": false,
+    "warmer_enabled": false,
+    "wait_policy": "Native fastest OpenMP/CUDA policy; no CPU wait override.",
+    "timezone": "UTC",
+    "temperature": 0,
+    "seed": 42,
+    "reasoning_effort": "low",
+    "ignore_eos": true,
+    "cache_prompt": false,
+    "installed_library_set_sha256": {
+      "libggml-base.so.0.27.0": "7a431e4ddf3aad3963b6c6c709789dbf81b6f288aa2e6f33e951a6aadc600776",
+      "libggml-cpu-zen4.so": "155a87103fdc442b309b656862bb2ea9b9f77be88f3434f9c044b71a572279e4",
+      "libggml.so.0.27.0": "fdf214fa9242da2b397b040183928d742f94c902e9ba2fd77e6af112cf7ccbd9",
+      "libllama-common.so.0.7.0": "86a923a9f337741357f28bab440c1e7051eb98e41dead6fe95b39ce896a86c87",
+      "libllama-server-impl.so": "3ecc6a2b6f49f3abf02303cb409e87eae5b3dff6e30cf2fa1cb06f84f81faab1",
+      "libllama.so.0.7.0": "148c134928fce83224465faddde52febed9d4f4c6da8e6b159ac88448b2f9eb4",
+      "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e"
+    }
+  },
+  "observed_critical_path": {
+    "native": {
+      "schema_version": 1,
+      "study": "observed_native_cpu_cuda_handoff_partition",
+      "performance_measurement": false,
+      "full_model_acceleration_claim": false,
+      "output_tokens": 128,
+      "cuda_runtime_environment": {
+        "GGML_CUDA_GRAPH_OPT": "0"
+      },
+      "cpu_groups": [
+        {
+          "ops": "expert",
+          "threads": 8,
+          "calls": 4463,
+          "elapsed_ms": 1728.289511
+        },
+        {
+          "ops": "CPY+CUSTOM+RESHAPE+VIEW",
+          "threads": 8,
+          "calls": 4463,
+          "elapsed_ms": 47.712478
+        },
+        {
+          "ops": "GET_ROWS",
+          "threads": 1,
+          "calls": 123,
+          "elapsed_ms": 0.264093
+        }
+      ],
+      "partition": {
+        "cpu_only_ms": 1304.802151,
+        "gpu_only_ms": 711.482457,
+        "cpu_and_gpu_ms": 471.463931,
+        "neither_cpu_nor_gpu_ms": 579.951359,
+        "envelope_ms": 3067.699898,
+        "observer_inside_neither_ms": 73.892395,
+        "cuda_api_inside_neither_ms": 417.788768,
+        "unattributed_neither_ms": 88.270196
+      },
+      "cuda_api_leaders": [
+        {
+          "name": "cudaStreamSynchronize_v3020",
+          "calls": 44219,
+          "sum_call_elapsed_ms": 842.672074,
+          "union_elapsed_ms": 842.672074
+        },
+        {
+          "name": "cudaGraphLaunch_v10000",
+          "calls": 9048,
+          "sum_call_elapsed_ms": 201.515802,
+          "union_elapsed_ms": 201.515802
+        },
+        {
+          "name": "cudaMemcpyAsync_v3020",
+          "calls": 28279,
+          "sum_call_elapsed_ms": 51.136888,
+          "union_elapsed_ms": 51.136888
+        },
+        {
+          "name": "cudaEventSynchronize_v3020",
+          "calls": 4463,
+          "sum_call_elapsed_ms": 4.615183,
+          "union_elapsed_ms": 4.615183
+        },
+        {
+          "name": "cudaEventRecord_v3020",
+          "calls": 4463,
+          "sum_call_elapsed_ms": 1.966572,
+          "union_elapsed_ms": 1.966572
+        }
+      ],
+      "kernel_stream_ids": [
+        14
+      ],
+      "kernel_sum_elapsed_ms": 885.889965,
+      "kernel_union_elapsed_ms": 776.012224,
+      "limitations": [
+        "Profiler-perturbed CPU-enclosed subset of first-text generation interval, including partial boundary tokens.",
+        "CUDA API elapsed time can include required GPU waits, driver work and profiling overhead; not removable latency.",
+        "CPU/GPU intervals partition wall time; CUDA API and observer subsets can overlap and must not be summed.",
+        "Kernel time-range overlap does not prove SM occupancy or successful QKV multi-stream activation.",
+        "No projected tok/s or precision/placement changes are implied."
+      ],
+      "source_sha256": "2c1c95acc940b8200907f1a8e4a8fcc055105651dd3a5fa429f26bface29f809",
+      "input_sha256": {
+        "private-native-trace128-cpu.jsonl": "c5942de9d207fe6143eeed4da7c26de0eac27bedd3436725ce2b07997df67a0e",
+        "private-native-trace128.sqlite": "64a3dbba46361c1a3e684050554ceef8097626f1677d71990701a2a8809106e6",
+        "native-trace128.json": "aea2cdd2a2e8213545733f187b46b0979ca9e93e6d129862cc287efe8cc3ea24"
+      }
+    },
+    "qkv_option": {
+      "schema_version": 1,
+      "study": "observed_native_cpu_cuda_handoff_partition",
+      "performance_measurement": false,
+      "full_model_acceleration_claim": false,
+      "output_tokens": 128,
+      "cuda_runtime_environment": {
+        "GGML_CUDA_GRAPH_OPT": "1"
+      },
+      "cpu_groups": [
+        {
+          "ops": "expert",
+          "threads": 8,
+          "calls": 4463,
+          "elapsed_ms": 1702.616115
+        },
+        {
+          "ops": "CPY+CUSTOM+RESHAPE+VIEW",
+          "threads": 8,
+          "calls": 4463,
+          "elapsed_ms": 55.911407
+        },
+        {
+          "ops": "GET_ROWS",
+          "threads": 1,
+          "calls": 123,
+          "elapsed_ms": 0.290557
+        }
+      ],
+      "partition": {
+        "cpu_only_ms": 1290.512263,
+        "gpu_only_ms": 727.634433,
+        "cpu_and_gpu_ms": 468.305816,
+        "neither_cpu_nor_gpu_ms": 617.0216,
+        "envelope_ms": 3103.474112,
+        "observer_inside_neither_ms": 83.287031,
+        "cuda_api_inside_neither_ms": 440.888279,
+        "unattributed_neither_ms": 92.84629
+      },
+      "cuda_api_leaders": [
+        {
+          "name": "cudaStreamSynchronize_v3020",
+          "calls": 44219,
+          "sum_call_elapsed_ms": 852.875739,
+          "union_elapsed_ms": 852.875739
+        },
+        {
+          "name": "cudaGraphLaunch_v10000",
+          "calls": 9048,
+          "sum_call_elapsed_ms": 223.739028,
+          "union_elapsed_ms": 223.739028
+        },
+        {
+          "name": "cudaMemcpyAsync_v3020",
+          "calls": 28279,
+          "sum_call_elapsed_ms": 55.187907,
+          "union_elapsed_ms": 55.187907
+        },
+        {
+          "name": "cudaEventSynchronize_v3020",
+          "calls": 4463,
+          "sum_call_elapsed_ms": 5.323115,
+          "union_elapsed_ms": 5.323115
+        },
+        {
+          "name": "cudaEventRecord_v3020",
+          "calls": 4463,
+          "sum_call_elapsed_ms": 2.502968,
+          "union_elapsed_ms": 2.502968
+        }
+      ],
+      "kernel_stream_ids": [
+        14
+      ],
+      "kernel_sum_elapsed_ms": 929.232985,
+      "kernel_union_elapsed_ms": 788.94075,
+      "limitations": [
+        "Profiler-perturbed CPU-enclosed subset of first-text generation interval, including partial boundary tokens.",
+        "CUDA API elapsed time can include required GPU waits, driver work and profiling overhead; not removable latency.",
+        "CPU/GPU intervals partition wall time; CUDA API and observer subsets can overlap and must not be summed.",
+        "Kernel time-range overlap does not prove SM occupancy or successful QKV multi-stream activation.",
+        "No projected tok/s or precision/placement changes are implied."
+      ],
+      "source_sha256": "2c1c95acc940b8200907f1a8e4a8fcc055105651dd3a5fa429f26bface29f809",
+      "input_sha256": {
+        "private-qkv-trace128-cpu.jsonl": "60a1b94654b4863fe30f8fe024c8ea353068a01467572f45fde0678aa21fb178",
+        "private-qkv-trace128.sqlite": "f1426a7b8cac9d2af254f192a629a00d0b76d5777082a0aa56dcdef33943d570",
+        "qkv-trace128.json": "5eb33d25b562f4da92c3ed711fb4392d19e97e49fb298a20bf5e9eafdf2ae3a9"
+      }
+    },
+    "trace_output_hashes_match128_control": true,
+    "source_and_process_alignment_checked": true,
+    "not_a_removable_latency_estimate": true,
+    "prior_art_already_present": [
+      "Pinned CPU intermediate buffers",
+      "CUDA graph replay",
+      "Guarded CPU/GPU expert overlap",
+      "Asynchronous resident-ID upload"
+    ],
+    "source_grounding": [
+      "Pinned llama-context.cpp uses first device host buffer for CPU intermediates.",
+      "Pinned CUDA backend cpy_tensor_async accepts device-device; synchronous buffer get/set uses per-thread-stream copy+sync.",
+      "Scalar control graphs use8worker native plans despite one-thread custom callbacks."
+    ]
+  },
+  "scalar_control_candidate": {
+    "implementation": "Opt-in CPU graph interposer; local copy of plan with n_threads1 for bounded scalar slot-map dispatch/copy graphs only.",
+    "allowed_ops": [
+      "NONE",
+      "VIEW",
+      "RESHAPE",
+      "CPY",
+      "CUSTOM"
+    ],
+    "non_view_node_byte_bound": 65536,
+    "graph_node_bound": 32,
+    "scalar_dispatch_ne1": 1,
+    "expert_arithmetic_and_other_plans_unchanged": true,
+    "no_synchronization_removed": true,
+    "default_enabled": false,
+    "long_full_vocab_gate": {
+      "positions": 96,
+      "categories": [
+        "coding",
+        "prose",
+        "reasoning"
+      ],
+      "max_abs_logit_error": 0,
+      "relative_l2": 0,
+      "top1_matches": 96,
+      "original_tolerance": "max_abs<=0.01; relative_l2<=0.001"
+    },
+    "matched_request_results": {
+      "requests": 18,
+      "output_tokens": 9216,
+      "pairs_per_category": 3,
+      "outputs_exact_within_workload": true,
+      "backend_modules_identical": true,
+      "generation_physical_reads_and_major_faults_zero": true,
+      "endpoint_process_swap_zero": true,
+      "workloads": [
+        {
+          "category": "coding",
+          "variants": {
+            "native": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "file": "handoff-critical-path-20261019/control-one-coding-pair0-native.json",
+                  "backend_decode_tok_s": 51.67552060811671,
+                  "request_seconds": 11.875742289999835,
+                  "prompt_ms": 1977.396,
+                  "first_text_seconds": 2.113377018000392,
+                  "load_to_ready_seconds": 4.011970621999353,
+                  "generation_window_process_cpu_seconds": 77.91,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+                },
+                {
+                  "pair": 1,
+                  "file": "handoff-critical-path-20261019/control-one-coding-pair1-native.json",
+                  "backend_decode_tok_s": 51.338828228920946,
+                  "request_seconds": 11.942907927001215,
+                  "prompt_ms": 1984.12,
+                  "first_text_seconds": 2.119801262000692,
+                  "load_to_ready_seconds": 4.0247613199990155,
+                  "generation_window_process_cpu_seconds": 78.35999999999999,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+                },
+                {
+                  "pair": 2,
+                  "file": "handoff-critical-path-20261019/control-one-coding-pair2-native.json",
+                  "backend_decode_tok_s": 51.45984842808794,
+                  "request_seconds": 11.929709617001208,
+                  "prompt_ms": 1994.168,
+                  "first_text_seconds": 2.1240800710002077,
+                  "load_to_ready_seconds": 4.031405015999553,
+                  "generation_window_process_cpu_seconds": 78.16,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.45984842808794,
+                "request_seconds": 11.929709617001208,
+                "prompt_ms": 1984.12,
+                "first_text_seconds": 2.119801262000692,
+                "load_to_ready_seconds": 4.0247613199990155,
+                "generation_window_process_cpu_seconds": 78.16
+              }
+            },
+            "cpu-one": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "file": "handoff-critical-path-20261019/control-one-coding-pair0-cpu-one.json",
+                  "backend_decode_tok_s": 51.90349200803031,
+                  "request_seconds": 11.857795779000298,
+                  "prompt_ms": 2006.466,
+                  "first_text_seconds": 2.136258340000495,
+                  "load_to_ready_seconds": 3.940476478999699,
+                  "generation_window_process_cpu_seconds": 77.5,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                  "changed_control_calls": 18399,
+                  "other_plan_calls": 19092
+                },
+                {
+                  "pair": 1,
+                  "file": "handoff-critical-path-20261019/control-one-coding-pair1-cpu-one.json",
+                  "backend_decode_tok_s": 51.496595883537466,
+                  "request_seconds": 11.907956412000203,
+                  "prompt_ms": 1978.674,
+                  "first_text_seconds": 2.108901521000007,
+                  "load_to_ready_seconds": 4.027388694001274,
+                  "generation_window_process_cpu_seconds": 78.16999999999999,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                  "changed_control_calls": 18399,
+                  "other_plan_calls": 19092
+                },
+                {
+                  "pair": 2,
+                  "file": "handoff-critical-path-20261019/control-one-coding-pair2-cpu-one.json",
+                  "backend_decode_tok_s": 51.89520580714462,
+                  "request_seconds": 11.840466039999228,
+                  "prompt_ms": 1987.63,
+                  "first_text_seconds": 2.1165685979995033,
+                  "load_to_ready_seconds": 3.932671892998769,
+                  "generation_window_process_cpu_seconds": 77.6,
+                  "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7",
+                  "changed_control_calls": 18399,
+                  "other_plan_calls": 19092
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.89520580714462,
+                "request_seconds": 11.857795779000298,
+                "prompt_ms": 1987.63,
+                "first_text_seconds": 2.1165685979995033,
+                "load_to_ready_seconds": 3.940476478999699,
+                "generation_window_process_cpu_seconds": 77.6
+              }
+            }
+          },
+          "ratio_of_configuration_medians_percent": 0.8460137220673403,
+          "paired_changes_percent": [
+            0.44115936758999386,
+            0.3073066917558709,
+            0.8460137220673403
+          ],
+          "median_paired_change_percent": 0.44115936758999386,
+          "request_median_change_percent": -0.6028129796086912
+        },
+        {
+          "category": "reasoning",
+          "variants": {
+            "native": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "file": "handoff-critical-path-20261019/control-one-reasoning-pair0-native.json",
+                  "backend_decode_tok_s": 51.86674610771028,
+                  "request_seconds": 11.940543753999009,
+                  "prompt_ms": 2082.838,
+                  "first_text_seconds": 2.212708269998984,
+                  "load_to_ready_seconds": 4.028741288999299,
+                  "generation_window_process_cpu_seconds": 77.61000000000001,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+                },
+                {
+                  "pair": 1,
+                  "file": "handoff-critical-path-20261019/control-one-reasoning-pair1-native.json",
+                  "backend_decode_tok_s": 51.10007154010015,
+                  "request_seconds": 12.101593179000702,
+                  "prompt_ms": 2095.582,
+                  "first_text_seconds": 2.2249070569996547,
+                  "load_to_ready_seconds": 3.9259432290000404,
+                  "generation_window_process_cpu_seconds": 78.76,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+                },
+                {
+                  "pair": 2,
+                  "file": "handoff-critical-path-20261019/control-one-reasoning-pair2-native.json",
+                  "backend_decode_tok_s": 51.74303658718726,
+                  "request_seconds": 11.973578785000427,
+                  "prompt_ms": 2092.328,
+                  "first_text_seconds": 2.2214915370004746,
+                  "load_to_ready_seconds": 3.938108532000115,
+                  "generation_window_process_cpu_seconds": 77.75,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3"
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.74303658718726,
+                "request_seconds": 11.973578785000427,
+                "prompt_ms": 2092.328,
+                "first_text_seconds": 2.2214915370004746,
+                "load_to_ready_seconds": 3.938108532000115,
+                "generation_window_process_cpu_seconds": 77.75
+              }
+            },
+            "cpu-one": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "file": "handoff-critical-path-20261019/control-one-reasoning-pair0-cpu-one.json",
+                  "backend_decode_tok_s": 51.77206875614414,
+                  "request_seconds": 11.970125451000058,
+                  "prompt_ms": 2094.433,
+                  "first_text_seconds": 2.2250176150009793,
+                  "load_to_ready_seconds": 3.925968528001249,
+                  "generation_window_process_cpu_seconds": 77.72,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                  "changed_control_calls": 18399,
+                  "other_plan_calls": 19092
+                },
+                {
+                  "pair": 1,
+                  "file": "handoff-critical-path-20261019/control-one-reasoning-pair1-cpu-one.json",
+                  "backend_decode_tok_s": 51.807855916168194,
+                  "request_seconds": 11.957212199000423,
+                  "prompt_ms": 2087.77,
+                  "first_text_seconds": 2.219164993000959,
+                  "load_to_ready_seconds": 3.9308434949998627,
+                  "generation_window_process_cpu_seconds": 77.71000000000001,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                  "changed_control_calls": 18399,
+                  "other_plan_calls": 19092
+                },
+                {
+                  "pair": 2,
+                  "file": "handoff-critical-path-20261019/control-one-reasoning-pair2-cpu-one.json",
+                  "backend_decode_tok_s": 52.20465040251727,
+                  "request_seconds": 11.889212377998774,
+                  "prompt_ms": 2095.034,
+                  "first_text_seconds": 2.2268304739991436,
+                  "load_to_ready_seconds": 3.9322377200005576,
+                  "generation_window_process_cpu_seconds": 77.03999999999999,
+                  "generated_text_sha256": "5a37bbd3cf97151bef960e53d80751bbbdae855caf1c4af6900c968e9f8a5bd3",
+                  "changed_control_calls": 18399,
+                  "other_plan_calls": 19092
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 51.807855916168194,
+                "request_seconds": 11.957212199000423,
+                "prompt_ms": 2094.433,
+                "first_text_seconds": 2.2250176150009793,
+                "load_to_ready_seconds": 3.9308434949998627,
+                "generation_window_process_cpu_seconds": 77.71000000000001
+              }
+            }
+          },
+          "ratio_of_configuration_medians_percent": 0.12527159837576463,
+          "paired_changes_percent": [
+            -0.18253960132669222,
+            1.3850946872209668,
+            0.8921274161252324
+          ],
+          "median_paired_change_percent": 0.8921274161252324,
+          "request_median_change_percent": -0.13668917450567752
+        },
+        {
+          "category": "prose",
+          "variants": {
+            "native": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "file": "handoff-critical-path-20261019/control-one-prose-pair0-native.json",
+                  "backend_decode_tok_s": 57.98257844781885,
+                  "request_seconds": 10.75778874900061,
+                  "prompt_ms": 1939.043,
+                  "first_text_seconds": 2.066050000999894,
+                  "load_to_ready_seconds": 3.935305576000246,
+                  "generation_window_process_cpu_seconds": 69.28,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+                },
+                {
+                  "pair": 1,
+                  "file": "handoff-critical-path-20261019/control-one-prose-pair1-native.json",
+                  "backend_decode_tok_s": 57.459664383835054,
+                  "request_seconds": 10.831250080000245,
+                  "prompt_ms": 1932.377,
+                  "first_text_seconds": 2.061661281999477,
+                  "load_to_ready_seconds": 3.925423545999365,
+                  "generation_window_process_cpu_seconds": 69.88,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+                },
+                {
+                  "pair": 2,
+                  "file": "handoff-critical-path-20261019/control-one-prose-pair2-native.json",
+                  "backend_decode_tok_s": 57.52297513780468,
+                  "request_seconds": 10.840258128000642,
+                  "prompt_ms": 1951.153,
+                  "first_text_seconds": 2.0781589769994753,
+                  "load_to_ready_seconds": 4.029379309000433,
+                  "generation_window_process_cpu_seconds": 69.86,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1"
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 57.52297513780468,
+                "request_seconds": 10.831250080000245,
+                "prompt_ms": 1939.043,
+                "first_text_seconds": 2.066050000999894,
+                "load_to_ready_seconds": 3.935305576000246,
+                "generation_window_process_cpu_seconds": 69.86
+              }
+            },
+            "cpu-one": {
+              "samples": [
+                {
+                  "pair": 0,
+                  "file": "handoff-critical-path-20261019/control-one-prose-pair0-cpu-one.json",
+                  "backend_decode_tok_s": 57.28662302420006,
+                  "request_seconds": 10.861832613998558,
+                  "prompt_ms": 1935.785,
+                  "first_text_seconds": 2.063440890999118,
+                  "load_to_ready_seconds": 4.029158004999772,
+                  "generation_window_process_cpu_seconds": 70.11000000000001,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                  "changed_control_calls": 18399,
+                  "other_plan_calls": 19092
+                },
+                {
+                  "pair": 1,
+                  "file": "handoff-critical-path-20261019/control-one-prose-pair1-cpu-one.json",
+                  "backend_decode_tok_s": 57.828836151102784,
+                  "request_seconds": 10.773354763001407,
+                  "prompt_ms": 1931.313,
+                  "first_text_seconds": 2.058149033000518,
+                  "load_to_ready_seconds": 3.9287912210002105,
+                  "generation_window_process_cpu_seconds": 69.5,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                  "changed_control_calls": 18399,
+                  "other_plan_calls": 19092
+                },
+                {
+                  "pair": 2,
+                  "file": "handoff-critical-path-20261019/control-one-prose-pair2-cpu-one.json",
+                  "backend_decode_tok_s": 57.10601681733081,
+                  "request_seconds": 10.902298610999424,
+                  "prompt_ms": 1947.866,
+                  "first_text_seconds": 2.0838481669998146,
+                  "load_to_ready_seconds": 4.029854893000447,
+                  "generation_window_process_cpu_seconds": 70.28999999999999,
+                  "generated_text_sha256": "418f4b7360f3a205b3c8aed13440178a89c7a2c6a5f558e87027b3ac9cfef5d1",
+                  "changed_control_calls": 18399,
+                  "other_plan_calls": 19092
+                }
+              ],
+              "medians": {
+                "backend_decode_tok_s": 57.28662302420006,
+                "request_seconds": 10.861832613998558,
+                "prompt_ms": 1935.785,
+                "first_text_seconds": 2.063440890999118,
+                "load_to_ready_seconds": 4.029158004999772,
+                "generation_window_process_cpu_seconds": 70.11000000000001
+              }
+            }
+          },
+          "ratio_of_configuration_medians_percent": -0.4108829785636092,
+          "paired_changes_percent": [
+            -1.2002836752855184,
+            0.6424885547566594,
+            -0.7248552764786309
+          ],
+          "median_paired_change_percent": -0.7248552764786309,
+          "request_median_change_percent": 0.2823546107090902
+        }
+      ],
+      "statistic_note": "Configuration median ratios and median paired ratios are both retained; neither is selected post hoc to call all workloads improved.",
+      "general_model_quality_established": false,
+      "confidence_interval_computed": false
+    },
+    "decision": "Retain as research only: coding signal positive this screen, reasoning near noise, prose regresses. No workload selector or default promotion."
+  },
+  "native_qkv_option": {
+    "flag": "GGML_CUDA_GRAPH_OPT=1",
+    "short_full_vocab_gate": {
+      "positions": 96,
+      "max_abs_logit_error": 0,
+      "relative_l2": 0
+    },
+    "debug_metadata_registration_count": 288,
+    "actual_multi_stream_activation_not_established": true,
+    "debug_metadata_is_not_activation_proof": true,
+    "coding_pairs": [
+      {
+        "native": {
+          "decode_tok_s": 51.27838210783854,
+          "request_seconds": 11.960000798999317,
+          "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+        },
+        "qkv": {
+          "decode_tok_s": 51.25997212099521,
+          "request_seconds": 11.970387391000259,
+          "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+        }
+      },
+      {
+        "native": {
+          "decode_tok_s": 51.92261518463164,
+          "request_seconds": 11.842547675998503,
+          "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+        },
+        "qkv": {
+          "decode_tok_s": 51.36458410920493,
+          "request_seconds": 11.952728491000016,
+          "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+        }
+      },
+      {
+        "native": {
+          "decode_tok_s": 51.69730549799326,
+          "request_seconds": 11.886149108000609,
+          "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+        },
+        "qkv": {
+          "decode_tok_s": 51.36973218978211,
+          "request_seconds": 11.935013325999535,
+          "generated_text_sha256": "c1933dc6679d0fccc6ee3182014544db43605e6b029b06bb9bd545d1ccc187c7"
+        }
+      }
+    ],
+    "coding_median_tok_s": {
+      "native": 51.69730549799326,
+      "qkv": 51.36458410920493
+    },
+    "ratio_of_medians_percent": -0.6435952233550202,
+    "original_long96_gate_run": false,
+    "not_run_reason": "Screen did not improve real request speed; no promotion pursued.",
+    "decision": "No speedup; do not bypass native alias/dependency safety checks to force concurrency."
+  },
+  "cuda_wait_policy_microbench": {
+    "runtime": "Exact installed CUDA12 libcudart.so.12 path; not CUDA13 compiler runtime.",
+    "results": {
+      "auto": {
+        "requested_flags": 0,
+        "observed_flags": 8,
+        "microseconds_per16byte_pinned_copy_and_stream_sync": [
+          5.7921499999999995,
+          5.7539286,
+          5.7999326,
+          5.974364,
+          5.859964799999999
+        ],
+        "median_us": 5.7999326,
+        "output_exact": true,
+        "scope": "Fresh-process CUDA12 runtime microbenchmark, Python call overhead included; not model throughput."
+      },
+      "spin": {
+        "requested_flags": 1,
+        "observed_flags": 9,
+        "microseconds_per16byte_pinned_copy_and_stream_sync": [
+          5.877868,
+          5.8562596000000005,
+          5.8185172000000005,
+          5.770181,
+          5.8843342000000005
+        ],
+        "median_us": 5.8562596000000005,
+        "output_exact": true,
+        "scope": "Fresh-process CUDA12 runtime microbenchmark, Python call overhead included; not model throughput."
+      },
+      "yield": {
+        "requested_flags": 2,
+        "observed_flags": 10,
+        "microseconds_per16byte_pinned_copy_and_stream_sync": [
+          5.7571044,
+          5.734846999999999,
+          5.8019404,
+          5.847429,
+          5.7050954
+        ],
+        "median_us": 5.7571044,
+        "output_exact": true,
+        "scope": "Fresh-process CUDA12 runtime microbenchmark, Python call overhead included; not model throughput."
+      },
+      "blocking": {
+        "requested_flags": 4,
+        "observed_flags": 12,
+        "microseconds_per16byte_pinned_copy_and_stream_sync": [
+          15.491639,
+          14.1822762,
+          14.195986000000001,
+          13.6037644,
+          22.7677336
+        ],
+        "median_us": 14.195986000000001,
+        "output_exact": true,
+        "scope": "Fresh-process CUDA12 runtime microbenchmark, Python call overhead included; not model throughput."
+      }
+    },
+    "fresh_processes_per_policy": 1,
+    "warmup_rounds": 1,
+    "timed_rounds": 5,
+    "copies_per_round": 5000,
+    "copy": "16-byte pinned host-to-device, CUDA per-thread stream, synchronized after every copy, exact readback.",
+    "python_call_overhead_included": true,
+    "not_model_throughput": true,
+    "model_policy_changed": false,
+    "decision": "No spin advantage over auto in this test; blocking loses. No inference policy prototype justified."
+  },
+  "validation": {
+    "control_fixture_methods": 3,
+    "critical_path_methods": 3,
+    "handoff_runner_methods": 3,
+    "io_study_methods": 10,
+    "ctest_targets": [
+      "vrambridge-cpu-control-threads",
+      "vrambridge-critical-path",
+      "vrambridge-handoff-study"
+    ],
+    "asan_ubsan": {
+      "exit_code": 0,
+      "sanitizers": [
+        "address",
+        "undefined"
+      ],
+      "changed_calls": 12,
+      "unchanged_other_calls": 12,
+      "native_plugins_instrumented": false,
+      "leak_detection": false
+    },
+    "sanitizer_scope": "Control-plan fixture only; native plugins uninstrumented, leaks off, no TSAN claim.",
+    "eligibility_guards_tested": [
+      "COPY output80KiB exceeds64KiB limit and keeps native plan",
+      "Two-row dispatcher keeps native plan"
+    ],
+    "asan_ubsan_guards": {
+      "results": [
+        {
+          "case": "normal",
+          "exit_code": 0,
+          "changed_calls": 12
+        },
+        {
+          "case": "large-copy",
+          "exit_code": 0,
+          "changed_calls": 0
+        },
+        {
+          "case": "batch-two",
+          "exit_code": 0,
+          "changed_calls": 0
+        }
+      ],
+      "native_plugins_instrumented": false,
+      "leak_detection": false
+    }
+  },
+  "next_investigation_gate": "Cost a different CPU/GPU handoff protocol with proven buffer lifetime/order and actual call reduction; do not credit all API time as savings or repeat existing overlap/packet/pinning work.",
+  "limitations": [
+    "One host/model;3request pairs per workload and one profiler sample per configuration.",
+    "Profiler changes timing; CPU-enclosed generation envelope contains partial boundary tokens and is not a full request denominator.",
+    "API calls can overlap observer/GPU/CPU work and include required waits; API sums are not critical-path savings.",
+    "Small mixed speed differences are not a portable model-agnostic optimization or qualified60tok/s result.",
+    "No concurrency or broader answer-quality qualification.",
+    "Weight SHA identity remains historical; no new full59GiB rehash or storage relocation."
+  ],
+  "tooling": {
+    "source_sha256": {
+      "CMakeLists.txt": "79dc4b9ef88a4cecdaf331e3dfb703100e48dbc0d644ad2004759aedfbd83af7",
+      "tools/trace/cpu_control_threads.cpp": "fd062334538bb8e6c33d469c421d770fdd8cbf60c3285fea87bbe9d66e1bcce7",
+      "tests/test_cpu_control_threads.cpp": "2a51e423f48bbe870b1258b875c6aca96cccd603b79d5e2b6ebcfd8b3c0d964a",
+      "tests/test_cpu_control_threads.py": "3324bbeddb621911fa1c408f9dd9fe56efaf4a63b35daf8d7f09d3be76387aee",
+      "tools/benchmark/vrambridge-handoff-study.py": "5c27c6401d278a08ab6fc678679d51b7e02dc1896779433debeb5bb7dd91e9dc",
+      "tests/test_handoff_study.py": "35e59386523711bd8af8da580eb2bc46256b6d27a96e1e0ff96a8d52f46c98d6",
+      "tools/benchmark/vrambridge-critical-path.py": "2c1c95acc940b8200907f1a8e4a8fcc055105651dd3a5fa429f26bface29f809",
+      "tests/test_critical_path.py": "411273483c51506c5940649176c03e504a006292e1ba5efb4cbb1524326e6e10",
+      "tools/benchmark/vrambridge-io-study.py": "4cd2624fde5fc92d753fd616d96800cf63899c257144669a8b9518a60f4896d6",
+      "tests/test_io_study.py": "679faa19df3bb24e37ee4da001d85b20cb0bdce9617fea07402257bfd77340f0"
+    },
+    "control_library_sha256": "3826d07a85b8c7d26d864066198521b05bf62808e37c8568e2edc3f535b28133",
+    "profiler_library_sha256": "bf421638c7ef34c840911e8e2ac386eaf090152ae0c0fc6d3eac21daa2b17e55",
+    "installed_cpu_sha256": "155a87103fdc442b309b656862bb2ea9b9f77be88f3434f9c044b71a572279e4",
+    "installed_cuda_sha256": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+    "installed_ggml_base_sha256": "7a431e4ddf3aad3963b6c6c709789dbf81b6f288aa2e6f33e951a6aadc600776",
+    "measured_source_hashes_remain_in_raw_reports": true
+  },
+  "public_evidence_index": [
+    {
+      "path": "handoff-critical-path-20261019/control-asan-status.json",
+      "sha256": "5c3bd33617321b5c6cc14d2a77ebe6752ec69806f2f2944e7a31d17243b3880d"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-coding-pair0-cpu-one-metrics.json",
+      "sha256": "c5217663d2bb0ce26d82f541920abe107fc62385833d8a94f3614595d286ebc4"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-coding-pair0-cpu-one.json",
+      "sha256": "3d77fbd7d3c847857fcb43304ec5303df900f100462d80b23bf9a5bc81f53914"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-coding-pair0-native.json",
+      "sha256": "e808abb29ad4908a7fad20f5df9dff9377cb3209f8dff3a5b898248c96b2c179"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-coding-pair1-cpu-one-metrics.json",
+      "sha256": "ece11a5a7531112d32a23355b2ef8a3a3bc07c2267b7945252525c948eb8bbc4"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-coding-pair1-cpu-one.json",
+      "sha256": "2d055f8c80014e925289ba4fc97a92d9f1cc08c1ac4f521b4f8894c45d1fc5b2"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-coding-pair1-native.json",
+      "sha256": "acea84ea6362780260114d4708039c9aaed2faa62d366637aca325498524f6b2"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-coding-pair2-cpu-one-metrics.json",
+      "sha256": "57ca184c9d73533f04c2a15a3621733af55b9a32607b1efb7719b6bc9dc6057f"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-coding-pair2-cpu-one.json",
+      "sha256": "babbef54ef87a615e0373b86b03adbd7490b85766792843ca20455bddea2922a"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-coding-pair2-native.json",
+      "sha256": "cf769dfe940b686c90fb692a25cedb6cb249ad9f87ba2c31cace6a67aaaa2c0a"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-long96-metrics.json",
+      "sha256": "a8f5f43e809c1be86d8440712f51be6a0deb883e3999d17e4b77a22e55ad6931"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-long96.json",
+      "sha256": "88a4bdb26e3c70ff586c016de3d1a170f34e6d82178e74c77e92f1f246193b9e"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-pilot-metrics.json",
+      "sha256": "2244c79173e94576e4b01162766c6baf3668fd533ee7488e65fdb4f271b1a951"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-pilot.json",
+      "sha256": "a597226ff88a389ab9ec8486a1b2062302fcba8423482a28764635ddd1e555dd"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-prose-pair0-cpu-one-metrics.json",
+      "sha256": "8d24bbba698ccafb0fe8b5bfa9e74b99c408d480cda81f9d484e3b829637e317"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-prose-pair0-cpu-one.json",
+      "sha256": "4f18aaf644d715e30ca563cd450087276938ea4faa79f1e8ba4755ff4420ade1"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-prose-pair0-native.json",
+      "sha256": "af10e49287eb870398d2ab87c6742a4bbb4cc5348b59cf23bc60d283d656e494"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-prose-pair1-cpu-one-metrics.json",
+      "sha256": "4ade78b441d62213e55249fa68dcb2b5a5b97c2121da7596675d70972d105fd6"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-prose-pair1-cpu-one.json",
+      "sha256": "69753962f02736ed0d887d6a8b4d4e66e71e182a7efb96361efc94c145b4f7fe"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-prose-pair1-native.json",
+      "sha256": "506dcbb6f7720ccca1d5fd2c95d0ccf8f59e13b441b047587c386ccfb6c4b1b5"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-prose-pair2-cpu-one-metrics.json",
+      "sha256": "b2a5b21ea4977bc89150b5bd3cb9a456acb2284d2327202f277857e5217bb29e"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-prose-pair2-cpu-one.json",
+      "sha256": "3a9b12908f6b44819b78e4dc3b06411179ff302cac5f9016002535ddb0dda201"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-prose-pair2-native.json",
+      "sha256": "d5bef8334d1c0a4d68ee0498ffe7a1f5d5c3b1298b183ae9ae8fd091b0dd28a4"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-reasoning-pair0-cpu-one-metrics.json",
+      "sha256": "b4b39c0343a40745843baeb0ae4c69fde0262056f3a3ffda2df73bb24f8eb256"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-reasoning-pair0-cpu-one.json",
+      "sha256": "80e1e350a447a563e383fda32fa6251193fb1a9dae172f4784a55e96e7fd0076"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-reasoning-pair0-native.json",
+      "sha256": "0ce3289e021400a3fba83e071d16eb4aa6dbbbaea1cc54f0c8f0d6724e17a314"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-reasoning-pair1-cpu-one-metrics.json",
+      "sha256": "4d66c631afa86cca9b05c9101a98f80c848b0312b3e8bce4a3db089328e3b5b7"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-reasoning-pair1-cpu-one.json",
+      "sha256": "dca1388c17681691813d88965009a9ad26cad77ca2cdd3ef2d95e462b02c6480"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-reasoning-pair1-native.json",
+      "sha256": "622c5127389734125e33ad7ee07670f8350af22dfb837be839e633d602b8e21c"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-reasoning-pair2-cpu-one-metrics.json",
+      "sha256": "41e671a3888b61027a3c0d9c74abae576dada5778f6e4b765b606c5fc6d9ca8d"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-reasoning-pair2-cpu-one.json",
+      "sha256": "cd90387b214ec21c0dd39e32ac904d9b597215577774cf7e1dd96f4d4eacec01"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-one-reasoning-pair2-native.json",
+      "sha256": "0c2cb90bce696204c9e98e404e3bd7347bc790cce643b9dfe3ef6d0991d34753"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control128.json",
+      "sha256": "6c07627f0d441677945ed672ef4a4d61106acef86a5e4938449e1ee470a41ac4"
+    },
+    {
+      "path": "handoff-critical-path-20261019/cuda-wait-auto-micro.json",
+      "sha256": "4cd6a04b77d562aad56a01b2ecdca1faf8c2aea806a18408b5a6776940db3fb4"
+    },
+    {
+      "path": "handoff-critical-path-20261019/cuda-wait-blocking-micro.json",
+      "sha256": "6d1b90e63b1023b3500cf039887fa66a01cacddc1f9764fa8371766f8679dcb7"
+    },
+    {
+      "path": "handoff-critical-path-20261019/cuda-wait-spin-micro.json",
+      "sha256": "d2dd7794daa939524f15a9bddceda3381565d0cbea9b260e4a9ddd9338b4abc9"
+    },
+    {
+      "path": "handoff-critical-path-20261019/cuda-wait-yield-micro.json",
+      "sha256": "99d01acbba33774d6f88b2a74e24df7102c0137b2ddcdaca8110ea67b8920b6b"
+    },
+    {
+      "path": "handoff-critical-path-20261019/graph-opt-short96.json",
+      "sha256": "4176f36312e8fe09dcaad1bf1367d7f95ae5a57e60075eaafeefa5c8696c9b59"
+    },
+    {
+      "path": "handoff-critical-path-20261019/native-critical-path-final.json",
+      "sha256": "8843bb23b8bfc6b3c39a82d58a25f583f71f1bc8a6d11e24bfbfb11535b5c932"
+    },
+    {
+      "path": "handoff-critical-path-20261019/native-trace128.json",
+      "sha256": "aea2cdd2a2e8213545733f187b46b0979ca9e93e6d129862cc287efe8cc3ea24"
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-critical-path-final.json",
+      "sha256": "a23436ae8a82c71c17b1ccdacc7e7110e1237c9e667506d7d92646fbec3de89e"
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-debug-short96.json",
+      "sha256": "4176f36312e8fe09dcaad1bf1367d7f95ae5a57e60075eaafeefa5c8696c9b59"
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-screen-coding-pair0-native.json",
+      "sha256": "585fdb47f076042ffb6ebe58c3b8e20c70933df4e51deb47315dde35ad63b7df"
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-screen-coding-pair0-qkv.json",
+      "sha256": "2a3a575126c06aceb11be80f1158c8fd7a7938694a6c4169aa9f961335ab0606"
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-screen-coding-pair1-native.json",
+      "sha256": "33b8536d950264b7ca91e758f91523c2a05c2d029ce007001da247db9c0a3d43"
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-screen-coding-pair1-qkv.json",
+      "sha256": "2c5d742103ef36049b868bbd1fbcaefe6b768d550eb6ca4aafeda58a08375ac3"
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-screen-coding-pair2-native.json",
+      "sha256": "39fe7323a4226cc71834375a0f93e408e9d1b2ba19088bade419833a63aa8328"
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-screen-coding-pair2-qkv.json",
+      "sha256": "7150b1b7d22f82bb083e0a5f1b01c5adb3125535a2dccfe0fd6ac4e7ee7194dc"
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-trace128.json",
+      "sha256": "5eb33d25b562f4da92c3ed711fb4392d19e97e49fb298a20bf5e9eafdf2ae3a9"
+    },
+    {
+      "path": "handoff-critical-path-20261019/control-asan-guards-status.json",
+      "sha256": "9ad99c480773e9e00bb1118b2d6e1545ebd3f977e148e0e385e357b8f7cf645d"
+    }
+  ],
+  "private_evidence_metadata": [
+    {
+      "path": "handoff-critical-path-20261019/private-native-trace128-cpu.jsonl",
+      "sha256": "c5942de9d207fe6143eeed4da7c26de0eac27bedd3436725ce2b07997df67a0e",
+      "bytes": 12501089,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "handoff-critical-path-20261019/private-native-trace128.sqlite",
+      "sha256": "64a3dbba46361c1a3e684050554ceef8097626f1677d71990701a2a8809106e6",
+      "bytes": 29294592,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "handoff-critical-path-20261019/private-native-trace128.nsys-rep",
+      "sha256": "75d5f4e3decebd60789a799c4dfe0f1ddde2a04faca9a14cedbbe45f3e14938e",
+      "bytes": 10228007,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "handoff-critical-path-20261019/private-qkv-trace128-cpu.jsonl",
+      "sha256": "60a1b94654b4863fe30f8fe024c8ea353068a01467572f45fde0678aa21fb178",
+      "bytes": 12501341,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "handoff-critical-path-20261019/private-qkv-trace128.sqlite",
+      "sha256": "f1426a7b8cac9d2af254f192a629a00d0b76d5777082a0aa56dcdef33943d570",
+      "bytes": 30728192,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "handoff-critical-path-20261019/private-qkv-trace128.nsys-rep",
+      "sha256": "c8266e71fd071691b387df43da7cc224bd8d5b539e17222c7f5479c28c61ad98",
+      "bytes": 10625785,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "handoff-critical-path-20261019/private-qkv-debug.log",
+      "sha256": "9c6d1f2402b9f015068e97a4af9e690af57495b1b1f5f896f0cb139640e50467",
+      "bytes": 668094,
+      "permissions": "0o600",
+      "publish": false
+    },
+    {
+      "path": "handoff-critical-path-20261019/qkv-debug-counts.json",
+      "sha256": "c0b36f3b4bd914765b22a7b1617f31321d8d3819b7943d7a0c9cd4418bb3a3ef",
+      "bytes": 777,
+      "permissions": "0o600",
+      "publish": false
+    }
+  ],
+  "finalized_at_utc": "2026-10-19T15:07:03.034491+00:00"
+}
