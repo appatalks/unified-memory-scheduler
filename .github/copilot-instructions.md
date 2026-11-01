@@ -15,6 +15,9 @@
 - Synapse's installer pins a research commit and the patch SHA-256 (`scripts/setup_acceleration.py`). Commit and
   push here first, verify the raw URL's checksum, then bump the pins in Synapse. Ask before committing or pushing.
 - Explain which evidence supports every recommendation; report negative and mixed results honestly.
+- Synapse users never pick engine internals. A validated technique ships in Synapse as an engine variant that
+  Synapse detects, Auto Tune measures, and Automatic reuses per model and machine; mixed results are fine as long
+  as the technique can be measured and is never the untested default.
 
 ## Research principles
 
