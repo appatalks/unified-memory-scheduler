@@ -1,0 +1,2778 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-01",
+  "status": "native_baseline_complete_checksums_skipped_no_disk_optimization",
+  "model": {
+    "repository": "ISTA-DASLab/DeepSeek-V4.1-Flash-1017-GSQ-RCO-GGUF",
+    "revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+    "quantization": "GSQ-RCO IQ2_XXS + IQ4_NL Engram",
+    "bytes": 248834257920,
+    "files": [
+      {
+        "remote_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+        "local_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00001-of-00006.gguf",
+        "bytes": 5780704,
+        "sha256": "f356f198561f56df36f7ab92d7238a926646d76de992c34f15bcb939a5f529b9"
+      },
+      {
+        "remote_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
+        "local_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00002-of-00006.gguf",
+        "bytes": 39535781184,
+        "sha256": "25af3785ccf925f54137e1ead4c481a8952315dc0b1af6519a99407f67bce8f3"
+      },
+      {
+        "remote_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
+        "local_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00003-of-00006.gguf",
+        "bytes": 39736712000,
+        "sha256": "8168d0998fc494def2e1952d83c131425a108660aae9d29190f5a8670ab62b48"
+      },
+      {
+        "remote_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf",
+        "local_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00004-of-00006.gguf",
+        "bytes": 39036908384,
+        "sha256": "9eb9b4de1968f150dfc207eb31c27be9cd9b5666a9a6246bde8a22b184b4bee0"
+      },
+      {
+        "remote_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf",
+        "local_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00005-of-00006.gguf",
+        "bytes": 19923784832,
+        "sha256": "7e35f6b4e6fc46f6c4b152b593d84d683c5ece695ae6ad734f556198c041bec1"
+      },
+      {
+        "remote_name": "DeepSeek-V4.1-Flash-Engram-IQ4_NL.gguf",
+        "local_name": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS-00006-of-00006.gguf",
+        "bytes": 110595290816,
+        "sha256": "3dac4c54893ad7aa89103c0028500eadc78e74112cef3a2930a97e67dc9fb4f3"
+      }
+    ],
+    "architecture": {
+      "kind": "descriptor_only_not_payload_or_quality_verification",
+      "model_revision": "65d53bc8be65123e255ff02f3ded958b6dbf54fd",
+      "architecture": "deepseek41",
+      "blocks": 40,
+      "experts_per_layer": 384,
+      "active_experts": 6,
+      "shards": [
+        {
+          "index": 0,
+          "header_bytes": 5780704,
+          "tensor_count": 0
+        },
+        {
+          "index": 1,
+          "header_bytes": 20544,
+          "tensor_count": 330
+        },
+        {
+          "index": 2,
+          "header_bytes": 18752,
+          "tensor_count": 296
+        },
+        {
+          "index": 3,
+          "header_bytes": 17760,
+          "tensor_count": 281
+        },
+        {
+          "index": 4,
+          "header_bytes": 8576,
+          "tensor_count": 135
+        },
+        {
+          "index": 5,
+          "header_bytes": 416,
+          "tensor_count": 1
+        }
+      ],
+      "tensor_count": 1043,
+      "groups": {
+        "routed_experts": {
+          "bytes": 132073390080,
+          "elements": 543581798400
+        },
+        "engram": {
+          "bytes": 110595290400,
+          "elements": 196613849600
+        },
+        "other": {
+          "bytes": 6159729088,
+          "elements": 8298995824
+        }
+      },
+      "expert_layers": [
+        {
+          "layer": 0,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.0.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 1999706432,
+              "shard": 1
+            },
+            {
+              "name": "blk.0.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 3002673472,
+              "shard": 1
+            },
+            {
+              "name": "blk.0.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 1000692032,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 1,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.1.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 5203370816,
+              "shard": 1
+            },
+            {
+              "name": "blk.1.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 6206337856,
+              "shard": 1
+            },
+            {
+              "name": "blk.1.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 4204356416,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 2,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.2.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 8309306688,
+              "shard": 1
+            },
+            {
+              "name": "blk.2.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 9312273728,
+              "shard": 1
+            },
+            {
+              "name": "blk.2.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 7310292288,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 3,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.3.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 11415699776,
+              "shard": 1
+            },
+            {
+              "name": "blk.3.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 12418666816,
+              "shard": 1
+            },
+            {
+              "name": "blk.3.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 10416685376,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 4,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.4.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 14511147840,
+              "shard": 1
+            },
+            {
+              "name": "blk.4.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 15514114880,
+              "shard": 1
+            },
+            {
+              "name": "blk.4.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 13512133440,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 5,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.5.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 17606595904,
+              "shard": 1
+            },
+            {
+              "name": "blk.5.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 18609562944,
+              "shard": 1
+            },
+            {
+              "name": "blk.5.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 16607581504,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 6,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.6.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 20702043968,
+              "shard": 1
+            },
+            {
+              "name": "blk.6.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 21705011008,
+              "shard": 1
+            },
+            {
+              "name": "blk.6.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 19703029568,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 7,
+          "bytes_per_expert": 8202240,
+          "components": [
+            {
+              "name": "blk.7.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 23974439232,
+              "shard": 1
+            },
+            {
+              "name": "blk.7.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 24977406272,
+              "shard": 1
+            },
+            {
+              "name": "blk.7.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 22798477632,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 8,
+          "bytes_per_expert": 8202240,
+          "components": [
+            {
+              "name": "blk.8.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 27257322304,
+              "shard": 1
+            },
+            {
+              "name": "blk.8.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 28260289344,
+              "shard": 1
+            },
+            {
+              "name": "blk.8.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 26081360704,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 9,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.9.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 30363715392,
+              "shard": 1
+            },
+            {
+              "name": "blk.9.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 31366682432,
+              "shard": 1
+            },
+            {
+              "name": "blk.9.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 29364700992,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 10,
+          "bytes_per_expert": 9123840,
+          "components": [
+            {
+              "name": "blk.10.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 33636110656,
+              "shard": 1
+            },
+            {
+              "name": "blk.10.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 34816024896,
+              "shard": 1
+            },
+            {
+              "name": "blk.10.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 32460149056,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 11,
+          "bytes_per_expert": 8663040,
+          "components": [
+            {
+              "name": "blk.11.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 37085453120,
+              "shard": 1
+            },
+            {
+              "name": "blk.11.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 38265367360,
+              "shard": 1
+            },
+            {
+              "name": "blk.11.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 36086438720,
+              "shard": 1
+            }
+          ]
+        },
+        {
+          "layer": 12,
+          "bytes_per_expert": 8663040,
+          "components": [
+            {
+              "name": "blk.12.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 999033152,
+              "shard": 2
+            },
+            {
+              "name": "blk.12.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 2178947392,
+              "shard": 2
+            },
+            {
+              "name": "blk.12.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 18752,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 13,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.13.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 4448375616,
+              "shard": 2
+            },
+            {
+              "name": "blk.13.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 5451342656,
+              "shard": 2
+            },
+            {
+              "name": "blk.13.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 3449361216,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 14,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.14.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 7662527808,
+              "shard": 2
+            },
+            {
+              "name": "blk.14.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 8665494848,
+              "shard": 2
+            },
+            {
+              "name": "blk.14.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 6663513408,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 15,
+          "bytes_per_expert": 8663040,
+          "components": [
+            {
+              "name": "blk.15.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 10768920896,
+              "shard": 2
+            },
+            {
+              "name": "blk.15.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 11948835136,
+              "shard": 2
+            },
+            {
+              "name": "blk.15.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 9769906496,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 16,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.16.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 14218263360,
+              "shard": 2
+            },
+            {
+              "name": "blk.16.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 15221230400,
+              "shard": 2
+            },
+            {
+              "name": "blk.16.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 13219248960,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 17,
+          "bytes_per_expert": 9400320,
+          "components": [
+            {
+              "name": "blk.17.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 17313711424,
+              "shard": 2
+            },
+            {
+              "name": "blk.17.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 18635183424,
+              "shard": 2
+            },
+            {
+              "name": "blk.17.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 16314697024,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 18,
+          "bytes_per_expert": 9123840,
+          "components": [
+            {
+              "name": "blk.18.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 21223116608,
+              "shard": 2
+            },
+            {
+              "name": "blk.18.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 22403030848,
+              "shard": 2
+            },
+            {
+              "name": "blk.18.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 20047155008,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 19,
+          "bytes_per_expert": 9400320,
+          "components": [
+            {
+              "name": "blk.19.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 24672459072,
+              "shard": 2
+            },
+            {
+              "name": "blk.19.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 25993931072,
+              "shard": 2
+            },
+            {
+              "name": "blk.19.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 23673444672,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 20,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.20.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 28410161984,
+              "shard": 2
+            },
+            {
+              "name": "blk.20.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 29413129024,
+              "shard": 2
+            },
+            {
+              "name": "blk.20.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 27411147584,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 21,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.21.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 31516555072,
+              "shard": 2
+            },
+            {
+              "name": "blk.21.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 32519522112,
+              "shard": 2
+            },
+            {
+              "name": "blk.21.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 30517540672,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 22,
+          "bytes_per_expert": 9123840,
+          "components": [
+            {
+              "name": "blk.22.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 34788950336,
+              "shard": 2
+            },
+            {
+              "name": "blk.22.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 35968864576,
+              "shard": 2
+            },
+            {
+              "name": "blk.22.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 33612988736,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 23,
+          "bytes_per_expert": 9492480,
+          "components": [
+            {
+              "name": "blk.23.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 38556797760,
+              "shard": 2
+            },
+            {
+              "name": "blk.23.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 17760,
+              "shard": 3
+            },
+            {
+              "name": "blk.23.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 37239278400,
+              "shard": 2
+            }
+          ]
+        },
+        {
+          "layer": 24,
+          "bytes_per_expert": 8663040,
+          "components": [
+            {
+              "name": "blk.24.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 2269445984,
+              "shard": 3
+            },
+            {
+              "name": "blk.24.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 3449360224,
+              "shard": 3
+            },
+            {
+              "name": "blk.24.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 1270431584,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 25,
+          "bytes_per_expert": 9123840,
+          "components": [
+            {
+              "name": "blk.25.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 5906549088,
+              "shard": 3
+            },
+            {
+              "name": "blk.25.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 7086463328,
+              "shard": 3
+            },
+            {
+              "name": "blk.25.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 4730587488,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 26,
+          "bytes_per_expert": 9492480,
+          "components": [
+            {
+              "name": "blk.26.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 9674396512,
+              "shard": 3
+            },
+            {
+              "name": "blk.26.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 10854310752,
+              "shard": 3
+            },
+            {
+              "name": "blk.26.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 8356877152,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 27,
+          "bytes_per_expert": 9400320,
+          "components": [
+            {
+              "name": "blk.27.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 13123738976,
+              "shard": 3
+            },
+            {
+              "name": "blk.27.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 14445210976,
+              "shard": 3
+            },
+            {
+              "name": "blk.27.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 12124724576,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 28,
+          "bytes_per_expert": 9123840,
+          "components": [
+            {
+              "name": "blk.28.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 17033144160,
+              "shard": 3
+            },
+            {
+              "name": "blk.28.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 18213058400,
+              "shard": 3
+            },
+            {
+              "name": "blk.28.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 15857182560,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 29,
+          "bytes_per_expert": 8663040,
+          "components": [
+            {
+              "name": "blk.29.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 20493300064,
+              "shard": 3
+            },
+            {
+              "name": "blk.29.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 21673214304,
+              "shard": 3
+            },
+            {
+              "name": "blk.29.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 19494285664,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 30,
+          "bytes_per_expert": 7741440,
+          "components": [
+            {
+              "name": "blk.30.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 23942642528,
+              "shard": 3
+            },
+            {
+              "name": "blk.30.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 24945609568,
+              "shard": 3
+            },
+            {
+              "name": "blk.30.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 22943628128,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 31,
+          "bytes_per_expert": 8663040,
+          "components": [
+            {
+              "name": "blk.31.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 27038090592,
+              "shard": 3
+            },
+            {
+              "name": "blk.31.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 28218004832,
+              "shard": 3
+            },
+            {
+              "name": "blk.31.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 26039076192,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 32,
+          "bytes_per_expert": 8663040,
+          "components": [
+            {
+              "name": "blk.32.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 30487433056,
+              "shard": 3
+            },
+            {
+              "name": "blk.32.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 31667347296,
+              "shard": 3
+            },
+            {
+              "name": "blk.32.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 29488418656,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 33,
+          "bytes_per_expert": 9492480,
+          "components": [
+            {
+              "name": "blk.33.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 34266093920,
+              "shard": 3
+            },
+            {
+              "name": "blk.33.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 35446008160,
+              "shard": 3
+            },
+            {
+              "name": "blk.33.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 32948574560,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 34,
+          "bytes_per_expert": 9400320,
+          "components": [
+            {
+              "name": "blk.34.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 37715436384,
+              "shard": 3
+            },
+            {
+              "name": "blk.34.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 8576,
+              "shard": 4
+            },
+            {
+              "name": "blk.34.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 36716421984,
+              "shard": 3
+            }
+          ]
+        },
+        {
+          "layer": 35,
+          "bytes_per_expert": 9400320,
+          "components": [
+            {
+              "name": "blk.35.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 2410994560,
+              "shard": 4
+            },
+            {
+              "name": "blk.35.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 3732466560,
+              "shard": 4
+            },
+            {
+              "name": "blk.35.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 1411980160,
+              "shard": 4
+            }
+          ]
+        },
+        {
+          "layer": 36,
+          "bytes_per_expert": 8663040,
+          "components": [
+            {
+              "name": "blk.36.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 6143452544,
+              "shard": 4
+            },
+            {
+              "name": "blk.36.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 7323366784,
+              "shard": 4
+            },
+            {
+              "name": "blk.36.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 5144438144,
+              "shard": 4
+            }
+          ]
+        },
+        {
+          "layer": 37,
+          "bytes_per_expert": 8663040,
+          "components": [
+            {
+              "name": "blk.37.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 9603608448,
+              "shard": 4
+            },
+            {
+              "name": "blk.37.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 10783522688,
+              "shard": 4
+            },
+            {
+              "name": "blk.37.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ1_M",
+              "bytes": 990904320,
+              "elements": 4529848320,
+              "offset": 8604594048,
+              "shard": 4
+            }
+          ]
+        },
+        {
+          "layer": 38,
+          "bytes_per_expert": 9861120,
+          "components": [
+            {
+              "name": "blk.38.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 13229898112,
+              "shard": 4
+            },
+            {
+              "name": "blk.38.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 14551370112,
+              "shard": 4
+            },
+            {
+              "name": "blk.38.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XXS",
+              "bytes": 1167851520,
+              "elements": 4529848320,
+              "offset": 12053936512,
+              "shard": 4
+            }
+          ]
+        },
+        {
+          "layer": 39,
+          "bytes_per_expert": 10229760,
+          "components": [
+            {
+              "name": "blk.39.ffn_gate_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 17280861056,
+              "shard": 4
+            },
+            {
+              "name": "blk.39.ffn_up_exps.weight",
+              "shape": [
+                5120,
+                2304,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 18602333056,
+              "shard": 4
+            },
+            {
+              "name": "blk.39.ffn_down_exps.weight",
+              "shape": [
+                2304,
+                5120,
+                384
+              ],
+              "quant": "IQ2_XS",
+              "bytes": 1309409280,
+              "elements": 4529848320,
+              "offset": 15963341696,
+              "shard": 4
+            }
+          ]
+        }
+      ],
+      "active_routed_bytes_per_token": 2063646720,
+      "engram_tensors": [
+        {
+          "name": "per_layer_token_embd.weight",
+          "shape": [
+            256,
+            768022850
+          ],
+          "quant": "IQ4_NL",
+          "bytes": 110595290400,
+          "elements": 196613849600,
+          "offset": 416,
+          "shard": 5
+        }
+      ],
+      "engram_rows_per_token": 48
+    },
+    "header_payloads_fetched_bytes": 11023584,
+    "metadata_shard_sha256_verified": true,
+    "weight_payload_verified": false,
+    "weight_payload_sha256_status": "skipped_at_user_request",
+    "local_six_shard_sizes_and_descriptors_verified": true,
+    "runtime_qualified": false,
+    "quality_qualified": false,
+    "native_text_runtime_smoke_passed": true
+  },
+  "backend": {
+    "tag": "b11870",
+    "commit": "74bca3950054eed1795f525cb9cf06bfe796492d",
+    "asset": "llama-b11870-bin-ubuntu-cuda-12.8-x64.tar.gz",
+    "asset_sha256": "9a60e70bd94487b124a9ffdd96438e48726f65d68a9c81ca1631c869aeff4f87",
+    "asset_verified": true,
+    "cuda_device_enumeration_passed": true,
+    "installed_backend_replaced": false,
+    "old_patch_rebased": false
+  },
+  "storage": {
+    "fio_version": "3.39",
+    "ioengine": "libaio",
+    "readonly": true,
+    "direct_io": true,
+    "per_case_seconds": 8,
+    "measurements": [
+      {
+        "case": "hdd-rand-4k-q1",
+        "source": "hdd-rand-4k-q1.json",
+        "source_sha256": "f60b98dfe4827e4d7a1526551bca2ae8580d923340d99d14fbf28426c820c07b",
+        "read_bytes": 5554176,
+        "bandwidth_bytes_s": 694185,
+        "iops": 169.478815,
+        "completion_mean_ns": 5891512.026549,
+        "completion_p95_ns": 9764864,
+        "direct": "1",
+        "block_size": "4k",
+        "queue_depth": 1,
+        "runtime_seconds": 8.001
+      },
+      {
+        "case": "hdd-rand-4k-q8-repeat",
+        "source": "hdd-rand-4k-q8-repeat.json",
+        "source_sha256": "6fe79dfa206584ac62416e0fc5bedaf39394ba516547c1da7884e981e1d527c1",
+        "read_bytes": 12767232,
+        "bandwidth_bytes_s": 1587964,
+        "iops": 387.686567,
+        "completion_mean_ns": 20617447.178056,
+        "completion_p95_ns": 61079552,
+        "direct": "1",
+        "block_size": "4k",
+        "queue_depth": 8,
+        "runtime_seconds": 8.04
+      },
+      {
+        "case": "hdd-rand-4k-q8",
+        "source": "hdd-rand-4k-q8.json",
+        "source_sha256": "cd9a4450c4cfbb287cdc9fae861b43455d46df4afcef8df4e853a915ca94956a",
+        "read_bytes": 12546048,
+        "bandwidth_bytes_s": 1562007,
+        "iops": 381.349602,
+        "completion_mean_ns": 20962413.446621,
+        "completion_p95_ns": 61603840,
+        "direct": "1",
+        "block_size": "4k",
+        "queue_depth": 8,
+        "runtime_seconds": 8.032
+      },
+      {
+        "case": "hdd-rand-8M-q1-repeat",
+        "source": "hdd-rand-8M-q1-repeat.json",
+        "source_sha256": "b15fe18f57d5e9d969c9e4dd01d8b96a23de5d6c51cc81a4fa37d25262e114bd",
+        "read_bytes": 1317011456,
+        "bandwidth_bytes_s": 163644564,
+        "iops": 19.507952,
+        "completion_mean_ns": 51158941.165605,
+        "completion_p95_ns": 57409536,
+        "direct": "1",
+        "block_size": "8M",
+        "queue_depth": 1,
+        "runtime_seconds": 8.048
+      },
+      {
+        "case": "hdd-rand-8M-q1",
+        "source": "hdd-rand-8M-q1.json",
+        "source_sha256": "01f9a12d626c3fc386cc6dfcb9ad8c5ff1a7c56e861014f22ae482ee1fe45ca5",
+        "read_bytes": 1317011456,
+        "bandwidth_bytes_s": 163685241,
+        "iops": 19.512801,
+        "completion_mean_ns": 51137051.630573,
+        "completion_p95_ns": 56885248,
+        "direct": "1",
+        "block_size": "8M",
+        "queue_depth": 1,
+        "runtime_seconds": 8.046
+      },
+      {
+        "case": "hdd-rand-8M-q8",
+        "source": "hdd-rand-8M-q8.json",
+        "source_sha256": "fcb57a8dd9657ee6edc883e8971882607574bbbcf61c93020761f52da5751350",
+        "read_bytes": 1426063360,
+        "bandwidth_bytes_s": 169809878,
+        "iops": 20.242915,
+        "completion_mean_ns": 392895156.1,
+        "completion_p95_ns": 801112064,
+        "direct": "1",
+        "block_size": "8M",
+        "queue_depth": 8,
+        "runtime_seconds": 8.398
+      },
+      {
+        "case": "hdd-seq-1M-q8",
+        "source": "hdd-seq-1M-q8.json",
+        "source_sha256": "1836102c4b32070bc974c256a92c5f75b92139cebd6e54a37b65dcb7381f5fc0",
+        "read_bytes": 1351614464,
+        "bandwidth_bytes_s": 168090344,
+        "iops": 160.303445,
+        "completion_mean_ns": 45325640.899147,
+        "completion_p95_ns": 53215232,
+        "direct": "1",
+        "block_size": "1M",
+        "queue_depth": 8,
+        "runtime_seconds": 8.041
+      },
+      {
+        "case": "nvme-rand-4k-q1",
+        "source": "nvme-rand-4k-q1.json",
+        "source_sha256": "45be243382bfceb32e13d0af2bfc5add1c7231334346102ca55c562ef405d62f",
+        "read_bytes": 593903616,
+        "bandwidth_bytes_s": 74228673,
+        "iops": 18122.234721,
+        "completion_mean_ns": 54150.601899,
+        "completion_p95_ns": 60160,
+        "direct": "1",
+        "block_size": "4k",
+        "queue_depth": 1,
+        "runtime_seconds": 8.001
+      },
+      {
+        "case": "nvme-rand-4k-q8-repeat",
+        "source": "nvme-rand-4k-q8-repeat.json",
+        "source_sha256": "d072717ca583dd198785b8d143606d82926517a86dd5a21c65cfbac35661edf6",
+        "read_bytes": 1220329472,
+        "bandwidth_bytes_s": 152522118,
+        "iops": 37236.845394,
+        "completion_mean_ns": 213848.760472,
+        "completion_p95_ns": 905216,
+        "direct": "1",
+        "block_size": "4k",
+        "queue_depth": 8,
+        "runtime_seconds": 8.001
+      },
+      {
+        "case": "nvme-rand-4k-q8",
+        "source": "nvme-rand-4k-q8.json",
+        "source_sha256": "27452ed283b46c662621c611e464bf671bc6dd5d3d28362f65ac7f80d0e11513",
+        "read_bytes": 1213640704,
+        "bandwidth_bytes_s": 151686127,
+        "iops": 37032.745907,
+        "completion_mean_ns": 214988.957941,
+        "completion_p95_ns": 921600,
+        "direct": "1",
+        "block_size": "4k",
+        "queue_depth": 8,
+        "runtime_seconds": 8.001
+      },
+      {
+        "case": "nvme-rand-8M-q1-repeat",
+        "source": "nvme-rand-8M-q1-repeat.json",
+        "source_sha256": "804f88f3ff56ebd05b63c28c0dcfb2794684fc14c22c6c083e13b12054ce38ce",
+        "read_bytes": 2441084928,
+        "bandwidth_bytes_s": 304147137,
+        "iops": 36.257164,
+        "completion_mean_ns": 27428013.020619,
+        "completion_p95_ns": 26869760,
+        "direct": "1",
+        "block_size": "8M",
+        "queue_depth": 1,
+        "runtime_seconds": 8.026
+      },
+      {
+        "case": "nvme-rand-8M-q1",
+        "source": "nvme-rand-8M-q1.json",
+        "source_sha256": "5b03fc4fe165c75ca12b43734354311bd1e2d8392fc4647eb2cd6d8e36f32f2e",
+        "read_bytes": 2575302656,
+        "bandwidth_bytes_s": 321190154,
+        "iops": 38.28885,
+        "completion_mean_ns": 25944076.690554,
+        "completion_p95_ns": 26607616,
+        "direct": "1",
+        "block_size": "8M",
+        "queue_depth": 1,
+        "runtime_seconds": 8.018
+      },
+      {
+        "case": "nvme-rand-8M-q8",
+        "source": "nvme-rand-8M-q8.json",
+        "source_sha256": "1d917838b4df6f19dbd64fcf26735a106456cd3d75f1076ac2c8cff50e694af5",
+        "read_bytes": 2709520384,
+        "bandwidth_bytes_s": 336670027,
+        "iops": 40.134195,
+        "completion_mean_ns": 198939050.702786,
+        "completion_p95_ns": 265289728,
+        "direct": "1",
+        "block_size": "8M",
+        "queue_depth": 8,
+        "runtime_seconds": 8.048
+      },
+      {
+        "case": "nvme-seq-1M-q8",
+        "source": "nvme-seq-1M-q8.json",
+        "source_sha256": "1b75d81a0eadc5daf322eeea1ac67c6124497e2c68f5b9b600ff4ab0f5f925d9",
+        "read_bytes": 2602565632,
+        "bandwidth_bytes_s": 325036297,
+        "iops": 309.978769,
+        "completion_mean_ns": 25781396.406527,
+        "completion_p95_ns": 34865152,
+        "direct": "1",
+        "block_size": "1M",
+        "queue_depth": 8,
+        "runtime_seconds": 8.007
+      },
+      {
+        "case": "sata-rand-4k-q1",
+        "source": "sata-rand-4k-q1.json",
+        "source_sha256": "21e3e10e910f5fea51dc21de97022624d14692afef3406bf4589f4424e4ca0df",
+        "read_bytes": 326230016,
+        "bandwidth_bytes_s": 40773655,
+        "iops": 9954.505687,
+        "completion_mean_ns": 98333.915991,
+        "completion_p95_ns": 112128,
+        "direct": "1",
+        "block_size": "4k",
+        "queue_depth": 1,
+        "runtime_seconds": 8.001
+      },
+      {
+        "case": "sata-rand-4k-q8-repeat",
+        "source": "sata-rand-4k-q8-repeat.json",
+        "source_sha256": "b9cd53556f9b7c54ba4b9c93cbb0a0d743b02e161b91d9313ade022bfa880a42",
+        "read_bytes": 2064375808,
+        "bandwidth_bytes_s": 258014724,
+        "iops": 62991.876015,
+        "completion_mean_ns": 125388.28493,
+        "completion_p95_ns": 177152,
+        "direct": "1",
+        "block_size": "4k",
+        "queue_depth": 8,
+        "runtime_seconds": 8.001
+      },
+      {
+        "case": "sata-rand-4k-q8",
+        "source": "sata-rand-4k-q8.json",
+        "source_sha256": "001c1b4f5377dbb1157ef1a75d28e49a92ec924f70b4f981dd7cd653b6ccec62",
+        "read_bytes": 2056720384,
+        "bandwidth_bytes_s": 257057915,
+        "iops": 62758.280215,
+        "completion_mean_ns": 125808.526871,
+        "completion_p95_ns": 177152,
+        "direct": "1",
+        "block_size": "4k",
+        "queue_depth": 8,
+        "runtime_seconds": 8.001
+      },
+      {
+        "case": "sata-rand-8M-q1-repeat",
+        "source": "sata-rand-8M-q1-repeat.json",
+        "source_sha256": "0313c583ee59b561dfc4f8e831bd7e6ccdad7460f33b7fe3585425c7148c7a28",
+        "read_bytes": 4487905280,
+        "bandwidth_bytes_s": 560287800,
+        "iops": 66.791511,
+        "completion_mean_ns": 14886297.069159,
+        "completion_p95_ns": 14876672,
+        "direct": "1",
+        "block_size": "8M",
+        "queue_depth": 1,
+        "runtime_seconds": 8.01
+      },
+      {
+        "case": "sata-rand-8M-q1",
+        "source": "sata-rand-8M-q1.json",
+        "source_sha256": "97a0b2ec289a7f9c7356d701dcaac0b7c566214f10c2ad71c46b8af4988e7b15",
+        "read_bytes": 4462739456,
+        "bandwidth_bytes_s": 556867913,
+        "iops": 66.383828,
+        "completion_mean_ns": 14984740.227444,
+        "completion_p95_ns": 15007744,
+        "direct": "1",
+        "block_size": "8M",
+        "queue_depth": 1,
+        "runtime_seconds": 8.014
+      },
+      {
+        "case": "sata-rand-8M-q8",
+        "source": "sata-rand-8M-q8.json",
+        "source_sha256": "46cf0d564142ee06c8980b5dd13cfc31815af674bd6b6057face2651f699d8a4",
+        "read_bytes": 4613734400,
+        "bandwidth_bytes_s": 568824361,
+        "iops": 67.809148,
+        "completion_mean_ns": 117239667.190909,
+        "completion_p95_ns": 162529280,
+        "direct": "1",
+        "block_size": "8M",
+        "queue_depth": 8,
+        "runtime_seconds": 8.111
+      },
+      {
+        "case": "sata-seq-1M-q8",
+        "source": "sata-seq-1M-q8.json",
+        "source_sha256": "2ff9a79a71543f4628dec46e98f3c889acc76a2c938cb4542f024e26f49c28ee",
+        "read_bytes": 4521459712,
+        "bandwidth_bytes_s": 564195122,
+        "iops": 538.058398,
+        "completion_mean_ns": 14851743.702226,
+        "completion_p95_ns": 15925248,
+        "direct": "1",
+        "block_size": "1M",
+        "queue_depth": 8,
+        "runtime_seconds": 8.014
+      }
+    ],
+    "devices": {
+      "sata": "Samsung 870 EVO SATA/ext4, existing 40 GiB file window",
+      "hdd": "Seagate ST24000DM001 SATA/XFS, existing 40 GiB file window",
+      "nvme": "WD_BLACK SN850XE PCIe Gen4 x4/exFAT, 2 GiB owned fixture"
+    },
+    "caveats": [
+      "Single-user screens, not full model routing traces or sustained thermal tests.",
+      "O_DIRECT bypasses OS page cache, not drive/controller caches.",
+      "NVMe fixture is small and results characterize this mounted path, not peak hardware capability.",
+      "Independent transfer sizes and queue depths; no end-to-end overlap claim."
+    ]
+  },
+  "optimistic_bounds": {
+    "sata": {
+      "large_random_read_bytes_s_mean": 558577856.5,
+      "random_4k_q8_iops_mean": 62875.078115,
+      "targets": {
+        "5": {
+          "scope": "Optimistic throughput bounds, not model generation measurements or quality qualification.",
+          "inputs": {
+            "active_routed_bytes_per_token": 2063646720,
+            "bandwidth_bytes_s": 558577856.5,
+            "random_4k_iops": 62875.078115,
+            "engram_rows_per_token": 48,
+            "engram_row_bytes": 144,
+            "target_tps": 5,
+            "combined_byte_hit_rate": 0.9,
+            "read_amplification": 1,
+            "prefetch_precision": 1,
+            "resident_compute_ms": 0
+          },
+          "engram": {
+            "logical_bytes_per_token": 6912,
+            "page_bytes_min": 196608,
+            "page_bytes_max": 393216,
+            "random_read_seconds_floor": 0.0007634185346411319
+          },
+          "experts": {
+            "logical_miss_bytes_per_token": 206364671.99999994,
+            "physical_read_bytes_per_token_estimate": 206364671.99999994
+          },
+          "target": {
+            "minimum_byte_hit_rate_bandwidth_only": 0.9459602449299074,
+            "maximum_logical_expert_miss_bytes_per_token": 111518963.3,
+            "row_iops_condition_met": true,
+            "compute_condition_met": true
+          },
+          "upper_bound_tps": 2.704175034643473,
+          "serial_reference_tps": 2.704175034643473,
+          "limitations": [
+            "Storage rate and IOPS are independently measured; their resources are shared, not additive.",
+            "Layer routing dependencies and per-miss tail latency reduce actual overlap.",
+            "Engram page coalescing, caching and alignment are workload-dependent.",
+            "No cache hit rate, compute time or prefetch precision is inferred from model parameter count.",
+            "Wrong predictions fetch extra bytes but must never replace actual router-selected experts."
+          ]
+        },
+        "10": {
+          "scope": "Optimistic throughput bounds, not model generation measurements or quality qualification.",
+          "inputs": {
+            "active_routed_bytes_per_token": 2063646720,
+            "bandwidth_bytes_s": 558577856.5,
+            "random_4k_iops": 62875.078115,
+            "engram_rows_per_token": 48,
+            "engram_row_bytes": 144,
+            "target_tps": 10,
+            "combined_byte_hit_rate": 0.9,
+            "read_amplification": 1,
+            "prefetch_precision": 1,
+            "resident_compute_ms": 0
+          },
+          "engram": {
+            "logical_bytes_per_token": 6912,
+            "page_bytes_min": 196608,
+            "page_bytes_max": 393216,
+            "random_read_seconds_floor": 0.0007634185346411319
+          },
+          "experts": {
+            "logical_miss_bytes_per_token": 206364671.99999994,
+            "physical_read_bytes_per_token_estimate": 206364671.99999994
+          },
+          "target": {
+            "minimum_byte_hit_rate_bandwidth_only": 0.9730277585254515,
+            "maximum_logical_expert_miss_bytes_per_token": 55661177.65,
+            "row_iops_condition_met": true,
+            "compute_condition_met": true
+          },
+          "upper_bound_tps": 2.704175034643473,
+          "serial_reference_tps": 2.704175034643473,
+          "limitations": [
+            "Storage rate and IOPS are independently measured; their resources are shared, not additive.",
+            "Layer routing dependencies and per-miss tail latency reduce actual overlap.",
+            "Engram page coalescing, caching and alignment are workload-dependent.",
+            "No cache hit rate, compute time or prefetch precision is inferred from model parameter count.",
+            "Wrong predictions fetch extra bytes but must never replace actual router-selected experts."
+          ]
+        },
+        "20": {
+          "scope": "Optimistic throughput bounds, not model generation measurements or quality qualification.",
+          "inputs": {
+            "active_routed_bytes_per_token": 2063646720,
+            "bandwidth_bytes_s": 558577856.5,
+            "random_4k_iops": 62875.078115,
+            "engram_rows_per_token": 48,
+            "engram_row_bytes": 144,
+            "target_tps": 20,
+            "combined_byte_hit_rate": 0.9,
+            "read_amplification": 1,
+            "prefetch_precision": 1,
+            "resident_compute_ms": 0
+          },
+          "engram": {
+            "logical_bytes_per_token": 6912,
+            "page_bytes_min": 196608,
+            "page_bytes_max": 393216,
+            "random_read_seconds_floor": 0.0007634185346411319
+          },
+          "experts": {
+            "logical_miss_bytes_per_token": 206364671.99999994,
+            "physical_read_bytes_per_token_estimate": 206364671.99999994
+          },
+          "target": {
+            "minimum_byte_hit_rate_bandwidth_only": 0.9865615153232236,
+            "maximum_logical_expert_miss_bytes_per_token": 27732284.825,
+            "row_iops_condition_met": true,
+            "compute_condition_met": true
+          },
+          "upper_bound_tps": 2.704175034643473,
+          "serial_reference_tps": 2.704175034643473,
+          "limitations": [
+            "Storage rate and IOPS are independently measured; their resources are shared, not additive.",
+            "Layer routing dependencies and per-miss tail latency reduce actual overlap.",
+            "Engram page coalescing, caching and alignment are workload-dependent.",
+            "No cache hit rate, compute time or prefetch precision is inferred from model parameter count.",
+            "Wrong predictions fetch extra bytes but must never replace actual router-selected experts."
+          ]
+        }
+      }
+    },
+    "hdd": {
+      "large_random_read_bytes_s_mean": 163664902.5,
+      "random_4k_q8_iops_mean": 384.5180845,
+      "targets": {
+        "5": {
+          "scope": "Optimistic throughput bounds, not model generation measurements or quality qualification.",
+          "inputs": {
+            "active_routed_bytes_per_token": 2063646720,
+            "bandwidth_bytes_s": 163664902.5,
+            "random_4k_iops": 384.5180845,
+            "engram_rows_per_token": 48,
+            "engram_row_bytes": 144,
+            "target_tps": 5,
+            "combined_byte_hit_rate": 0.9,
+            "read_amplification": 1,
+            "prefetch_precision": 1,
+            "resident_compute_ms": 0
+          },
+          "engram": {
+            "logical_bytes_per_token": 6912,
+            "page_bytes_min": 196608,
+            "page_bytes_max": 393216,
+            "random_read_seconds_floor": 0.12483157993054031
+          },
+          "experts": {
+            "logical_miss_bytes_per_token": 206364671.99999994,
+            "physical_read_bytes_per_token_estimate": 206364671.99999994
+          },
+          "target": {
+            "minimum_byte_hit_rate_bandwidth_only": 0.9842335550049962,
+            "maximum_logical_expert_miss_bytes_per_token": 32536372.5,
+            "row_iops_condition_met": true,
+            "compute_condition_met": true
+          },
+          "upper_bound_tps": 0.7923309852650025,
+          "serial_reference_tps": 0.7923309852650025,
+          "limitations": [
+            "Storage rate and IOPS are independently measured; their resources are shared, not additive.",
+            "Layer routing dependencies and per-miss tail latency reduce actual overlap.",
+            "Engram page coalescing, caching and alignment are workload-dependent.",
+            "No cache hit rate, compute time or prefetch precision is inferred from model parameter count.",
+            "Wrong predictions fetch extra bytes but must never replace actual router-selected experts."
+          ]
+        },
+        "10": {
+          "scope": "Optimistic throughput bounds, not model generation measurements or quality qualification.",
+          "inputs": {
+            "active_routed_bytes_per_token": 2063646720,
+            "bandwidth_bytes_s": 163664902.5,
+            "random_4k_iops": 384.5180845,
+            "engram_rows_per_token": 48,
+            "engram_row_bytes": 144,
+            "target_tps": 10,
+            "combined_byte_hit_rate": 0.9,
+            "read_amplification": 1,
+            "prefetch_precision": 1,
+            "resident_compute_ms": 0
+          },
+          "engram": {
+            "logical_bytes_per_token": 6912,
+            "page_bytes_min": 196608,
+            "page_bytes_max": 393216,
+            "random_read_seconds_floor": 0.12483157993054031
+          },
+          "experts": {
+            "logical_miss_bytes_per_token": 206364671.99999994,
+            "physical_read_bytes_per_token_estimate": 206364671.99999994
+          },
+          "target": {
+            "minimum_byte_hit_rate_bandwidth_only": 0.9921644135629959,
+            "maximum_logical_expert_miss_bytes_per_token": 16169882.25,
+            "row_iops_condition_met": false,
+            "compute_condition_met": true
+          },
+          "upper_bound_tps": 0.7923309852650025,
+          "serial_reference_tps": 0.7923309852650025,
+          "limitations": [
+            "Storage rate and IOPS are independently measured; their resources are shared, not additive.",
+            "Layer routing dependencies and per-miss tail latency reduce actual overlap.",
+            "Engram page coalescing, caching and alignment are workload-dependent.",
+            "No cache hit rate, compute time or prefetch precision is inferred from model parameter count.",
+            "Wrong predictions fetch extra bytes but must never replace actual router-selected experts."
+          ]
+        },
+        "20": {
+          "scope": "Optimistic throughput bounds, not model generation measurements or quality qualification.",
+          "inputs": {
+            "active_routed_bytes_per_token": 2063646720,
+            "bandwidth_bytes_s": 163664902.5,
+            "random_4k_iops": 384.5180845,
+            "engram_rows_per_token": 48,
+            "engram_row_bytes": 144,
+            "target_tps": 20,
+            "combined_byte_hit_rate": 0.9,
+            "read_amplification": 1,
+            "prefetch_precision": 1,
+            "resident_compute_ms": 0
+          },
+          "engram": {
+            "logical_bytes_per_token": 6912,
+            "page_bytes_min": 196608,
+            "page_bytes_max": 393216,
+            "random_read_seconds_floor": 0.12483157993054031
+          },
+          "experts": {
+            "logical_miss_bytes_per_token": 206364671.99999994,
+            "physical_read_bytes_per_token_estimate": 206364671.99999994
+          },
+          "target": {
+            "minimum_byte_hit_rate_bandwidth_only": 0.9961298428419958,
+            "maximum_logical_expert_miss_bytes_per_token": 7986637.125,
+            "row_iops_condition_met": false,
+            "compute_condition_met": true
+          },
+          "upper_bound_tps": 0.7923309852650025,
+          "serial_reference_tps": 0.7923309852650025,
+          "limitations": [
+            "Storage rate and IOPS are independently measured; their resources are shared, not additive.",
+            "Layer routing dependencies and per-miss tail latency reduce actual overlap.",
+            "Engram page coalescing, caching and alignment are workload-dependent.",
+            "No cache hit rate, compute time or prefetch precision is inferred from model parameter count.",
+            "Wrong predictions fetch extra bytes but must never replace actual router-selected experts."
+          ]
+        }
+      }
+    },
+    "nvme": {
+      "large_random_read_bytes_s_mean": 312668645.5,
+      "random_4k_q8_iops_mean": 37134.795650500004,
+      "targets": {
+        "5": {
+          "scope": "Optimistic throughput bounds, not model generation measurements or quality qualification.",
+          "inputs": {
+            "active_routed_bytes_per_token": 2063646720,
+            "bandwidth_bytes_s": 312668645.5,
+            "random_4k_iops": 37134.795650500004,
+            "engram_rows_per_token": 48,
+            "engram_row_bytes": 144,
+            "target_tps": 5,
+            "combined_byte_hit_rate": 0.9,
+            "read_amplification": 1,
+            "prefetch_precision": 1,
+            "resident_compute_ms": 0
+          },
+          "engram": {
+            "logical_bytes_per_token": 6912,
+            "page_bytes_min": 196608,
+            "page_bytes_max": 393216,
+            "random_read_seconds_floor": 0.001292588235889584
+          },
+          "experts": {
+            "logical_miss_bytes_per_token": 206364671.99999994,
+            "physical_read_bytes_per_token_estimate": 206364671.99999994
+          },
+          "target": {
+            "minimum_byte_hit_rate_bandwidth_only": 0.9697927360842072,
+            "maximum_logical_expert_miss_bytes_per_token": 62337121.1,
+            "row_iops_condition_met": true,
+            "compute_condition_met": true
+          },
+          "upper_bound_tps": 1.513684682337368,
+          "serial_reference_tps": 1.513684682337368,
+          "limitations": [
+            "Storage rate and IOPS are independently measured; their resources are shared, not additive.",
+            "Layer routing dependencies and per-miss tail latency reduce actual overlap.",
+            "Engram page coalescing, caching and alignment are workload-dependent.",
+            "No cache hit rate, compute time or prefetch precision is inferred from model parameter count.",
+            "Wrong predictions fetch extra bytes but must never replace actual router-selected experts."
+          ]
+        },
+        "10": {
+          "scope": "Optimistic throughput bounds, not model generation measurements or quality qualification.",
+          "inputs": {
+            "active_routed_bytes_per_token": 2063646720,
+            "bandwidth_bytes_s": 312668645.5,
+            "random_4k_iops": 37134.795650500004,
+            "engram_rows_per_token": 48,
+            "engram_row_bytes": 144,
+            "target_tps": 10,
+            "combined_byte_hit_rate": 0.9,
+            "read_amplification": 1,
+            "prefetch_precision": 1,
+            "resident_compute_ms": 0
+          },
+          "engram": {
+            "logical_bytes_per_token": 6912,
+            "page_bytes_min": 196608,
+            "page_bytes_max": 393216,
+            "random_read_seconds_floor": 0.001292588235889584
+          },
+          "experts": {
+            "logical_miss_bytes_per_token": 206364671.99999994,
+            "physical_read_bytes_per_token_estimate": 206364671.99999994
+          },
+          "target": {
+            "minimum_byte_hit_rate_bandwidth_only": 0.9849440041026014,
+            "maximum_logical_expert_miss_bytes_per_token": 31070256.55,
+            "row_iops_condition_met": true,
+            "compute_condition_met": true
+          },
+          "upper_bound_tps": 1.513684682337368,
+          "serial_reference_tps": 1.513684682337368,
+          "limitations": [
+            "Storage rate and IOPS are independently measured; their resources are shared, not additive.",
+            "Layer routing dependencies and per-miss tail latency reduce actual overlap.",
+            "Engram page coalescing, caching and alignment are workload-dependent.",
+            "No cache hit rate, compute time or prefetch precision is inferred from model parameter count.",
+            "Wrong predictions fetch extra bytes but must never replace actual router-selected experts."
+          ]
+        },
+        "20": {
+          "scope": "Optimistic throughput bounds, not model generation measurements or quality qualification.",
+          "inputs": {
+            "active_routed_bytes_per_token": 2063646720,
+            "bandwidth_bytes_s": 312668645.5,
+            "random_4k_iops": 37134.795650500004,
+            "engram_rows_per_token": 48,
+            "engram_row_bytes": 144,
+            "target_tps": 20,
+            "combined_byte_hit_rate": 0.9,
+            "read_amplification": 1,
+            "prefetch_precision": 1,
+            "resident_compute_ms": 0
+          },
+          "engram": {
+            "logical_bytes_per_token": 6912,
+            "page_bytes_min": 196608,
+            "page_bytes_max": 393216,
+            "random_read_seconds_floor": 0.001292588235889584
+          },
+          "experts": {
+            "logical_miss_bytes_per_token": 206364671.99999994,
+            "physical_read_bytes_per_token_estimate": 206364671.99999994
+          },
+          "target": {
+            "minimum_byte_hit_rate_bandwidth_only": 0.9925196381117986,
+            "maximum_logical_expert_miss_bytes_per_token": 15436824.275,
+            "row_iops_condition_met": true,
+            "compute_condition_met": true
+          },
+          "upper_bound_tps": 1.513684682337368,
+          "serial_reference_tps": 1.513684682337368,
+          "limitations": [
+            "Storage rate and IOPS are independently measured; their resources are shared, not additive.",
+            "Layer routing dependencies and per-miss tail latency reduce actual overlap.",
+            "Engram page coalescing, caching and alignment are workload-dependent.",
+            "No cache hit rate, compute time or prefetch precision is inferred from model parameter count.",
+            "Wrong predictions fetch extra bytes but must never replace actual router-selected experts."
+          ]
+        }
+      }
+    }
+  },
+  "previous_v4_flash": {
+    "bytes": 155095241120,
+    "context": 4096,
+    "loaded_seconds": 834.5,
+    "generated_tokens_each": 128,
+    "generation_tps": [
+      0.5381620361,
+      10.3274005534
+    ],
+    "repeated_prompt": true,
+    "quality_checked": false,
+    "physical_read_bytes_measured": false,
+    "retired": false
+  },
+  "preservation": {
+    "installed_profile_changed": false,
+    "saved_synapse_choices_changed": false,
+    "old_model_deleted": false,
+    "samsung_ntfs_used": false
+  },
+  "native_baseline": {
+    "source": "deepseek-v41-native-20261101T220815Z.json",
+    "source_sha256": "882032e3dc19a6eaf8ff5232bfc189e6a6441051a0b976e176a98e1bef61afc1",
+    "status": "complete",
+    "settings": {
+      "context": 4096,
+      "threads": 8,
+      "batch_threads": 16,
+      "batch_size": 128,
+      "ubatch_size": 128,
+      "lazy_mode": "on",
+      "placement": "auto-fit",
+      "kv_cache": "f16",
+      "reasoning": "off"
+    },
+    "load_seconds": 452.88603159599734,
+    "load_interval": {
+      "elapsed_seconds": 452.8854519730012,
+      "physical_read_bytes": 113905053696,
+      "read_syscall_bytes": 59474820,
+      "minor_faults": 2667946,
+      "major_faults": 7284,
+      "cpu_seconds": 28.56,
+      "physical_read_bytes_s": 251509632.7333351
+    },
+    "samples": [
+      {
+        "index": 1,
+        "repeated_prompt": false,
+        "generated_tokens": 128,
+        "generation_tps": 2.9473499332413637,
+        "first_text_seconds": 12.71625451699947,
+        "request_interval": {
+          "elapsed_seconds": 55.80857241799822,
+          "physical_read_bytes": 12329117696,
+          "read_syscall_bytes": 0,
+          "minor_faults": 421971,
+          "major_faults": 68680,
+          "cpu_seconds": 100.03999999999999,
+          "physical_read_bytes_s": 220917990.94333884
+        },
+        "generation_interval": {
+          "elapsed_seconds": 43.092324463003024,
+          "physical_read_bytes": 9017180672,
+          "read_syscall_bytes": 0,
+          "minor_faults": 244179,
+          "major_faults": 49376,
+          "cpu_seconds": 86.10999999999999,
+          "physical_read_bytes_s": 209252593.92172527
+        }
+      },
+      {
+        "index": 2,
+        "repeated_prompt": true,
+        "generated_tokens": 128,
+        "generation_tps": 14.294273162659714,
+        "first_text_seconds": 0.6994267689951812,
+        "request_interval": {
+          "elapsed_seconds": 9.58536713400099,
+          "physical_read_bytes": 327680,
+          "read_syscall_bytes": 0,
+          "minor_faults": 2960,
+          "major_faults": 3,
+          "cpu_seconds": 80.82,
+          "physical_read_bytes_s": 34185.4407263819
+        },
+        "generation_interval": {
+          "elapsed_seconds": 8.885946536996926,
+          "physical_read_bytes": 253952,
+          "read_syscall_bytes": 0,
+          "minor_faults": 67,
+          "major_faults": 0,
+          "cpu_seconds": 70.51999999999998,
+          "physical_read_bytes_s": 28579.06008579532
+        }
+      },
+      {
+        "index": 3,
+        "repeated_prompt": false,
+        "generated_tokens": 128,
+        "generation_tps": 5.402694974859814,
+        "first_text_seconds": 2.964420315998723,
+        "request_interval": {
+          "elapsed_seconds": 26.47184157900483,
+          "physical_read_bytes": 4208729600,
+          "read_syscall_bytes": 0,
+          "minor_faults": 141401,
+          "major_faults": 25611,
+          "cpu_seconds": 97.60999999999999,
+          "physical_read_bytes_s": 158988923.66211498
+        },
+        "generation_interval": {
+          "elapsed_seconds": 23.507428126002196,
+          "physical_read_bytes": 3587819008,
+          "read_syscall_bytes": 0,
+          "minor_faults": 105034,
+          "major_faults": 21415,
+          "cpu_seconds": 84.86999999999998,
+          "physical_read_bytes_s": 152624905.99860293
+        }
+      }
+    ],
+    "sanity": [
+      {
+        "name": "arithmetic",
+        "passed": true
+      },
+      {
+        "name": "structured",
+        "passed": true
+      }
+    ],
+    "peak_rss_bytes": 121021878272,
+    "peak_vram_bytes": 15815016448,
+    "lazy_engram_confirmed": true,
+    "owned_backend_stopped": true,
+    "limitations": [
+      "Three 128-token requests, only two distinct prompts; no sustained held-out cohort.",
+      "Content-based first-text event, not an exact backend prefill/decode boundary.",
+      "Checksums explicitly skipped; successful inference does not verify weight integrity.",
+      "Arithmetic and JSON checks are not broad quality or numerical-parity qualification.",
+      "Warm same-prompt result has almost no physical I/O and is not disk-streaming throughput."
+    ]
+  }
+}

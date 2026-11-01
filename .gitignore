@@ -98,3 +98,6 @@ htmlcov/
 !/benchmarks/results/model-agnostic-architecture-summary.json
 !/benchmarks/results/optimized-verification-summary.json
 !/benchmarks/results/gpt120-prefill-real-workload-summary.json
+!/benchmarks/results/deepseek-v41-disk-feasibility.json
+!/benchmarks/results/deepseek-v41-row-stream-blocked.json
+!/benchmarks/results/system-ssd-row-stream-20261101.json

@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-01",
+  "status": "blocked_storage_controller_dead",
+  "kind": "partial_row_microbenchmark_not_inference",
+  "measurements": [
+    {
+      "trial": 0,
+      "method": "mmap",
+      "novel_ids": {
+        "median_ms": 4.7165045,
+        "p95_ms": 5.185686,
+        "initial_page_residency_fraction": 0.0,
+        "cache_page_hit_fraction": 0.0
+      },
+      "immediate_reuse": {
+        "median_ms": 0.0017885000000000002,
+        "p95_ms": 0.002675,
+        "initial_page_residency_fraction": 1.0,
+        "cache_page_hit_fraction": 0.0
+      }
+    },
+    {
+      "trial": 0,
+      "method": "upstream-madvise",
+      "novel_ids": {
+        "median_ms": 1.6612025,
+        "p95_ms": 1.708952,
+        "initial_page_residency_fraction": 0.0,
+        "cache_page_hit_fraction": 0.0
+      },
+      "immediate_reuse": {
+        "median_ms": 0.014477,
+        "p95_ms": 0.015128,
+        "initial_page_residency_fraction": 1.0,
+        "cache_page_hit_fraction": 0.0
+      }
+    }
+  ],
+  "rows": 48,
+  "row_bytes": 144,
+  "trial_count_completed_per_method": 1,
+  "timed_novel_requests_per_method": 32,
+  "timed_reused_requests_per_method": 32,
+  "completed_method_rows_matched_local_mmap_bytes": true,
+  "failed_method": "pread-8",
+  "failure": "OSError errno 5 (Input/output error)",
+  "storage_observation": {
+    "controller": "nvme1",
+    "kernel_state": "dead",
+    "reported_block_size": "0B",
+    "mounted_filesystem": "exFAT",
+    "independent_metadata_access": "also failed with errno 5",
+    "kernel_logs_available": false,
+    "cause_established": false
+  },
+  "limitations": [
+    "Synthetic numeric-token histories, not live model token or expert routing traces.",
+    "Disjoint seeded histories for each method; no global cache drops.",
+    "Cold page-residency measurements were zero for both completed novel-ID phases.",
+    "Only one phase per method completed; no confidence or broad performance claim.",
+    "Explicit concurrent reads and direct reads have no completed comparison.",
+    "Byte equality uses the same local files, whose full payload hashes were skipped by the user.",
+    "Controller became unavailable during the experiment; causation, data loss and physical damage are not established."
+  ],
+  "installed_backend_changed": false,
+  "model_files_deleted": false,
+  "filesystem_repair_or_reset_attempted": false
+}

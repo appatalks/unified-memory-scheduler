@@ -883,6 +883,13 @@ no cold-load or generation improvement is claimed from setup alone.
 
 ## Storage I/O And RAM-disk Hypothesis
 
+The [DeepSeek V4.1 explicit disk-tier study](../docs/research/deepseek-v41-disk-inference.md)
+starts a separate true out-of-core track: verified GGUF tensor/shard accounting,
+measured SSD/HDD read service, deterministic Engram access, and byte-weighted
+expert cache bounds. Its initial screens are not generation-speed qualification;
+the full replacement runtime, explicit I/O prototype and numerical gates remain
+pending. The installed Synapse backend and previous model are preserved.
+
 The Linux-only `vrambridge-io-study.py` research runner reuses the existing
 backend launcher and exact-count streaming sampler. It launches and stops its
 own backend on a private loopback port; it does not attach to or unload an
