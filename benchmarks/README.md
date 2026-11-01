@@ -1507,9 +1507,11 @@ tested setup built the shared CPU libraries and server with
 and loaded the **matching official** CUDA plugin through
 `GGML_BACKEND_PATH=/path/to/libggml-cuda.so`. That variable names a library file,
 not a directory. The CPU plugin must be from the patched build: the ordinary
-CPU matmul does not understand masked expert ID `-1`. This patch does not
-require a modified CUDA kernel. The separate DFlash attention-bias patch is
-not required for non-speculative experiments.
+CPU matmul does not understand masked expert ID `-1`. The classic hybrid path
+does not require a modified CUDA kernel. Opt-in hosted MoE execution
+(`VRAMBRIDGE_HYBRID_HOSTED=1`) does: load the CUDA plugin built from the same
+patched checkout, not the official one. The separate DFlash attention-bias patch
+is not required for non-speculative experiments.
 
 Configure the optional tools against the patched source/libraries:
 
@@ -1611,13 +1613,36 @@ Optional environment switches, scoped to the private process:
 | `VRAMBRIDGE_HYBRID_POLICY=ranked` | Prefer weaker training seeds only for zero-frequency eviction ties; active ties use recency; default is `classic` |
 | `VRAMBRIDGE_HYBRID_POLICY=probation` | Raise the causal admission margin after a prior low-reuse lifetime; experimental heuristic, slower in the current screen |
 | `VRAMBRIDGE_HYBRID_POLICY=anchored` | Protect the strongest initial seeds up to one quarter of usable group slots; remaining slots adapt; slower in the current screen |
+| `VRAMBRIDGE_HYBRID_POLICY=lfu` | Saturating per-expert frequency (cap 15, periodic halving); the least recently used slot is replaced only by a strictly more frequent candidate, at most four admissions per layer and token |
+| `VRAMBRIDGE_HYBRID_LFU_FILL=1` | `lfu` demands before an expert may take a free slot (1-15, default 1) |
+| `VRAMBRIDGE_HYBRID_LFU_ADMIT=6` | `lfu` demands before an expert may replace a cached one (1-15, default 6); an upload reads as many RAM bytes as one CPU evaluation |
+| `VRAMBRIDGE_HYBRID_HOSTED=1` | Single-graph hosted MoE: CPU experts run in a host call inside the CUDA graph while the GPU computes resident experts; admissions are deferred to the end of the token. Requires a plan, `DIRECT=1`, the patched CUDA plugin; incompatible with `COLD_GPU` and `ROUTE_PACKET`. `STAGE_INPUT`/`BOUNDARY` do not apply |
+| `VRAMBRIDGE_HYBRID_HOSTED_THREADS=N` | Fix the hosted CPU expert thread count |
+| `GGML_CUDA_HOST_MAILBOX=0` | Hosted calls use a pinned mailbox polled by a host worker (default); `0` restores `cudaLaunchHostFunc` |
 | `VRAMBRIDGE_HYBRID_WINDOW=32` | Recent-history window in routed-token rounds, derived using routed-layer count; allowed range 8-256, default 64 |
 
 The switches remain research options. An installation can opt into the tested
 overlap/fusion bundle using `decode_pipeline: true`; the updated experimental
 manual profile does so, while omission preserves the previous pipeline.
 Admission-policy/window tuning and payback profiling are not part of that
-bundle; classic remains default. A live entry has an unfinished observation
+bundle; classic remains default.
+
+Hosted MoE results (RTX 5070 Ti 16 GB, Ryzen 9 9950X, 512-token decode,
+steady-state median tok/s, answers verified, text identical between the
+mailbox and the callback handoff):
+
+| Model | Classic dispatch | Classic + `lfu` 1/6 | Hosted + mailbox + `lfu` 1/6 |
+|---|---:|---:|---:|
+| Qwen3-Coder-30B-A3B Q4_K_M | 116 | 125 | 151-154 |
+| Qwen3.8-Flash-Next IQ3_S (512 experts, top-10) | 47.3 | 46.4 | 46-48 |
+| gpt-oss-120b MXFP4 (12 GB bank) | 50.4 | 50.0 | 46.6-47.6 |
+
+Hosted execution is therefore opt-in: it is a large gain for small experts
+with a high hit rate, neutral for many-expert routing, and still about
+1.5 ms/token slower for gpt-oss, where admissions applied only at the next
+token leave more experts on the bandwidth-bound CPU path. The hosted graph
+reorders node-local work so independent GPU nodes (for example shared
+experts) run before the host-call join. A live entry has an unfinished observation
 window, so zero future reuse is not reported as a wasted lifetime. Payback
 accounting includes initialization/partial-prefill observations, unlike the
 filtered scheduler counters.
