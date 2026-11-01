@@ -1,14 +1,29 @@
 # Project Guidelines
 
-## Research and implementation workflow
+## Sister projects: research vs. production
 
-- Treat [appatalks/unified-memory-scheduler](https://github.com/appatalks/unified-memory-scheduler) as the research workspace: inspect its code, documentation, tests, and results to investigate ideas and develop findings.
-- Treat the Synapse repository, [appatalks/Synapse](https://github.com/appatalks/Synapse), as a downstream consumer of this research, not as a workspace for us to edit or push to.
-- Synapse may be updated independently, including by the user working there directly; do not assume its current code or decisions are reflected in this repository or in prior conversation.
-- When a task depends on Synapse's current state, inspect the latest Synapse code or user-provided context read-only if available. If its state cannot be verified, say so and ask for the relevant context rather than making assumptions.
-- When research produces useful findings, present them clearly so Synapse can apply them through its own agent or coding sessions. Do not make code changes or push commits to Synapse directly.
-- Keep work in this repository focused on research and artifacts that support it; do not implement findings in `unified-memory-scheduler` as a substitute for Synapse's own implementation work.
-- Keep research changes here limited to artifacts that directly support the investigation, and explain which evidence or results support any recommendations.
+- **This repository (VRAMBridge) is the research area**: backend patches, experiments, benchmarks, raw results and
+  negative findings. The canonical llama.cpp patch is
+  [third_party/patches/llama-b11669-hybrid-experts.patch](../third_party/patches/llama-b11669-hybrid-experts.patch)
+  against commit `620d2225cc436ab0b001e3200e590e3b286ef9ab`.
+- **[appatalks/Synapse](https://github.com/appatalks/Synapse) is the production application.** It receives only the
+  learned, validated subset of this research: defaults, guards, opt-in profile flags, docs and tests.
+- Flow: investigate and measure here → record evidence and the patch here → apply the validated result in Synapse.
+  When the user asks for end-to-end work, both repositories may be edited in the same task; keep experimental
+  engine code here and production behavior there.
+- Synapse also changes independently. Read its current code before relying on it; don't assume prior sessions.
+- Synapse's installer pins a research commit and the patch SHA-256 (`scripts/setup_acceleration.py`). Commit and
+  push here first, verify the raw URL's checksum, then bump the pins in Synapse. Ask before committing or pushing.
+- Explain which evidence supports every recommendation; report negative and mixed results honestly.
+
+## Research principles
+
+- **Model-agnostic.** Validate speed changes on several MoE families (at minimum Qwen3-Coder-30B-A3B, a
+  many-expert Qwen3.8 model, gpt-oss-120b). A gain on one model that regresses another stays opt-in.
+- **Accurate only.** No lossy shortcuts; verify answers (and text identity where the math is unchanged).
+- Benchmark with warm-up excluded and medians reported; noise is about ±5%.
+- Develop in a copied backend tree; never replace the user's installed backend or profile without consent.
+- Stop only processes you started; never `pkill` every `llama-server`.
 
 ## Local model paths and storage
 
