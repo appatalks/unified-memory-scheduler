@@ -8,6 +8,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <cstring>
 #include <cstdio>
 #include <filesystem>
@@ -20,6 +21,13 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#if defined(__linux__)
+#include <sys/resource.h>
+#endif
+
+#ifndef VRAMBRIDGE_TRACE_LLAMA_COMMIT
+#define VRAMBRIDGE_TRACE_LLAMA_COMMIT "620d2225cc436ab0b001e3200e590e3b286ef9ab"
+#endif
 
 using json = nlohmann::json;
 namespace fs = std::filesystem;
@@ -47,6 +55,51 @@ struct CloseFile {
     }
 };
 
+struct IOObservation {
+    uint64_t nanoseconds = 0;
+    uint64_t read_bytes = 0;
+    uint64_t minor_faults = 0;
+    uint64_t major_faults = 0;
+};
+
+static IOObservation observe_io() {
+#if defined(__linux__)
+    std::ifstream input("/proc/self/io");
+    std::string field;
+    uint64_t value;
+    IOObservation result;
+    bool found = false;
+    while (input >> field >> value) {
+        if (field == "read_bytes:") {
+            result.read_bytes = value;
+            found = true;
+        }
+    }
+    rusage usage{};
+    if (!input.eof() || !found || getrusage(RUSAGE_SELF, &usage) != 0) {
+        throw std::runtime_error("Required process I/O/fault observations are unavailable.");
+    }
+    result.minor_faults = usage.ru_minflt;
+    result.major_faults = usage.ru_majflt;
+    result.nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+    return result;
+#else
+    throw std::runtime_error("Trace I/O observations require Linux.");
+#endif
+}
+
+static json io_interval(const IOObservation & before, const IOObservation & after) {
+    if (after.nanoseconds <= before.nanoseconds || after.read_bytes < before.read_bytes ||
+        after.minor_faults < before.minor_faults || after.major_faults < before.major_faults) {
+        throw std::runtime_error("Process I/O/fault counters or monotonic time decreased.");
+    }
+    return {{"elapsed_ns", after.nanoseconds - before.nanoseconds},
+            {"physical_read_bytes", after.read_bytes - before.read_bytes},
+            {"minor_faults", after.minor_faults - before.minor_faults},
+            {"major_faults", after.major_faults - before.major_faults}};
+}
+
 struct Trace {
     std::unique_ptr<FILE, CloseFile> output;
     std::map<int, Layer> layers;
@@ -58,6 +111,12 @@ struct Trace {
     bool prefill_enabled = false;
     json prefill_batches = json::array();
     json prefill_requests = json::array();
+    bool io_enabled = false;
+    std::map<int, json> pending_routes;
+    std::map<int, IOObservation> expert_starts;
+    std::map<std::string, IOObservation> engram_starts;
+    json engram_intervals = json::array();
+    json token_intervals = json::array();
 
     void emit(const json & value) {
         const std::string line = value.dump() + '\n';
@@ -76,9 +135,37 @@ static bool routing_callback(ggml_tensor * tensor, bool ask, void * data) noexce
     const std::string prefix = "ffn_moe_topk-";
     try {
         const std::string name = tensor->name;
+        const bool output = trace.io_enabled && !prefill && name.rfind("ffn_moe_out-", 0) == 0;
+        const bool engram = trace.io_enabled && !prefill && name.rfind("engram_rows-", 0) == 0;
         const bool selected = name.rfind(prefix, 0) == 0;
         if (ask) {
-            return selected;
+            if (engram && !trace.engram_starts.emplace(name, observe_io()).second) {
+                throw std::runtime_error("Duplicate Engram gather start.");
+            }
+            return selected || output || engram;
+        }
+        if (engram) {
+            const auto found = trace.engram_starts.find(name);
+            if (found == trace.engram_starts.end()) throw std::runtime_error("Missing Engram gather start.");
+            trace.engram_intervals.push_back({{"name", name}, {"interval", io_interval(found->second, observe_io())}});
+            trace.engram_starts.erase(found);
+            return true;
+        }
+        if (output) {
+            size_t consumed = 0;
+            const std::string suffix = name.substr(std::strlen("ffn_moe_out-"));
+            const int layer_id = std::stoi(suffix, &consumed);
+            if (consumed != suffix.size() || !trace.pending_routes.count(layer_id) ||
+                !trace.expert_starts.count(layer_id)) {
+                throw std::runtime_error("Missing or invalid routed-expert output boundary: " + name);
+            }
+            auto record = std::move(trace.pending_routes.at(layer_id));
+            record["expert_observed_interval"] = io_interval(trace.expert_starts.at(layer_id), observe_io());
+            trace.emit(record);
+            trace.pending_routes.erase(layer_id);
+            trace.expert_starts.erase(layer_id);
+            ++trace.counts[layer_id];
+            return true;
         }
         if (!selected) {
             return true;
@@ -117,9 +204,17 @@ static bool routing_callback(ggml_tensor * tensor, bool ask, void * data) noexce
                 if (prefill) ++row_counts[expert];
             }
             if (!prefill) {
-                trace.emit({{"type", "route"}, {"request", trace.request}, {"phase", trace.phase},
-                            {"token", trace.token}, {"layer", layer_id}, {"experts", experts}});
-                ++trace.counts[layer_id];
+                json record = {{"type", "route"}, {"request", trace.request}, {"phase", trace.phase},
+                               {"token", trace.token}, {"layer", layer_id}, {"experts", experts}};
+                if (trace.io_enabled) {
+                    if (!trace.pending_routes.emplace(layer_id, std::move(record)).second) {
+                        throw std::runtime_error("Duplicate pending expert route.");
+                    }
+                    trace.expert_starts[layer_id] = observe_io();
+                } else {
+                    trace.emit(record);
+                    ++trace.counts[layer_id];
+                }
             }
         }
         if (prefill) {
@@ -133,7 +228,7 @@ static bool routing_callback(ggml_tensor * tensor, bool ask, void * data) noexce
     }
 }
 
-static int prefill_self_test() {
+static int prefill_self_test(bool io_test = false) {
     ggml_backend_load_all_from_path(VRAMBRIDGE_LLAMA_LIBRARY_DIR);
     auto * device = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU);
     if (!device) throw std::runtime_error("Prefill self-test requires a CPU backend.");
@@ -146,9 +241,15 @@ static int prefill_self_test() {
     auto * ids = ggml_view_2d(ctx.get(), storage, 2, 3, storage->nb[1], 0);
     auto * wrong_shape = ggml_new_tensor_2d(ctx.get(), GGML_TYPE_I32, 1, 3);
     auto * zero_rows = ggml_new_tensor_2d(ctx.get(), GGML_TYPE_I32, 2, 0);
+    auto * single_ids = ggml_new_tensor_2d(ctx.get(), GGML_TYPE_I32, 2, 1);
+    auto * expert_out = ggml_new_tensor_2d(ctx.get(), GGML_TYPE_F32, 4, 1);
+    auto * engram_out = ggml_new_tensor_2d(ctx.get(), GGML_TYPE_F32, 4, 1);
     ggml_set_name(ids, "ffn_moe_topk-0");
     ggml_set_name(wrong_shape, "ffn_moe_topk-0");
     ggml_set_name(zero_rows, "ffn_moe_topk-0");
+    ggml_set_name(single_ids, "ffn_moe_topk-0");
+    ggml_set_name(expert_out, "ffn_moe_out-0");
+    ggml_set_name(engram_out, "engram_rows-1");
     std::unique_ptr<ggml_backend_buffer, decltype(&ggml_backend_buffer_free)> buffer(
         ggml_backend_alloc_ctx_tensors(ctx.get(), backend.get()), ggml_backend_buffer_free);
     if (!buffer) throw std::runtime_error("Cannot allocate prefill self-test tensors.");
@@ -185,6 +286,45 @@ static int prefill_self_test() {
     trace.phase.clear();
     if (routing_callback(ids, true, &trace)) {
         throw std::runtime_error("Inactive prefill callback requested a tensor.");
+    }
+    if (io_test) {
+        trace.output.reset(std::tmpfile());
+        if (!trace.output) throw std::runtime_error("Cannot create temporary I/O self-test output.");
+        trace.io_enabled = true;
+        trace.prefill_enabled = false;
+        trace.phase = "decode";
+        trace.request = "self-test";
+        trace.error.clear();
+        const int32_t valid[] = {1, 3};
+        ggml_backend_tensor_set(single_ids, valid, 0, sizeof(valid));
+        if (!routing_callback(engram_out, true, &trace) || !routing_callback(engram_out, false, &trace) ||
+            trace.engram_intervals.size() != 1 ||
+            !routing_callback(single_ids, true, &trace) || !routing_callback(single_ids, false, &trace) ||
+            trace.counts[0] != 0 || trace.pending_routes.size() != 1 ||
+            !routing_callback(expert_out, true, &trace) || !routing_callback(expert_out, false, &trace) ||
+            trace.counts[0] != 1 || !trace.pending_routes.empty() || !trace.expert_starts.empty() ||
+            !trace.engram_starts.empty()) {
+            throw std::runtime_error("Expert/Engram I/O boundary self-test failed: " + trace.error);
+        }
+        std::rewind(trace.output.get());
+        char line[4096];
+        if (!std::fgets(line, sizeof(line), trace.output.get())) {
+            throw std::runtime_error("No completed route emitted by I/O self-test.");
+        }
+        const auto record = json::parse(line);
+        if (record.at("experts") != json({1, 3}) ||
+            record.at("expert_observed_interval").at("elapsed_ns").get<uint64_t>() == 0 ||
+            !record.at("expert_observed_interval").contains("physical_read_bytes")) {
+            throw std::runtime_error("I/O self-test emitted incorrect experts or observations.");
+        }
+        trace.error.clear();
+        if (routing_callback(expert_out, false, &trace) || trace.error.empty()) {
+            throw std::runtime_error("Missing expert start was not rejected.");
+        }
+        std::cout << json({{"io_self_test", true}, {"deferred_route_completion", true},
+            {"engram_boundary", true}, {"actual_expert_ids_preserved", true},
+            {"missing_boundary_rejected", true}}).dump() << '\n';
+        return 0;
     }
     std::cout << json({{"self_test", true}, {"strided_histogram", histogram},
         {"invalid_routes_rejected", true}, {"invalid_shape_rejected", true},
@@ -309,6 +449,9 @@ static void check_counts(const Trace & trace, int expected) {
     if (!trace.error.empty()) {
         throw std::runtime_error(trace.error);
     }
+    if (!trace.pending_routes.empty() || !trace.engram_starts.empty() || !trace.expert_starts.empty()) {
+        throw std::runtime_error("Incomplete expert or Engram I/O observation boundaries.");
+    }
     for (const auto & [id, layer] : trace.layers) {
         const auto found = trace.counts.find(id);
         if (found == trace.counts.end() || found->second != expected) {
@@ -343,6 +486,7 @@ static void run_request(Trace & trace, const Request & request, llama_context * 
     user.content = request.prompt;
     chat.messages = {system, user};
     chat.chat_template_kwargs["reasoning_effort"] = "\"low\"";
+    if (trace.io_enabled) chat.chat_template_kwargs["enable_thinking"] = "false";
     chat.now = std::chrono::system_clock::time_point{};
     const auto rendered = common_chat_templates_apply(templates, chat);
     const auto * model = llama_get_model(ctx);
@@ -353,6 +497,7 @@ static void run_request(Trace & trace, const Request & request, llama_context * 
     }
     trace.request = request.id;
     trace.counts.clear();
+    trace.token_intervals = json::array();
     trace.emit({{"type", "request_start"}, {"id", request.id}, {"split", request.split},
                 {"category", request.category}, {"prompt_tokens", tokens.size()},
                 {"max_tokens", request.tokens}});
@@ -389,10 +534,16 @@ static void run_request(Trace & trace, const Request & request, llama_context * 
         trace.token = decoded;
         const std::vector<llama_token> next{token};
         auto next_batch = common_batch_get_one(ctx, next);
+        trace.engram_intervals = json::array();
+        const auto before = trace.io_enabled ? observe_io() : IOObservation{};
         if (llama_process(ctx, LLAMA_PROCESS_TYPE_DECODE, next_batch.get()) != 0) {
             throw std::runtime_error("Decode failed: " + trace.error);
         }
         check_counts(trace, decoded + 1);
+        if (trace.io_enabled) {
+            trace.token_intervals.push_back({{"token", decoded}, {"interval", io_interval(before, observe_io())},
+                                            {"engram_gathers", trace.engram_intervals}});
+        }
     }
     trace.phase.clear();
     llama_memory_clear(llama_get_memory(ctx), true);
@@ -412,8 +563,10 @@ static void run_request(Trace & trace, const Request & request, llama_context * 
     if (stop == "eos" && !llama_vocab_is_eog(vocab, llama_sampler_sample(sampler.get(), ctx, -1))) {
         throw std::runtime_error("Routing observation changed the generation stop.");
     }
-    trace.emit({{"type", "request_end"}, {"id", request.id}, {"decode_tokens", decoded},
-                {"stop_reason", stop}, {"token_sequence_equivalent", true}});
+    json ending = {{"type", "request_end"}, {"id", request.id}, {"decode_tokens", decoded},
+                   {"stop_reason", stop}, {"token_sequence_equivalent", true}};
+    if (trace.io_enabled) ending["observed_token_intervals"] = trace.token_intervals;
+    trace.emit(ending);
     if (trace.prefill_enabled) {
         json coverage = json::array();
         for (const auto & [id, rows] : observed_rows) {
@@ -438,6 +591,7 @@ static int run(int argc, char ** argv) {
     fs::path prefill_destination;
     std::vector<char *> backend_args{argv[0]};
     bool cpu_only = false;
+    bool trace_io = false;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--help") {
@@ -447,10 +601,16 @@ static int run(int argc, char ** argv) {
                          "Only the pinned official backend is supported. Collection synchronizes routing tensors; "
                          "its timings are not inference benchmarks. Prompt/output text is not stored. "
                          "Prefill summaries retain observed expert row histograms, including pruned final-layer coverage. "
-                         "Or --prefill-self-test for CPU-only strided histogram and invalid-input checks.\n";
+                         "Use --trace-io for Linux expert/Engram I/O boundaries, not speed measurements. "
+                         "Or --prefill-self-test / --io-self-test for bounded fixture checks.\n";
             return 0;
         }
         if (arg == "--prefill-self-test" && argc == 2) return prefill_self_test();
+        if (arg == "--io-self-test" && argc == 2) return prefill_self_test(true);
+        if (arg == "--trace-io") {
+            trace_io = true;
+            continue;
+        }
         if (arg == "--trace-corpus" || arg == "--trace-output" || arg == "--prefill-output") {
             if (++i >= argc) {
                 throw std::runtime_error("Missing trace option value.");
@@ -486,11 +646,13 @@ static int run(int argc, char ** argv) {
     }
     const std::string identity = llama_commit();
     if (identity.size() < 7 ||
-        std::string("620d2225cc436ab0b001e3200e590e3b286ef9ab").rfind(identity, 0) != 0) {
+        std::string(VRAMBRIDGE_TRACE_LLAMA_COMMIT).rfind(identity, 0) != 0) {
         throw std::runtime_error("Linked llama.cpp build does not match the supported commit.");
     }
     Trace trace;
     trace.prefill_enabled = !prefill_destination.empty();
+    trace.io_enabled = trace_io;
+    if (trace_io) (void) observe_io();
     ggml_backend_load_all_from_path(VRAMBRIDGE_LLAMA_LIBRARY_DIR);
     if (ggml_backend_dev_count() == 0) {
         throw std::runtime_error("No backends loaded from the matching library directory.");
@@ -550,8 +712,14 @@ static int run(int argc, char ** argv) {
     }
     trace.emit({{"type", "metadata"}, {"schema_version", 1}, {"instrumented", true},
                 {"capture_scope", "decode_only"},
+                {"io_observer", trace_io},
+                {"io_scope", "Process read_bytes/fault deltas between routing and routed output; "
+                             "includes callback/scheduling overhead, not original kernel time. "
+                             "Engram gather intervals exclude earlier prefetch I/O. "
+                             "Collection is not a performance benchmark."},
                 {"collector_source_sha256", VRAMBRIDGE_TRACE_SOURCE_SHA256},
-                {"template_policy", "model Jinja, fixed system message, epoch date, low reasoning effort"},
+                {"template_policy", trace_io ? "model Jinja, fixed system message, epoch date, thinking disabled"
+                                             : "model Jinja, fixed system message, epoch date, low reasoning effort"},
                 {"corpus_unique_prompts", true},
                 {"generated_text_recorded", false},
                 {"token_equivalence_check", "callback active vs inactive, same prompt and greedy sampling"},

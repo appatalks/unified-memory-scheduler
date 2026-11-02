@@ -101,3 +101,10 @@ htmlcov/
 !/benchmarks/results/deepseek-v41-disk-feasibility.json
 !/benchmarks/results/deepseek-v41-row-stream-blocked.json
 !/benchmarks/results/system-ssd-row-stream-20261101.json
+!/benchmarks/results/system-ssd-row-recovery-control-20261101.json
+!/benchmarks/results/system-ssd-row-stream-fixed-20261101.json
+!/benchmarks/results/deepseek-v41-row-stream-recovered.json
+!/benchmarks/results/deepseek-v41-disk-trace-20261102.json
+!/benchmarks/results/deepseek-v41-expert-attribution-summary.json
+!/benchmarks/results/deepseek-v41-live-cache-v1-summary.json
+!/benchmarks/results/deepseek-v41-live-cache-final-summary.json

@@ -114,7 +114,7 @@ def run_case(path, method, requests, seed, workers, cache_pages):
                 store = rows.RowStore(
                     path, row_bytes=ROW_BYTES, tensor_offset=TENSOR_OFFSET, tensor_rows=tensor_rows,
                     cache_pages=cache_pages if method == "direct-cache" else 0,
-                    workers=1 if method == "direct-serial" else workers)
+                    workers=1 if method == "direct-serial" else workers, direct=True)
             else:
                 mapping = mmap.mmap(source.fileno(), 0, access=mmap.ACCESS_READ)
                 mapping.madvise(mmap.MADV_RANDOM)

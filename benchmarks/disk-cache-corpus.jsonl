@@ -1,0 +1,6 @@
+{"id":"warmup-hash","phase":"warmup","max_tokens":64,"prompt":"Explain hash table collision handling with a compact Python example."}
+{"id":"novel-avl","phase":"distinct","max_tokens":64,"prompt":"Explain AVL rotations and give a Python implementation of a right rotation."}
+{"id":"novel-path","phase":"distinct","max_tokens":64,"prompt":"Explain Dijkstra's algorithm, its invariants and when it fails."}
+{"id":"novel-logic","phase":"distinct","max_tokens":64,"prompt":"Explain necessary and sufficient conditions using concrete counterexamples."}
+{"id":"novel-sql","phase":"distinct","max_tokens":64,"prompt":"Explain serializable transactions and how they prevent write skew."}
+{"id":"reuse-hash","phase":"reuse","max_tokens":64,"prompt":"Explain hash table collision handling with a compact Python example."}

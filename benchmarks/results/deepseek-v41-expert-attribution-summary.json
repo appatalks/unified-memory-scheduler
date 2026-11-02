@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-01",
+  "status": "observer_complete_no_cache_implementation",
+  "model": "DeepSeek-V4.1-Flash-1017-GSQ-RCO-IQ2_XXS",
+  "backend_commit": "74bca3950054eed1795f525cb9cf06bfe796492d",
+  "run_report": {
+    "file": "deepseek-v41-routing-run-20261102T010111Z.json",
+    "sha256": "a1515051175d45312f1b51862614ae55ac487e6f7e325330d6bd874d639a2690"
+  },
+  "analysis_report": {
+    "file": "deepseek-v41-disk-trace-20261102.json",
+    "sha256": "8f7d1b5800ab6107c4e31b4c57c726a281b61b31f94696e10e076ce21d46c9ea"
+  },
+  "trace_sha256": "2a2446d320ff3095eba8e2f02104a2826662d38235e8ab11be360a34f9d0785f",
+  "collector_source_sha256": "e750ad5732b99524542056855bd742201fefcc2609182159c347b6f1aab53762",
+  "collector_binary_sha256": "4a8e1187192ee9137376bd1dd1d155aec5031ddda8491a9101e954a1dbaa0ee0",
+  "requests": [
+    {
+      "id": "train-hash",
+      "tokens": 32,
+      "token_sequence_equivalent": true,
+      "engram_gathers_per_token": [
+        2
+      ]
+    },
+    {
+      "id": "test-avl",
+      "tokens": 32,
+      "token_sequence_equivalent": true,
+      "engram_gathers_per_token": [
+        2
+      ]
+    },
+    {
+      "id": "test-logic",
+      "tokens": 32,
+      "token_sequence_equivalent": true,
+      "engram_gathers_per_token": [
+        2
+      ]
+    }
+  ],
+  "routed_tokens": 96,
+  "layers": 40,
+  "active_experts": [
+    6
+  ],
+  "native_gpu_expert_bytes": 6936330240,
+  "observed_run_seconds": 649.0453977340001,
+  "peak_rss_bytes": 123330220032,
+  "peak_vram_bytes": 15734079488,
+  "peak_process_swap_bytes": 173940736,
+  "measured_io": {
+    "train-hash": {
+      "split": "train",
+      "tokens": 32,
+      "totals": {
+        "physical_read_bytes": 2298762240,
+        "expert_interval_read_bytes": 2286735872,
+        "engram_gather_read_bytes": 4005888,
+        "unattributed_read_bytes": 8020480,
+        "observed_expert_ns": 10817658815,
+        "observed_engram_ns": 59688649,
+        "observed_token_ns": 11466830200,
+        "expert_interval_major_faults": 12258
+      },
+      "tokens_with_expert_interval_reads": 32
+    },
+    "test-avl": {
+      "split": "test",
+      "tokens": 32,
+      "totals": {
+        "physical_read_bytes": 1047876096,
+        "expert_interval_read_bytes": 1039749632,
+        "engram_gather_read_bytes": 2621440,
+        "unattributed_read_bytes": 5505024,
+        "observed_expert_ns": 5962846804,
+        "observed_engram_ns": 29468028,
+        "observed_token_ns": 6547554193,
+        "expert_interval_major_faults": 5797
+      },
+      "tokens_with_expert_interval_reads": 32
+    },
+    "test-logic": {
+      "split": "test",
+      "tokens": 32,
+      "totals": {
+        "physical_read_bytes": 1102798848,
+        "expert_interval_read_bytes": 1093476352,
+        "engram_gather_read_bytes": 3194880,
+        "unattributed_read_bytes": 6127616,
+        "observed_expert_ns": 6301612341,
+        "observed_engram_ns": 45210231,
+        "observed_token_ns": 6911139257,
+        "expert_interval_major_faults": 6046
+      },
+      "tokens_with_expert_interval_reads": 27
+    }
+  },
+  "cache_replay_brief": [
+    {
+      "policy": "train_static",
+      "capacity_bytes": 34359738368,
+      "byte_hit_fraction": 0.5718609045641301,
+      "logical_miss_bytes_per_token": 883527840.0,
+      "peak_resident_bytes": 20852951040,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "lru",
+      "capacity_bytes": 34359738368,
+      "byte_hit_fraction": 0.8491816273669168,
+      "logical_miss_bytes_per_token": 311235840.0,
+      "peak_resident_bytes": 34359736320,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "lfu",
+      "capacity_bytes": 34359738368,
+      "byte_hit_fraction": 0.8476757882279385,
+      "logical_miss_bytes_per_token": 314343360.0,
+      "peak_resident_bytes": 34359736320,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "train_static",
+      "capacity_bytes": 68719476736,
+      "byte_hit_fraction": 0.5718609045641301,
+      "logical_miss_bytes_per_token": 883527840.0,
+      "peak_resident_bytes": 20852951040,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "lru",
+      "capacity_bytes": 68719476736,
+      "byte_hit_fraction": 0.8524256709985709,
+      "logical_miss_bytes_per_token": 304541280.0,
+      "peak_resident_bytes": 40343592960,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "lfu",
+      "capacity_bytes": 68719476736,
+      "byte_hit_fraction": 0.8524256709985709,
+      "logical_miss_bytes_per_token": 304541280.0,
+      "peak_resident_bytes": 40343592960,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "train_static",
+      "capacity_bytes": 103079215104,
+      "byte_hit_fraction": 0.5718609045641301,
+      "logical_miss_bytes_per_token": 883527840.0,
+      "peak_resident_bytes": 20852951040,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "lru",
+      "capacity_bytes": 103079215104,
+      "byte_hit_fraction": 0.8524256709985709,
+      "logical_miss_bytes_per_token": 304541280.0,
+      "peak_resident_bytes": 40343592960,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "lfu",
+      "capacity_bytes": 103079215104,
+      "byte_hit_fraction": 0.8524256709985709,
+      "logical_miss_bytes_per_token": 304541280.0,
+      "peak_resident_bytes": 40343592960,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "train_static",
+      "capacity_bytes": 115964116992,
+      "byte_hit_fraction": 0.5718609045641301,
+      "logical_miss_bytes_per_token": 883527840.0,
+      "peak_resident_bytes": 20852951040,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "lru",
+      "capacity_bytes": 115964116992,
+      "byte_hit_fraction": 0.8524256709985709,
+      "logical_miss_bytes_per_token": 304541280.0,
+      "peak_resident_bytes": 40343592960,
+      "training_resident_bytes": 20852951040
+    },
+    {
+      "policy": "lfu",
+      "capacity_bytes": 115964116992,
+      "byte_hit_fraction": 0.8524256709985709,
+      "logical_miss_bytes_per_token": 304541280.0,
+      "peak_resident_bytes": 40343592960,
+      "training_resident_bytes": 20852951040
+    }
+  ],
+  "first_attempt": {
+    "status": "failed_before_model_loading",
+    "reason": "Server-only --reasoning flag not accepted by common collector",
+    "correction": "Thinking disabled through the verified GGUF Jinja enable_thinking parameter"
+  },
+  "scope": [
+    "96 observed tokens, one training and two held-out short prompts, with callback-inactive replays.",
+    "Process I/O recorded in callback boundaries, not individually attributed storage requests.",
+    "Collector synchronization changes scheduling: no model tok/s or latency speedup is inferred.",
+    "Reference replay warms file pages between prompts; working set is not controlled cold.",
+    "Replay starts only with training-route residents (~19.4GiB), unlike native startup/prefill/page cache.",
+    "Largest replay working set uses only ~37.6GiB: the trace cannot distinguish 64/96/108GiB capacities.",
+    "Logical replay misses and observed physical reads are different quantities; no equivalence claimed.",
+    "Full checkpoint checksums remain skipped; same-context token-sequence checks are not broad quality/logit parity."
+  ],
+  "owned_collector_stopped": true,
+  "installed_synapse_changed": false,
+  "old_model_retired": false
+}

@@ -887,8 +887,19 @@ The [DeepSeek V4.1 explicit disk-tier study](../docs/research/deepseek-v41-disk-
 starts a separate true out-of-core track: verified GGUF tensor/shard accounting,
 measured SSD/HDD read service, deterministic Engram access, and byte-weighted
 expert cache bounds. Its initial screens are not generation-speed qualification;
-the full replacement runtime, explicit I/O prototype and numerical gates remain
-pending. The installed Synapse backend and previous model are preserved.
+the native text baseline now executes, but broad quality/numerical gates and
+disk-expert integration remain pending. The bounded row-stream prototype
+passes exact-byte tests; its recovered-drive screen did not beat upstream
+Engram prefetch, so no new engine speedup is claimed. The installed Synapse
+backend and previous model are preserved.
+
+The same study now includes a
+[completed live-cache comparison](results/deepseek-v41-live-cache-final-summary.json).
+Two exact RAM expert-cache candidates were tested against matched native
+paging, including a source-residency-aware refinement. Both were slower
+and showed no meaningful peak-RSS reduction; neither is a production
+optimization. Warm repeated-prompt rates are kept separate from changing
+requests, and the negative results remain available for the next design.
 
 The Linux-only `vrambridge-io-study.py` research runner reuses the existing
 backend launcher and exact-count streaming sampler. It launches and stops its

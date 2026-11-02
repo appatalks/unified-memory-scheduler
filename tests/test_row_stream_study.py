@@ -68,6 +68,24 @@ class RowStreamStudyTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "No physical I/O"):
                     study.run_case(fixture, "direct-concurrent", 4, 20261102, 2, 64)
 
+    def test_direct_methods_request_direct_io_and_preserve_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / "rows.bin"
+            study.write_fixture(fixture, 64 * study.PAGE, study.FIXTURE_SEED)
+            real_store = study.rows.RowStore
+            interval = {"physical_read_bytes": study.PAGE, "minor_faults": 0, "major_faults": 0}
+            for method in ("direct-serial", "direct-concurrent", "direct-cache"):
+                with self.subTest(method=method), \
+                        mock.patch.object(study.io, "interval", return_value=interval), \
+                        mock.patch.object(study.rows, "RowStore", wraps=real_store) as constructor:
+                    result = study.run_case(fixture, method, 4, 20261102, 2, 64)
+                    self.assertIs(constructor.call_args.kwargs["direct"], True)
+                    self.assertTrue(result["all_rows_byte_equal"])
+                    self.assertGreater(result["physical_reads_including_warmup"], 0)
+                    if method == "direct-cache":
+                        self.assertEqual(result["immediate_reuse"]["submitted_page_bytes"], 0)
+                        self.assertEqual(result["immediate_reuse"]["explicit_cache_page_hit_fraction"], 1)
+
     def test_cli_invalid_bounds_do_not_write_reports(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "report.json"

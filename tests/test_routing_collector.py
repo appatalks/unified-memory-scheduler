@@ -44,6 +44,17 @@ class CollectorInputTests(unittest.TestCase):
         self.assertTrue(report["inactive_callback_skips_capture"])
         self.assertTrue(report["zero_rows_recorded"])
 
+    @unittest.skipUnless(sys.platform == "linux", "Linux process I/O observer")
+    def test_io_boundaries_preserve_ids_and_reject_missing_starts(self):
+        result = subprocess.run([str(BINARY), "--io-self-test"], capture_output=True, text=True,
+                                check=True, timeout=20)
+        report = json.loads(result.stdout)
+        self.assertTrue(report["io_self_test"])
+        self.assertTrue(report["deferred_route_completion"])
+        self.assertTrue(report["engram_boundary"])
+        self.assertTrue(report["actual_expert_ids_preserved"])
+        self.assertTrue(report["missing_boundary_rejected"])
+
     def test_prefill_output_paths_are_checked_before_backend_loading(self):
         values = [
             {"id": "train", "split": "train", "category": "coding", "prompt": "First", "max_tokens": 1},

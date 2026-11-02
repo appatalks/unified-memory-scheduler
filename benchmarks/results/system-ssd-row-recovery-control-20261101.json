@@ -1,0 +1,302 @@
+{
+  "schema_version": 1,
+  "status": "failed",
+  "kind": "synthetic_row_fixture_not_model_inference",
+  "settings": {
+    "fixture_bytes": 4194304,
+    "rows_per_request": 48,
+    "row_bytes": 144,
+    "tensor_offset": 416,
+    "page_bytes": 4096,
+    "requests_per_case": 8,
+    "trials": 1,
+    "workers": 2,
+    "cache_pages": 64,
+    "free_space_reserve_bytes": 17179869184
+  },
+  "source_sha256": "5c6bd4f491ac7389d221803fa0bf00cd2b2e87c66fd3bd844810957ea20eaed7",
+  "row_stream_sha256": "5bf204e5ba38444269c81552a4675e07dc67d4da077baab1cd009280af8c1d94",
+  "cases": [
+    {
+      "method": "mmap",
+      "request_seed": 20261102,
+      "all_rows_byte_equal": true,
+      "samples": [
+        {
+          "immediate_reuse": false,
+          "pages": 52,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.008035,
+          "submit_ms": 0.000171,
+          "gather_ms": 0.007864
+        },
+        {
+          "immediate_reuse": true,
+          "pages": 52,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.002014,
+          "submit_ms": 0.00014,
+          "gather_ms": 0.001874
+        },
+        {
+          "immediate_reuse": false,
+          "pages": 50,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.008075,
+          "submit_ms": 8e-05,
+          "gather_ms": 0.007995
+        },
+        {
+          "immediate_reuse": true,
+          "pages": 50,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.001894,
+          "submit_ms": 0.000131,
+          "gather_ms": 0.001763
+        },
+        {
+          "immediate_reuse": false,
+          "pages": 48,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.007774,
+          "submit_ms": 0.00014,
+          "gather_ms": 0.007634
+        },
+        {
+          "immediate_reuse": true,
+          "pages": 48,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.001854,
+          "submit_ms": 0.000111,
+          "gather_ms": 0.001743
+        },
+        {
+          "immediate_reuse": false,
+          "pages": 49,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.006833,
+          "submit_ms": 8e-05,
+          "gather_ms": 0.006753
+        },
+        {
+          "immediate_reuse": true,
+          "pages": 49,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.001783,
+          "submit_ms": 8e-05,
+          "gather_ms": 0.001703
+        }
+      ],
+      "physical_reads_including_warmup": 0,
+      "novel_ids": {
+        "requests": 4,
+        "median_ms": 0.0079045,
+        "p95_ms": 0.008075,
+        "median_submit_ms": 0.00010999999999999999,
+        "median_gather_ms": 0.007749,
+        "explicit_cache_page_hit_fraction": 0.0,
+        "submitted_page_bytes": 0,
+        "logical_row_bytes": 27648,
+        "observed_io": {
+          "physical_read_bytes": 0,
+          "minor_faults": 6,
+          "major_faults": 0
+        },
+        "observed_physical_read_amplification": 0.0
+      },
+      "immediate_reuse": {
+        "requests": 4,
+        "median_ms": 0.001874,
+        "p95_ms": 0.002014,
+        "median_submit_ms": 0.00012100000000000001,
+        "median_gather_ms": 0.001753,
+        "explicit_cache_page_hit_fraction": 0.0,
+        "submitted_page_bytes": 0,
+        "logical_row_bytes": 27648,
+        "observed_io": {
+          "physical_read_bytes": 0,
+          "minor_faults": 1,
+          "major_faults": 0
+        },
+        "observed_physical_read_amplification": 0.0
+      },
+      "payload_memory_bound_bytes": null,
+      "explicit_cache_pages": 0,
+      "peak_pending_pages": null,
+      "peak_cached_pages": null,
+      "trial": 0
+    },
+    {
+      "method": "upstream-madvise",
+      "request_seed": 20261102,
+      "all_rows_byte_equal": true,
+      "samples": [
+        {
+          "immediate_reuse": false,
+          "pages": 52,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.015589,
+          "submit_ms": 0.012443,
+          "gather_ms": 0.003146
+        },
+        {
+          "immediate_reuse": true,
+          "pages": 52,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.013646,
+          "submit_ms": 0.011792,
+          "gather_ms": 0.001854
+        },
+        {
+          "immediate_reuse": false,
+          "pages": 50,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.017613,
+          "submit_ms": 0.012824,
+          "gather_ms": 0.004789
+        },
+        {
+          "immediate_reuse": true,
+          "pages": 50,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.013034,
+          "submit_ms": 0.011311,
+          "gather_ms": 0.001723
+        },
+        {
+          "immediate_reuse": false,
+          "pages": 48,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.014427,
+          "submit_ms": 0.011561,
+          "gather_ms": 0.002866
+        },
+        {
+          "immediate_reuse": true,
+          "pages": 48,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.012313,
+          "submit_ms": 0.01061,
+          "gather_ms": 0.001703
+        },
+        {
+          "immediate_reuse": false,
+          "pages": 49,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.015059,
+          "submit_ms": 0.012113,
+          "gather_ms": 0.002946
+        },
+        {
+          "immediate_reuse": true,
+          "pages": 49,
+          "cache_hit_pages": 0,
+          "logical_bytes": 6912,
+          "submitted_bytes": 0,
+          "physical_read_bytes": 0,
+          "total_ms": 0.012744,
+          "submit_ms": 0.010931,
+          "gather_ms": 0.001813
+        }
+      ],
+      "physical_reads_including_warmup": 0,
+      "novel_ids": {
+        "requests": 4,
+        "median_ms": 0.015324,
+        "p95_ms": 0.017613,
+        "median_submit_ms": 0.012278,
+        "median_gather_ms": 0.003046,
+        "explicit_cache_page_hit_fraction": 0.0,
+        "submitted_page_bytes": 0,
+        "logical_row_bytes": 27648,
+        "observed_io": {
+          "physical_read_bytes": 0,
+          "minor_faults": 7,
+          "major_faults": 0
+        },
+        "observed_physical_read_amplification": 0.0
+      },
+      "immediate_reuse": {
+        "requests": 4,
+        "median_ms": 0.012889000000000001,
+        "p95_ms": 0.013646,
+        "median_submit_ms": 0.011120999999999999,
+        "median_gather_ms": 0.001768,
+        "explicit_cache_page_hit_fraction": 0.0,
+        "submitted_page_bytes": 0,
+        "logical_row_bytes": 27648,
+        "observed_io": {
+          "physical_read_bytes": 0,
+          "minor_faults": 0,
+          "major_faults": 0
+        },
+        "observed_physical_read_amplification": 0.0
+      },
+      "payload_memory_bound_bytes": null,
+      "explicit_cache_pages": 0,
+      "peak_pending_pages": null,
+      "peak_cached_pages": null,
+      "trial": 0
+    }
+  ],
+  "fixture_removed": true,
+  "failed_wd_volume_accessed": false,
+  "scope": [
+    "Recently written small SSD fixture; controller caches and filesystem page residency are not forced cold.",
+    "mmap and upstream-madvise are warm-cache references, not cold-disk comparators to O_DIRECT.",
+    "Direct-read physical traffic is attested with /proc counters, not inferred from requested bytes.",
+    "Matched row IDs are used across methods within a trial; method order rotates.",
+    "Immediate reuse is an artificial positive cache control, not a measured model hit rate.",
+    "No model, tokenizer, generated tokens, prefetch prediction or compute/I/O overlap is measured.",
+    "Payload bounds exclude Python objects, OS cache and interpreter RSS; process peak RSS includes fixture setup.",
+    "No global cache eviction, filesystem repair, device reset or existing file modification."
+  ],
+  "fixture_device": "sda1",
+  "error": "No physical I/O observed for the direct-read control; result not qualified.",
+  "process_peak_rss_bytes": 32534528
+}
