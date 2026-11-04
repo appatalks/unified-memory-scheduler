@@ -10,6 +10,28 @@ Raw files under `results/`, including nested output and logs, are ignored unless
 
 Ignore rules do not remove already tracked content or historical copies. Before publishing the repository, review both the current files and Git history, including commit author and committer identities.
 
+## Owned Synapse Engine Baselines
+
+The [SC117/hosted follow-up](../docs/research/sc117-hosted-porting-baseline.md)
+records fresh alternating held-out measurements on the exact SC117 IQ3_S
+target and Qwen3-Coder-30B, plus retained long-context fit failures.
+The [owned-runtime runner](../tools/benchmark/vrambridge-synapse-baseline.py)
+uses temporary configuration and never rewrites installed profiles or saved
+settings. Its `--capacity-check` has a bounded, explicit-failure deadline.
+Short-prompt generation at an allocated capacity is not proof of near-capacity
+input performance. The candidate remains unpromoted: full numerical,
+GPT-OSS-120B, and actual long-input qualification are incomplete.
+
+The [96K/128K core decode follow-up](../docs/research/sc117-core-decode.md)
+adds repeated existing-Classic results, a measured 8K-input screen, and
+aligned CPU/CUDA critical-path partitions. The
+[Synapse diagnostic adapter](../tools/benchmark/vrambridge-synapse-critical-path.py)
+preserves these larger capacities and requires a private output directory
+and the actually mapped CPU library. Profiler intervals are not removable
+latency or throughput benchmarks. The baseline runner accepts an explicit
+synthetic `--corpus`; raw prompt counts must be reported separately from
+allocated capacity.
+
 ## Routing Collection And Cache Replay
 
 The optional `vrambridge-trace` collector uses the official evaluation callback

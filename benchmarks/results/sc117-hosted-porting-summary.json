@@ -1,0 +1,755 @@
+{
+  "schema_version": 1,
+  "kind": "reviewed-synapse-hosted-porting-baseline",
+  "date_utc": "2026-11-04",
+  "research_repository": "https://github.com/appatalks/unified-memory-scheduler",
+  "production_repository": "https://github.com/appatalks/Synapse",
+  "hardware": {
+    "cpu": "Ryzen 9 9950X",
+    "gpu": "RTX 5070 Ti 16GB"
+  },
+  "metric": "(output_tokens - 1) / (request_wall_seconds - reported_prompt_seconds)",
+  "warmup_tokens_excluded": 64,
+  "sampling": {
+    "temperature": 0,
+    "seed": 42,
+    "cache_prompt": false,
+    "ignore_eos": true,
+    "reasoning_effort": "low"
+  },
+  "target_weights_changed": false,
+  "selected_experts_skipped": false,
+  "speculation_enabled": false,
+  "installed_backend_changed": false,
+  "canonical_patch_sha256": "990bd2ce296c3ad65918b684428c6a6340674619a9f1dc8a1ddee1d72a39d88f",
+  "cohorts": [
+    {
+      "model": "Qwen3.8-Flash-Next-GSQ-RCO-abliterated-IQ3_S-00001-of-00002.gguf",
+      "metadata": {
+        "general.architecture": "qwen4exp",
+        "general.name": "Qwen3.8-Flash-Next GSQ-RCO",
+        "qwen4exp.block_count": 48,
+        "qwen4exp.context_length": 262144,
+        "qwen4exp.embedding_length": 2560,
+        "qwen4exp.expert_count": 512,
+        "qwen4exp.expert_used_count": 10,
+        "qwen4exp.expert_feed_forward_length": 640,
+        "general.file_type": 26,
+        "split.count": 2
+      },
+      "context": 16384,
+      "kv_type": "f16",
+      "cpu_threads": 8,
+      "batch_threads": 16,
+      "output_tokens": 512,
+      "repetitions": 3,
+      "split": "test",
+      "runner_sha256": "40eb10ff36fdabfe2e416647a9eede4def7eb4b832f7157c8ed414b9fbb80e76",
+      "synapse_runtime_sha256": "1d87b789e90a59ca1962e27a467c8754fff74365c5e664f7a1fd1411951408d1",
+      "backend_identities": {
+        "installed": {
+          "executable_sha256": "895377f1aadaa82c7f456cfae1357db7a1195d0962d37b7cf074a8103e70fba4",
+          "libllama_sha256": "148c134928fce83224465faddde52febed9d4f4c6da8e6b159ac88448b2f9eb4",
+          "cuda_plugin_sha256": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e"
+        },
+        "candidate": {
+          "executable_sha256": "ff8d4bd8f6e4e76ae655234afc33dd9018eaf0af56cd93ead53bcf0f2b4f73e4",
+          "libllama_sha256": "967cb7db3fe090b480fa16408111d8a66dbab4410653caa890bd1beb3d818d14",
+          "cuda_plugin_sha256": "62f0609e393d6d58e5422741e09f9d1f8430c44990864ded936c3332921b6bff"
+        }
+      },
+      "standard_backend_identity": {
+        "executable_sha256": "3ac6495070ae9627825dbe706de3b580fdbedd2fbe079197b2c6c81982dbd0f9",
+        "libllama_sha256": "d49cfef496d223e74f7890cdfcb96f59ba226e92acf5ab7194a3ee0c3c99f59d"
+      },
+      "summary": [
+        {
+          "context": 16384,
+          "variant": "standard",
+          "category": "coding",
+          "samples": 3,
+          "median_wall_decode_tok_s": 27.012761438709077,
+          "median_end_to_end_tok_s": 23.767530646925177,
+          "repeated_text_hashes_match": false,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "standard",
+          "category": "reasoning",
+          "samples": 3,
+          "median_wall_decode_tok_s": 26.8431907656582,
+          "median_end_to_end_tok_s": 23.54365799212507,
+          "repeated_text_hashes_match": false,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "standard",
+          "category": "prose",
+          "samples": 3,
+          "median_wall_decode_tok_s": 27.140190010829606,
+          "median_end_to_end_tok_s": 23.702100632976546,
+          "repeated_text_hashes_match": false,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "classic",
+          "category": "coding",
+          "samples": 3,
+          "median_wall_decode_tok_s": 39.48358005168872,
+          "median_end_to_end_tok_s": 35.65436811840406,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "classic",
+          "category": "reasoning",
+          "samples": 3,
+          "median_wall_decode_tok_s": 37.426238036429304,
+          "median_end_to_end_tok_s": 33.82545345389849,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "classic",
+          "category": "prose",
+          "samples": 3,
+          "median_wall_decode_tok_s": 34.19618348052497,
+          "median_end_to_end_tok_s": 31.256293534055075,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "candidate-classic",
+          "category": "coding",
+          "samples": 3,
+          "median_wall_decode_tok_s": 40.35646061482821,
+          "median_end_to_end_tok_s": 36.363367879057556,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "candidate-classic",
+          "category": "reasoning",
+          "samples": 3,
+          "median_wall_decode_tok_s": 38.7695111525914,
+          "median_end_to_end_tok_s": 34.95846919143509,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "candidate-classic",
+          "category": "prose",
+          "samples": 3,
+          "median_wall_decode_tok_s": 34.764442232731106,
+          "median_end_to_end_tok_s": 31.806780568966502,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "hosted",
+          "category": "coding",
+          "samples": 3,
+          "median_wall_decode_tok_s": 43.16481733208367,
+          "median_end_to_end_tok_s": 38.7046989533243,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "hosted",
+          "category": "reasoning",
+          "samples": 3,
+          "median_wall_decode_tok_s": 39.12997342583539,
+          "median_end_to_end_tok_s": 35.119286564546684,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "hosted",
+          "category": "prose",
+          "samples": 3,
+          "median_wall_decode_tok_s": 34.83208564468085,
+          "median_end_to_end_tok_s": 31.717396146851836,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        }
+      ],
+      "hosted_vs_candidate_classic": [
+        {
+          "category": "coding",
+          "paired_hosted_gain_percent": [
+            8.16549550225365,
+            5.81223364624901,
+            7.012039124535474
+          ]
+        },
+        {
+          "category": "reasoning",
+          "paired_hosted_gain_percent": [
+            0.46978739541903014,
+            0.9841078709476259,
+            1.1916884162509245
+          ]
+        },
+        {
+          "category": "prose",
+          "paired_hosted_gain_percent": [
+            0.19457643386568968,
+            0.7152506039139528,
+            -2.0489870236157337
+          ]
+        }
+      ],
+      "bounded_answer_checks": [
+        {
+          "variant": "standard",
+          "workload": "arithmetic",
+          "prompt_sha256": "31dc79da247476c2d3c08c7f60ea04c16730286a5b74db12441a0c2a0150e1b3",
+          "answer_sha256": "3949ac1596ec77106a709a618bf5adcb19b77537ce8bcbdf54ff830169cdd084",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 18,
+            "prompt_tokens": 55,
+            "total_tokens": 73,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 1.5147492630057968,
+          "check_passed": true,
+          "check": "exact integer"
+        },
+        {
+          "variant": "standard",
+          "workload": "code",
+          "prompt_sha256": "bba5ff0241bd31e07757bb6d75be4d79ec8b7d04ead951c630ecebbb71e6f21b",
+          "answer_sha256": "46c243f38bf4af37358b4db8ad218b0417abe7688b0d11fac04025c86316aa6b",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 60,
+            "prompt_tokens": 66,
+            "total_tokens": 126,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 4.040066134999506,
+          "check_passed": true,
+          "check": "AST-only; model code is never executed"
+        },
+        {
+          "variant": "classic",
+          "workload": "arithmetic",
+          "prompt_sha256": "31dc79da247476c2d3c08c7f60ea04c16730286a5b74db12441a0c2a0150e1b3",
+          "answer_sha256": "3949ac1596ec77106a709a618bf5adcb19b77537ce8bcbdf54ff830169cdd084",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 56,
+            "prompt_tokens": 55,
+            "total_tokens": 111,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 2.989734292990761,
+          "check_passed": true,
+          "check": "exact integer"
+        },
+        {
+          "variant": "classic",
+          "workload": "code",
+          "prompt_sha256": "bba5ff0241bd31e07757bb6d75be4d79ec8b7d04ead951c630ecebbb71e6f21b",
+          "answer_sha256": "46c243f38bf4af37358b4db8ad218b0417abe7688b0d11fac04025c86316aa6b",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 62,
+            "prompt_tokens": 66,
+            "total_tokens": 128,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 3.077064748998964,
+          "check_passed": true,
+          "check": "AST-only; model code is never executed"
+        },
+        {
+          "variant": "candidate-classic",
+          "workload": "arithmetic",
+          "prompt_sha256": "31dc79da247476c2d3c08c7f60ea04c16730286a5b74db12441a0c2a0150e1b3",
+          "answer_sha256": "3949ac1596ec77106a709a618bf5adcb19b77537ce8bcbdf54ff830169cdd084",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 18,
+            "prompt_tokens": 55,
+            "total_tokens": 73,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 1.6033579089998966,
+          "check_passed": true,
+          "check": "exact integer"
+        },
+        {
+          "variant": "candidate-classic",
+          "workload": "code",
+          "prompt_sha256": "bba5ff0241bd31e07757bb6d75be4d79ec8b7d04ead951c630ecebbb71e6f21b",
+          "answer_sha256": "46c243f38bf4af37358b4db8ad218b0417abe7688b0d11fac04025c86316aa6b",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 39,
+            "prompt_tokens": 66,
+            "total_tokens": 105,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 2.3420320129953325,
+          "check_passed": true,
+          "check": "AST-only; model code is never executed"
+        },
+        {
+          "variant": "hosted",
+          "workload": "arithmetic",
+          "prompt_sha256": "31dc79da247476c2d3c08c7f60ea04c16730286a5b74db12441a0c2a0150e1b3",
+          "answer_sha256": "3949ac1596ec77106a709a618bf5adcb19b77537ce8bcbdf54ff830169cdd084",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 18,
+            "prompt_tokens": 55,
+            "total_tokens": 73,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 1.6389623900031438,
+          "check_passed": true,
+          "check": "exact integer"
+        },
+        {
+          "variant": "hosted",
+          "workload": "code",
+          "prompt_sha256": "bba5ff0241bd31e07757bb6d75be4d79ec8b7d04ead951c630ecebbb71e6f21b",
+          "answer_sha256": "46c243f38bf4af37358b4db8ad218b0417abe7688b0d11fac04025c86316aa6b",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 39,
+            "prompt_tokens": 66,
+            "total_tokens": 105,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 2.4508881670044502,
+          "check_passed": true,
+          "check": "AST-only; model code is never executed"
+        }
+      ],
+      "prompt_token_range": [
+        132,
+        155
+      ]
+    },
+    {
+      "model": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+      "metadata": {
+        "general.architecture": "qwen3moe",
+        "general.name": "Qwen3-Coder-30B-A3B-Instruct",
+        "qwen3moe.block_count": 48,
+        "qwen3moe.context_length": 262144,
+        "qwen3moe.embedding_length": 2048,
+        "qwen3moe.feed_forward_length": 5472,
+        "qwen3moe.expert_used_count": 8,
+        "qwen3moe.expert_count": 128,
+        "qwen3moe.expert_feed_forward_length": 768,
+        "general.file_type": 15
+      },
+      "context": 16384,
+      "kv_type": "f16",
+      "cpu_threads": 8,
+      "batch_threads": 16,
+      "output_tokens": 512,
+      "repetitions": 3,
+      "split": "test",
+      "runner_sha256": "40eb10ff36fdabfe2e416647a9eede4def7eb4b832f7157c8ed414b9fbb80e76",
+      "synapse_runtime_sha256": "1d87b789e90a59ca1962e27a467c8754fff74365c5e664f7a1fd1411951408d1",
+      "backend_identities": {
+        "installed": {
+          "executable_sha256": "895377f1aadaa82c7f456cfae1357db7a1195d0962d37b7cf074a8103e70fba4",
+          "libllama_sha256": "148c134928fce83224465faddde52febed9d4f4c6da8e6b159ac88448b2f9eb4",
+          "cuda_plugin_sha256": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e"
+        },
+        "candidate": {
+          "executable_sha256": "ff8d4bd8f6e4e76ae655234afc33dd9018eaf0af56cd93ead53bcf0f2b4f73e4",
+          "libllama_sha256": "967cb7db3fe090b480fa16408111d8a66dbab4410653caa890bd1beb3d818d14",
+          "cuda_plugin_sha256": "62f0609e393d6d58e5422741e09f9d1f8430c44990864ded936c3332921b6bff"
+        }
+      },
+      "standard_backend_identity": {
+        "executable_sha256": "3ac6495070ae9627825dbe706de3b580fdbedd2fbe079197b2c6c81982dbd0f9",
+        "libllama_sha256": "d49cfef496d223e74f7890cdfcb96f59ba226e92acf5ab7194a3ee0c3c99f59d"
+      },
+      "summary": [
+        {
+          "context": 16384,
+          "variant": "standard",
+          "category": "coding",
+          "samples": 3,
+          "median_wall_decode_tok_s": 69.65269226895707,
+          "median_end_to_end_tok_s": 65.33203164938365,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": true
+        },
+        {
+          "context": 16384,
+          "variant": "standard",
+          "category": "reasoning",
+          "samples": 3,
+          "median_wall_decode_tok_s": 69.40570717662362,
+          "median_end_to_end_tok_s": 64.66857665367185,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": true
+        },
+        {
+          "context": 16384,
+          "variant": "standard",
+          "category": "prose",
+          "samples": 3,
+          "median_wall_decode_tok_s": 69.8473531736176,
+          "median_end_to_end_tok_s": 65.6425937163364,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": true
+        },
+        {
+          "context": 16384,
+          "variant": "candidate-classic",
+          "category": "coding",
+          "samples": 3,
+          "median_wall_decode_tok_s": 86.86335448347538,
+          "median_end_to_end_tok_s": 81.26027096398488,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "candidate-classic",
+          "category": "reasoning",
+          "samples": 3,
+          "median_wall_decode_tok_s": 92.8428157402849,
+          "median_end_to_end_tok_s": 86.09310303047371,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "candidate-classic",
+          "category": "prose",
+          "samples": 3,
+          "median_wall_decode_tok_s": 106.05127013693696,
+          "median_end_to_end_tok_s": 98.79180442220787,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "hosted",
+          "category": "coding",
+          "samples": 3,
+          "median_wall_decode_tok_s": 116.233708257236,
+          "median_end_to_end_tok_s": 107.03687953694802,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "hosted",
+          "category": "reasoning",
+          "samples": 3,
+          "median_wall_decode_tok_s": 107.4755344092616,
+          "median_end_to_end_tok_s": 98.41089916519607,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 16384,
+          "variant": "hosted",
+          "category": "prose",
+          "samples": 3,
+          "median_wall_decode_tok_s": 136.1559802418141,
+          "median_end_to_end_tok_s": 124.02020648715097,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        }
+      ],
+      "hosted_vs_candidate_classic": [
+        {
+          "category": "coding",
+          "paired_hosted_gain_percent": [
+            31.10621900296353,
+            34.20853961908319,
+            36.23227736770076
+          ]
+        },
+        {
+          "category": "reasoning",
+          "paired_hosted_gain_percent": [
+            18.46850838030827,
+            15.270617300721657,
+            16.016941105622795
+          ]
+        },
+        {
+          "category": "prose",
+          "paired_hosted_gain_percent": [
+            30.837810039825598,
+            26.072261538104225,
+            27.39294887281909
+          ]
+        }
+      ],
+      "bounded_answer_checks": [
+        {
+          "variant": "standard",
+          "workload": "arithmetic",
+          "prompt_sha256": "31dc79da247476c2d3c08c7f60ea04c16730286a5b74db12441a0c2a0150e1b3",
+          "answer_sha256": "3949ac1596ec77106a709a618bf5adcb19b77537ce8bcbdf54ff830169cdd084",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 23,
+            "total_tokens": 27,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 0.17671037699619774,
+          "check_passed": true,
+          "check": "exact integer"
+        },
+        {
+          "variant": "standard",
+          "workload": "code",
+          "prompt_sha256": "bba5ff0241bd31e07757bb6d75be4d79ec8b7d04ead951c630ecebbb71e6f21b",
+          "answer_sha256": "46c243f38bf4af37358b4db8ad218b0417abe7688b0d11fac04025c86316aa6b",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 18,
+            "prompt_tokens": 34,
+            "total_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 0.7896323229942936,
+          "check_passed": true,
+          "check": "AST-only; model code is never executed"
+        },
+        {
+          "variant": "candidate-classic",
+          "workload": "arithmetic",
+          "prompt_sha256": "31dc79da247476c2d3c08c7f60ea04c16730286a5b74db12441a0c2a0150e1b3",
+          "answer_sha256": "3949ac1596ec77106a709a618bf5adcb19b77537ce8bcbdf54ff830169cdd084",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 23,
+            "total_tokens": 27,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 0.30705943300563376,
+          "check_passed": true,
+          "check": "exact integer"
+        },
+        {
+          "variant": "candidate-classic",
+          "workload": "code",
+          "prompt_sha256": "bba5ff0241bd31e07757bb6d75be4d79ec8b7d04ead951c630ecebbb71e6f21b",
+          "answer_sha256": "46c243f38bf4af37358b4db8ad218b0417abe7688b0d11fac04025c86316aa6b",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 18,
+            "prompt_tokens": 34,
+            "total_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 0.7203367689944571,
+          "check_passed": true,
+          "check": "AST-only; model code is never executed"
+        },
+        {
+          "variant": "hosted",
+          "workload": "arithmetic",
+          "prompt_sha256": "31dc79da247476c2d3c08c7f60ea04c16730286a5b74db12441a0c2a0150e1b3",
+          "answer_sha256": "3949ac1596ec77106a709a618bf5adcb19b77537ce8bcbdf54ff830169cdd084",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 4,
+            "prompt_tokens": 23,
+            "total_tokens": 27,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 0.2828618869971251,
+          "check_passed": true,
+          "check": "exact integer"
+        },
+        {
+          "variant": "hosted",
+          "workload": "code",
+          "prompt_sha256": "bba5ff0241bd31e07757bb6d75be4d79ec8b7d04ead951c630ecebbb71e6f21b",
+          "answer_sha256": "46c243f38bf4af37358b4db8ad218b0417abe7688b0d11fac04025c86316aa6b",
+          "finish_reason": "stop",
+          "usage": {
+            "completion_tokens": 18,
+            "prompt_tokens": 34,
+            "total_tokens": 52,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            }
+          },
+          "elapsed_seconds": 0.6894888090027962,
+          "check_passed": true,
+          "check": "AST-only; model code is never executed"
+        }
+      ],
+      "prompt_token_range": [
+        100,
+        123
+      ]
+    }
+  ],
+  "long_context": {
+    "allocated_context": 142336,
+    "original_requested_context": 142128,
+    "eight_gib_bank": {
+      "status": "failed",
+      "error": "CUDA out of memory allocating the 8187.07 MiB expert bank"
+    },
+    "four_gib_bank": {
+      "status": "loaded-and-short-prompt-tested",
+      "repetitions": 1,
+      "output_tokens": 256,
+      "summary": [
+        {
+          "context": 142336,
+          "variant": "standard",
+          "category": "coding",
+          "samples": 1,
+          "median_wall_decode_tok_s": 25.627490476128752,
+          "median_end_to_end_tok_s": 19.995832971509916,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": true
+        },
+        {
+          "context": 142336,
+          "variant": "standard",
+          "category": "reasoning",
+          "samples": 1,
+          "median_wall_decode_tok_s": 25.233327473127726,
+          "median_end_to_end_tok_s": 19.625718137928303,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": true
+        },
+        {
+          "context": 142336,
+          "variant": "standard",
+          "category": "prose",
+          "samples": 1,
+          "median_wall_decode_tok_s": 25.22791219384528,
+          "median_end_to_end_tok_s": 19.501317946740052,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": true
+        },
+        {
+          "context": 142336,
+          "variant": "classic",
+          "category": "coding",
+          "samples": 1,
+          "median_wall_decode_tok_s": 34.09236619316598,
+          "median_end_to_end_tok_s": 28.91899125480162,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 142336,
+          "variant": "classic",
+          "category": "reasoning",
+          "samples": 1,
+          "median_wall_decode_tok_s": 32.77386144225224,
+          "median_end_to_end_tok_s": 27.614631955492786,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        },
+        {
+          "context": 142336,
+          "variant": "classic",
+          "category": "prose",
+          "samples": 1,
+          "median_wall_decode_tok_s": 29.533663997930322,
+          "median_end_to_end_tok_s": 25.389420549656155,
+          "repeated_text_hashes_match": true,
+          "matches_standard_text": false
+        }
+      ]
+    },
+    "near_capacity_input": {
+      "status": "interrupted",
+      "capacity_verified": false,
+      "reason": "Standard near-capacity prefill remained unfinished after the confirmation cohort; owned trial interrupted and original model restored.",
+      "raw_report_incomplete": true,
+      "not_a_model_answer_failure": true
+    }
+  },
+  "restoration_receipts": [
+    {
+      "status": "restored",
+      "original_context": 142336,
+      "protected_files_unchanged": true,
+      "model_matches": true,
+      "context": 142336,
+      "state": "ready"
+    },
+    {
+      "status": "restored",
+      "original_context": 142336,
+      "protected_files_unchanged": true,
+      "model_matches": true,
+      "context": 142336,
+      "state": "ready"
+    },
+    {
+      "status": "restored",
+      "original_context": 142336,
+      "protected_files_unchanged": true,
+      "model_matches": true,
+      "context": 142336,
+      "state": "ready"
+    }
+  ],
+  "qualification": {
+    "rollout_approved": false,
+    "performance_target_met": false,
+    "candidate_binary_source_binding_proven": false,
+    "gpt_oss_120b_validation": "blocked: original shards point into an unavailable archive root; no alternate originals found in the approved SSD root",
+    "full_vocabulary_numerical_gate": "not established for these exact targets/placements",
+    "output_identity": "accelerated outputs differ from Standard; SC117 Standard also differs across fresh loads",
+    "broad_answer_quality": "not established by bounded arithmetic/AST checks",
+    "conclusion": "Existing hosted dispatch warrants per-model measurement, not a universal default or a 100 tok/s claim for SC117."
+  }
+}

@@ -97,6 +97,8 @@ htmlcov/
 !/benchmarks/results/handoff-critical-path-summary.json
 !/benchmarks/results/model-agnostic-architecture-summary.json
 !/benchmarks/results/optimized-verification-summary.json
+!/benchmarks/results/sc117-hosted-porting-summary.json
+!/benchmarks/results/sc117-core-decode-summary.json
 !/benchmarks/results/gpt120-prefill-real-workload-summary.json
 !/benchmarks/results/deepseek-v41-disk-feasibility.json
 !/benchmarks/results/deepseek-v41-row-stream-blocked.json

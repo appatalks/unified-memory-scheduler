@@ -24,6 +24,67 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## SC117 Core Decode At Normal Context Capacities
+
+The [reviewed aggregate](results/sc117-core-decode-summary.json) and
+[full study](../docs/research/sc117-core-decode.md) compare exact unchanged
+SC117 weights with F16 K/V and 8/16 threads. Three fresh alternating
+512-output held-out pairs per context give:
+
+| Allocated context | Engine | Bank | Coding | Reasoning | Prose |
+|---|---|---:|---:|---:|---:|
+| 96K | Standard | None | 29.39 | 29.35 | 29.38 |
+| 96K | Existing Classic hybrid | 6 GiB | 45.13 | 44.76 | 40.44 |
+| 128K | Standard | None | 26.29 | 26.49 | 27.12 |
+| 128K | Existing Classic hybrid | 4 GiB | 36.86 | 36.41 | 33.77 |
+
+All 18 workload pairs improve. An 8,233-input-token single coding pair at
+128K gives 24.73 -> 36.76 decode tok/s, but only 8.35 -> 8.95 whole-request
+tok/s. Neither result is a filled-128K or broad quality guarantee.
+8 GiB banks fail at both capacities; 6 GiB fits 96K but fails 128K compute
+allocation. Same-build Hosted screens do not improve on Classic.
+
+Private CPU/CUDA timelines establish reduced CPU expert work and actual
+overlap; the warm generation intervals have zero physical reads. Required
+CUDA waits/observer overhead are not projected as removable latency.
+The downstream retry fix retains an early allocation cause that generic
+loader-tail errors previously obscured. No new kernel, global budget/default,
+backend pin, 100 tok/s claim, or full numerical/cross-family qualification is
+promoted. Original 262K settings and protected saved files are restored.
+
+## Exact SC117 Deployment Baseline And Existing Hosted Port
+
+The [reviewed aggregate](results/sc117-hosted-porting-summary.json) and
+[protocol/results](../docs/research/sc117-hosted-porting-baseline.md) retain
+three fresh alternating loads per engine with 512-output held-out requests
+at 16K/F16 on the existing
+Ryzen 9950X / RTX 5070 Ti host. These use the modified SC117 target, not the
+original Qwen checkpoint from the older Strata study.
+
+| Target / workload | Standard | Installed Classic | Candidate Classic | Candidate Hosted |
+|---|---:|---:|---:|---:|
+| SC117 IQ3_S / coding | 27.01 | 39.48 | 40.36 | 43.16 |
+| SC117 IQ3_S / reasoning | 26.84 | 37.43 | 38.77 | 39.13 |
+| SC117 IQ3_S / prose | 27.14 | 34.20 | 34.76 | 34.83 |
+| Coder30B Q4_K_M / coding | 69.65 | Not tested | 86.86 | 116.23 |
+| Coder30B Q4_K_M / reasoning | 69.41 | Not tested | 92.84 | 107.48 |
+| Coder30B Q4_K_M / prose | 69.85 | Not tested | 106.05 | 136.16 |
+
+Rates are `(outputs - 1) / (request wall - reported prompt time)`, not
+speculative proposals. Hosted is the existing metadata-driven hosted/LFU
+variant, not a newly imported Strata runtime. Same-build gains are substantial
+for Coder, but SC117's reasoning/prose changes are within noise.
+
+At the original 142,336 allocated capacity, the 8 GiB bank failed CUDA
+allocation; a separate 4 GiB single screen loaded and generated faster than
+its matched Standard screen. Actual near-capacity input remains unverified:
+the lengthy Standard probe was interrupted and its unfinished report retained.
+All 14 bounded confirmation answer checks pass, but output hashes differ
+across engines and no full-vocabulary gate is established for these targets.
+GPT originals are unavailable. **No production rollout, default/pin change,
+or SC117 100 tok/s claim.** Original model/settings were restored and protected
+saved files were verified unchanged.
+
 ## Optimized Native Verification: Numerical Blocker Removed, No Throughput Win
 
 The [reviewed aggregate](results/optimized-verification-summary.json) and

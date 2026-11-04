@@ -392,6 +392,12 @@ if(BUILD_TESTING)
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_execution_sweep.py
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/benchmark/vrambridge-execution-sweep.py
     )
+    add_test(NAME vrambridge-synapse-baseline
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_synapse_baseline.py
+    )
+    add_test(NAME vrambridge-synapse-critical-path
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_synapse_critical_path.py
+    )
     add_test(NAME vrambridge-model-matrix
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_model_matrix.py
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/benchmark/vrambridge-model-matrix.py
