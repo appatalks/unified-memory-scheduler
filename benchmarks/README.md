@@ -34,6 +34,14 @@ allocated capacity.
 
 ## Routing Collection And Cache Replay
 
+For exact repeated-request state reuse rather than expert-cache replay, see
+the [prompt checkpoint experiment](../docs/research/prompt-reuse-checkpoints.md)
+and [owned replay runner](../tools/benchmark/vrambridge-prompt-reuse.py).
+Periodic checkpoints reduce the tested middle-edit prefill by about 48%,
+but full-vocabulary log-probability diagnostics fail in both candidate and
+unchanged controls. The patch remains separate, default-off and unpromoted.
+Raw diagnostic logs can contain tokens/text and must remain private.
+
 The optional `vrambridge-trace` collector uses the official evaluation callback
 to copy actual `ffn_moe_topk` I32 expert IDs after evaluation. It inspects the
 loaded model's original expert tensors, including biases, to record sizes and

@@ -24,6 +24,25 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## Prompt Reuse: Repeated Latency Gain, Numerical Gate Blocked
+
+The [reviewed aggregate](results/prompt-reuse-checkpoint-summary.json) and
+[full study](../docs/research/prompt-reuse-checkpoints.md) preserve 96K/F16,
+6 GiB expert bank and 8/16 threads on SC117. Three alternating 256-output
+pairs show an experimental periodic-checkpoint policy reduces middle-edit
+prefill from **42.78 to 22.28 seconds** and full-request time from **49.72 to
+29.32 seconds**. It reuses 4,096 of the 8,192 synthetic input tokens.
+Cold, exact-repeat and append timings are approximately unchanged; paired
+decode-rate differences remain within approximately 5%.
+
+The original default-off server and denser-boundary-only controls reproduce
+full recomputation. Approximately 340 MiB extra RSS is observed in the
+candidate. All timed edited output hashes match uncached controls, but
+complete-vocabulary log-probability diagnostics fail both candidate and
+unchanged controls, including fixed empty-bank attribution.
+**No numerical equivalence, production promotion or broad speed claim.**
+The installed engine/profile and original96K settings remain unchanged.
+
 ## SC117 Core Decode At Normal Context Capacities
 
 The [reviewed aggregate](results/sc117-core-decode-summary.json) and

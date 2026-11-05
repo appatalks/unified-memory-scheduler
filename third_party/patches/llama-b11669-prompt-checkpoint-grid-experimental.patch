@@ -1,0 +1,41 @@
+diff --git a/tools/server/server-context.cpp b/tools/server/server-context.cpp
+index a18b754..ed13699 100644
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -1001,6 +1001,13 @@ private:
+     common_speculative_init_result_ptr spec_init;
+ 
+     common_context_seq_rm_type ctx_tgt_seq_rm_type = COMMON_CONTEXT_SEQ_RM_TYPE_NO;
++    const bool vrambridge_checkpoint_grid = [] {
++        const char * value = std::getenv("VRAMBRIDGE_PROMPT_CHECKPOINT_GRID");
++        if (value && std::string(value) != "0" && std::string(value) != "1") {
++            throw std::invalid_argument("VRAMBRIDGE_PROMPT_CHECKPOINT_GRID must be 0 or 1");
++        }
++        return value && std::string(value) == "1";
++    }();
+     common_context_seq_rm_type ctx_dft_seq_rm_type = COMMON_CONTEXT_SEQ_RM_TYPE_NO;
+ 
+     common_speculative_ptr spec;
+@@ -1517,6 +1524,13 @@ private:
+         } else {
+             SRV_TRC("%s", "context checkpoints disabled\n");
+         }
++        if (vrambridge_checkpoint_grid) {
++            if (params_base.n_ctx_checkpoints <= 0 || params_base.checkpoint_min_step <= 0) {
++                throw std::invalid_argument("Prompt checkpoint grid requires positive checkpoint count and spacing");
++            }
++            SRV_WRN("VRAMBridge prompt checkpoint grid active: count=%d min_step=%d\n",
++                    params_base.n_ctx_checkpoints, params_base.checkpoint_min_step);
++        }
+ 
+         if (!params_base.model_alias.empty()) {
+             // backward compat: use first alias as model name
+@@ -4149,7 +4163,7 @@ private:
+                     } else {
+                         // skip ordinary mid-prompt checkpoints, unless the batch starts a user
+                         // message or we are near the end of the prompt
+-                        if (!is_user_start && !near_prompt_end) {
++                        if (!is_user_start && !near_prompt_end && !vrambridge_checkpoint_grid) {
+                             do_checkpoint = false;
+                         }
+                     }

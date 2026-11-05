@@ -398,6 +398,9 @@ if(BUILD_TESTING)
     add_test(NAME vrambridge-synapse-critical-path
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_synapse_critical_path.py
     )
+    add_test(NAME vrambridge-prompt-reuse
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_prompt_reuse.py
+    )
     add_test(NAME vrambridge-model-matrix
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_model_matrix.py
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/benchmark/vrambridge-model-matrix.py
