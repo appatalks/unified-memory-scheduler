@@ -99,6 +99,13 @@ htmlcov/
 !/benchmarks/results/optimized-verification-summary.json
 !/benchmarks/results/sc117-hosted-porting-summary.json
 !/benchmarks/results/sc117-core-decode-summary.json
+!/benchmarks/results/clover-initial-summary.json
+!/benchmarks/results/clover-router-experiment-summary.json
+!/benchmarks/results/clover-agent-concurrency-summary.json
+!/benchmarks/results/clover-synapse-integration-summary.json
+!/benchmarks/results/clover-sequence-correctness-summary.json
+!/benchmarks/results/clover-candidate-speed-summary.json
+!/benchmarks/results/clover-scheduling-family-summary.json
 !/benchmarks/results/gpt120-prefill-real-workload-summary.json
 !/benchmarks/results/deepseek-v41-disk-feasibility.json
 !/benchmarks/results/deepseek-v41-row-stream-blocked.json

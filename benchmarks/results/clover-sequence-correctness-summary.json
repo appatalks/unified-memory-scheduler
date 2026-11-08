@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-07",
+  "status": "bounded_cpu_decode_passed_gpu_and_chunking_failed",
+  "model_sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c",
+  "prototype_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+  "candidate_libllama_sha256": "e15ec9eea415bebedb43fde0feba67880a372a60a3ccf101a9f27f3673310ced",
+  "patches": [
+    {
+      "path": "third_party/patches/llama-clover-sequence-ffn-experimental.patch",
+      "sha256": "3a523f189a29a79fd9c15e5fdf781e514547c25815128afbc0ab22ca5a15427f"
+    },
+    {
+      "path": "third_party/patches/llama-clover-sequence-gdn-experimental.patch",
+      "sha256": "0b3b3bab82244d4321934278d9db78866bceeaa1ec872b01b0a4d7a1857d7964"
+    }
+  ],
+  "prefill_probe_sha256": "2cfa49a9d039c5f894e9a22b2b2e1d599d541c7086901412526ea6dab6329eb6",
+  "decode_probe_sha256": "b02ed5fc30d973ae7dbe459120b197ad8a01e0c3e640df1c23e581a823fdf47d",
+  "decode_probe_binary_sha256": "60d800d35dd343cdd2049e1d2ac8578c43bbf10235a5dd6c2b4f32f652f43e74",
+  "cpu_reference_sha256": "3c104aafd6a193df3574eed04e8509b4b20d444def814080a45260d43d79f596",
+  "gpu_reference_sha256": "dd21b6d28986c4a4fc1aa407a9e647b8e3dd17af5a39907bbb17eb2fc2effc87",
+  "protocol": {
+    "prompts": 8,
+    "prompt_token_counts": [8, 7, 9, 9, 7, 7, 9, 10],
+    "teacher_forced_decode_steps": 32,
+    "vocabulary": 248320,
+    "context_per_sequence": 16384,
+    "backend_slots": 8,
+    "generation_threads": 8,
+    "prompt_threads": 16,
+    "kv_cache": "f16",
+    "prefill": "each independent request prefetched separately",
+    "gate": {"max_absolute": 0.01, "relative_l2": 0.001},
+    "gpu_placement": "CUDA backbone and KV; routed expert tensors on CPU",
+    "gpu_model_buffer_mib": {"CPU_Mapped": 19433.31, "CUDA0": 2488.81}
+  },
+  "batched_decode_raw_logits": {
+    "cpu_original": [
+      {"sequences": 2, "passed": 0, "total": 64, "max_absolute": 8.16872144, "max_relative_l2": 2.64933088},
+      {"sequences": 4, "passed": 0, "total": 128, "max_absolute": 9.70038176, "max_relative_l2": 2.64933088},
+      {"sequences": 8, "passed": 0, "total": 256, "max_absolute": 17.4054208, "max_relative_l2": 3.94807008}
+    ],
+    "cpu_candidate": [
+      {"sequences": 2, "passed": 64, "total": 64, "max_absolute": 0.0000057220459, "max_relative_l2": 0.000000182117869},
+      {"sequences": 4, "passed": 128, "total": 128, "max_absolute": 0.0000057220459, "max_relative_l2": 0.000000207565041},
+      {"sequences": 8, "passed": 256, "total": 256, "max_absolute": 0.00000667572021, "max_relative_l2": 0.000000207565041}
+    ],
+    "cpu_ffn_only": [
+      {"sequences": 2, "passed": 6, "total": 64, "max_absolute": 10.8202338, "max_relative_l2": 1.04925503},
+      {"sequences": 4, "passed": 15, "total": 128, "max_absolute": 12.3071823, "max_relative_l2": 1.04925503},
+      {"sequences": 8, "passed": 20, "total": 256, "max_absolute": 12.3071823, "max_relative_l2": 1.96638695}
+    ],
+    "gpu_original": [
+      {"sequences": 2, "passed": 0, "total": 64, "max_absolute": 5.45608389, "max_relative_l2": 1.95081596},
+      {"sequences": 4, "passed": 0, "total": 128, "max_absolute": 7.64663076, "max_relative_l2": 1.48259573},
+      {"sequences": 8, "passed": 0, "total": 256, "max_absolute": 18.3188691, "max_relative_l2": 4.55182091}
+    ],
+    "gpu_candidate": [
+      {"sequences": 2, "passed": 0, "total": 64, "max_absolute": 0.0317403078, "max_relative_l2": 0.00416420346, "same_top": 64},
+      {"sequences": 4, "passed": 0, "total": 128, "max_absolute": 0.0317403078, "max_relative_l2": 0.00416420346, "same_top": 128},
+      {"sequences": 8, "passed": 0, "total": 256, "max_absolute": 15.6709576, "max_relative_l2": 7.3336705, "same_top": 251}
+    ]
+  },
+  "identical_prompt_prefill_cpu": {
+    "prompt_tokens": 13,
+    "original_sequence_major_passed": 0,
+    "candidate_sequence_major_passed": 14,
+    "sequence_major_total": 14,
+    "original_interleaved_passed": 0,
+    "candidate_interleaved_passed": 8,
+    "interleaved_total": 8,
+    "candidate_batch_max_absolute": 0.00000286102295,
+    "candidate_batch_max_relative_l2": 0.0000000647823522,
+    "candidate_chunked_passed": 0,
+    "chunked_total": 3,
+    "candidate_chunked_max_absolute": 2.80821228,
+    "candidate_chunked_max_relative_l2": 0.0667828206
+  },
+  "slot_and_tensor_localization": {
+    "sequential_identical_prompt": {
+      "cpu_slots_1_to_7_passing": 7,
+      "gpu_slots_1_to_7_passing": 7,
+      "slots_compared_per_placement": 7,
+      "max_absolute_logprob_error": 0.0,
+      "scope": "single active request; not concurrent state-isolation proof"
+    },
+    "cpu_identical_prompt_observed": {
+      "observer_control_raw_logits_match": true,
+      "last_matching_layer_output": 6,
+      "first_different_layer_output": 7,
+      "expert_ids_match": true,
+      "expert_down_max_absolute": 0.0000000298023224,
+      "post_bf16_expert_output_max_absolute": 0.0000610351562,
+      "scope": "one 13-token prompt; inactive graph branches excluded from the interpretation"
+    },
+    "gpu_decode_observed": {
+      "observer_control_raw_logits_match": true,
+      "layer": 3,
+      "q_projection_max_absolute": 0.00000190734863,
+      "attention_output_max_absolute": 0.0000000037252903,
+      "scope": "one target sequence at the first teacher-forced decode step"
+    }
+  },
+  "attention_ablation": {
+    "patch": "third_party/patches/llama-clover-sequence-attention-experimental.patch",
+    "patch_sha256": "1d06e7bcc7d2f986126e003548b2d5a0ba3d2e25a20af14c1f2de569cb19fdf0",
+    "combined_library_sha256": "5b1809b366b01c35f5223e29416e3509a690c4c4a980efb10350d47b2fc8334b",
+    "gpu_output_projection_only": [
+      {"sequences": 2, "passed": 0, "total": 64, "max_absolute": 0.0317403078, "max_relative_l2": 0.00416420346},
+      {"sequences": 4, "passed": 0, "total": 128, "max_absolute": 0.0317403078, "max_relative_l2": 0.00416420346},
+      {"sequences": 8, "passed": 0, "total": 256, "max_absolute": 11.5579271, "max_relative_l2": 3.87266965}
+    ],
+    "gpu_qkv_and_output_projection": [
+      {"sequences": 2, "passed": 0, "total": 64, "max_absolute": 0.0317403078, "max_relative_l2": 0.00416420346},
+      {"sequences": 4, "passed": 0, "total": 128, "max_absolute": 0.0317403078, "max_relative_l2": 0.00416420346},
+      {"sequences": 8, "passed": 0, "total": 256, "max_absolute": 12.1180241, "max_relative_l2": 4.37858277}
+    ]
+  },
+  "diverse_server_cpu": {
+    "wrapper_sha256": "18ddf7c517fcb66b7df8ae670ddf1885bcde679dde97b6fe24123c50b4a02990",
+    "numerics_runner_sha256": "62e977fa658b24f32402ceb93b42bbd4a4aa69e0929ec7819d4aeabafce12f68",
+    "candidate_libllama_sha256": "e15ec9eea415bebedb43fde0feba67880a372a60a3ccf101a9f27f3673310ced",
+    "kind": "one-position pre-sampling full-vocabulary log probabilities, not raw logits",
+    "sequential_repeat": {"passed": 8, "total": 8, "max_absolute": 0.0, "max_relative_l2": 0.0},
+    "levels": [
+      {"sequences": 2, "passed": 5, "total": 8, "max_absolute": 1.6108970642089844, "max_relative_l2": 0.029397008808959502},
+      {"sequences": 4, "passed": 4, "total": 8, "max_absolute": 1.908287525177002, "max_relative_l2": 0.022577011762856695},
+      {"sequences": 8, "passed": 1, "total": 8, "max_absolute": 2.863062858581543, "max_relative_l2": 0.05015591735797264}
+    ],
+    "note": "FFN split markers appeared; GDN markers may include graph reservation and do not establish an active GDN decode branch in this one-output prefill diagnostic."
+  },
+  "limitations": [
+    "The CPU decode result uses serial prefill, eight short synthetic prompts and 32 teacher-forced tokens; it is not end-to-end multi-agent quality qualification.",
+    "The GPU/CPU-expert experiment failed the unchanged numerical gate and is not qualified.",
+    "Chunked single-request prefill and combined-candidate concurrent server prefill fail the unchanged numerical contract.",
+    "No natural answer quality, long occupied context, cancellation, rollback, performance or cross-family qualification is established.",
+    "The experimental patches are default-off, model-specific research and must not be installed as a production backend."
+  ]
+}

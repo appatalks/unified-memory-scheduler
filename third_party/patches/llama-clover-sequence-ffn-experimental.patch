@@ -1,0 +1,101 @@
+diff --git a/src/llama-context.cpp b/src/llama-context.cpp
+index 468516aee..18a099c1a 100644
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -16,6 +16,7 @@
+ 
+ #include <cinttypes>
+ #include <cmath>
++#include <cstdlib>
+ #include <cstring>
+ #include <limits>
+ #include <stdexcept>
+@@ -2570,6 +2571,14 @@ uint32_t llama_context::graph_max_nodes(uint32_t n_tokens) const {
+         res *= 4;
+     }
+ 
++    const char * split_env = std::getenv("VRAMBRIDGE_EXPERIMENT_FFN_SPLIT");
++    if (split_env && std::strcmp(split_env, "1") == 0) {
++        if (cparams.n_seq_max > 8 || res > std::numeric_limits<uint32_t>::max() / cparams.n_seq_max) {
++            throw std::runtime_error("Experimental per-sequence FFN graph budget is unsupported");
++        }
++        res *= cparams.n_seq_max;
++    }
++
+     return res;
+ }
+ 
+diff --git a/src/models/clover-moe.cpp b/src/models/clover-moe.cpp
+index b0b0cb931..1c5ffef1f 100644
+--- a/src/models/clover-moe.cpp
++++ b/src/models/clover-moe.cpp
+@@ -3,7 +3,12 @@
+ #include "llama-memory-recurrent.h"
+ 
+ #include <algorithm>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
+ #include <numeric>
++#include <stdexcept>
++#include <vector>
+ 
+ class llm_graph_input_clover_selection : public llm_graph_input_i {
+ public:
+@@ -321,8 +326,54 @@ llama_model_clover_moe::graph::graph(const llama_model & model, const llm_graph_
+         ggml_tensor * attn_post_norm = build_norm(cur, model.layers[il].attn_post_norm, nullptr, LLM_NORM_RMS, il);
+         cb(attn_post_norm, "attn_post_norm", il);
+ 
+-        // MOE FFN layer
+-        cur = build_layer_ffn(attn_post_norm, il);
++        const char * split_env = std::getenv("VRAMBRIDGE_EXPERIMENT_FFN_SPLIT");
++        if (split_env && std::strcmp(split_env, "0") != 0 && std::strcmp(split_env, "1") != 0) {
++            throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_FFN_SPLIT must be 0 or 1");
++        }
++        const bool split_requested = split_env && std::strcmp(split_env, "1") == 0 &&
++            cparams.causal_attn && ubatch.n_seqs > 1;
++        const bool split = split_requested && attn_post_norm->ne[1] > 0;
++        if (split) {
++            if (!ubatch.equal_seqs() || ubatch.n_seqs_unq != ubatch.n_seqs ||
++                ubatch.n_tokens != ubatch.n_seq_tokens * ubatch.n_seqs) {
++                std::fprintf(stderr, "EXPERIMENT_FFN_REJECT equal=%d unique=%u seq=%u tokens=%u width=%u rows=%lld\n",
++                             ubatch.equal_seqs(), ubatch.n_seqs_unq, ubatch.n_seqs,
++                             ubatch.n_tokens, ubatch.n_seq_tokens, static_cast<long long>(attn_post_norm->ne[1]));
++                throw std::runtime_error("Experimental per-sequence FFN requires uncoupled equal-width sequences");
++            }
++            std::vector<int64_t> widths(ubatch.n_seqs, ubatch.n_seq_tokens);
++            if (attn_post_norm->ne[1] != ubatch.n_tokens) {
++                if (!ubatch.output) throw std::runtime_error("Experimental per-sequence FFN needs output ownership");
++                int64_t total = 0;
++                for (uint32_t seq = 0; seq < ubatch.n_seqs; ++seq) {
++                    widths[seq] = 0;
++                    for (uint32_t pos = 0; pos < ubatch.n_seq_tokens; ++pos) {
++                        widths[seq] += ubatch.output[seq * ubatch.n_seq_tokens + pos] != 0;
++                    }
++                    total += widths[seq];
++                }
++                if (total != attn_post_norm->ne[1])
++                    throw std::runtime_error("Experimental per-sequence FFN output ownership mismatch");
++            }
++            cur = nullptr;
++            int64_t offset = 0;
++            for (uint32_t seq = 0; seq < ubatch.n_seqs; ++seq) {
++                if (widths[seq] == 0) continue;
++                auto * input = ggml_view_2d(ctx0, attn_post_norm, attn_post_norm->ne[0], widths[seq],
++                                          attn_post_norm->nb[1], offset * attn_post_norm->nb[1]);
++                auto * output = build_layer_ffn(input, il);
++                cur = cur ? ggml_concat(ctx0, cur, output, 1) : output;
++                offset += widths[seq];
++            }
++            if (!cur) throw std::runtime_error("Experimental per-sequence FFN has no active outputs");
++            if (il == 0) std::fprintf(stderr, "EXPERIMENT_FFN_SPLIT sequences=%u rows=%lld\n",
++                                      ubatch.n_seqs, static_cast<long long>(offset));
++        } else {
++            if (split_requested && il == n_layer - 1) {
++                std::fprintf(stderr, "EXPERIMENT_FFN_EMPTY sequences=%u rows=0\n", ubatch.n_seqs);
++            }
++            cur = build_layer_ffn(attn_post_norm, il);
++        }
+         cb(cur, "ffn_out", il);
+ 
+         // Residual connection for FFN - add to the tensor from before post_attention_layernorm

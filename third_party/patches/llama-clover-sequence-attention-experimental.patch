@@ -1,0 +1,80 @@
+diff --git a/src/models/clover-moe.cpp b/src/models/clover-moe.cpp
+--- a/src/models/clover-moe.cpp
++++ b/src/models/clover-moe.cpp
+@@ -445,11 +445,41 @@ ggml_tensor * llama_model_clover_moe::graph::build_layer_attn(
+ 
+     // Order: joint QG projection, QG split, Q norm, KV projection, K norm, RoPE, attention
+ 
+-    auto [Qcur_full, Kcur, Vcur] = build_qkv(model.layers[il], cur,
++    ggml_tensor * Qcur_full = nullptr;
++    ggml_tensor * Kcur = nullptr;
++    ggml_tensor * Vcur = nullptr;
++    const char * qkv_env = std::getenv("VRAMBRIDGE_EXPERIMENT_ATTN_QKV_SPLIT");
++    if (qkv_env && std::strcmp(qkv_env, "0") != 0 && std::strcmp(qkv_env, "1") != 0) {
++        throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_ATTN_QKV_SPLIT must be 0 or 1");
++    }
++    const bool split_qkv = qkv_env && std::strcmp(qkv_env, "1") == 0 &&
++        cparams.causal_attn && ubatch.n_seqs > 1 && ubatch.n_seq_tokens == 1;
++    if (split_qkv) {
++        const char * ffn_env = std::getenv("VRAMBRIDGE_EXPERIMENT_FFN_SPLIT");
++        if (!ffn_env || std::strcmp(ffn_env, "1") != 0 || !ubatch.equal_seqs() ||
++            ubatch.n_seqs_unq != ubatch.n_seqs || ubatch.n_tokens != ubatch.n_seqs ||
++            cur->ne[1] != ubatch.n_tokens || model.layers[il].wqkv) {
++            throw std::runtime_error("Experimental QKV split requires independent sequences and separate QKV weights");
++        }
++        for (uint32_t seq = 0; seq < ubatch.n_seqs; ++seq) {
++            auto * input = ggml_view_2d(ctx0, cur, cur->ne[0], 1, cur->nb[1], seq * cur->nb[1]);
++            auto [part_q, part_k, part_v] = build_qkv(model.layers[il], input,
++                n_embd_head * 2, n_head, n_embd_head, n_head_kv, n_embd_head, n_head_kv, il, false);
++            Qcur_full = Qcur_full ? ggml_concat(ctx0, Qcur_full, part_q, 1) : part_q;
++            Kcur = Kcur ? ggml_concat(ctx0, Kcur, part_k, 1) : part_k;
++            Vcur = Vcur ? ggml_concat(ctx0, Vcur, part_v, 1) : part_v;
++        }
++        if (il == 3) std::fprintf(stderr, "EXPERIMENT_ATTN_QKV_SPLIT sequences=%u\n", ubatch.n_seqs);
++    } else {
++        auto qkv = build_qkv(model.layers[il], cur,
+             n_embd_head * 2, n_head,
+             n_embd_head,     n_head_kv,
+             n_embd_head,     n_head_kv,
+             il, false);
++        Qcur_full = qkv.q;
++        Kcur = qkv.k;
++        Vcur = qkv.v;
++    }
+     cb(Qcur_full, "Qcur_full", il);
+ 
+     ggml_tensor * Qcur = ggml_view_3d(ctx0, Qcur_full, n_embd_head, n_head, n_tokens,
+@@ -508,7 +538,32 @@ ggml_tensor * llama_model_clover_moe::graph::build_layer_attn(
+     cur = build_bf16_round(ggml_mul(ctx0, build_bf16_round(cur), gate_sigmoid));
+     cb(cur, "attn_gated", il);
+ 
+-    cur = build_lora_mm(model.layers[il].wo, cur, model.layers[il].wo_s);
++    const char * attn_env = std::getenv("VRAMBRIDGE_EXPERIMENT_ATTN_OUT_SPLIT");
++    if (attn_env && std::strcmp(attn_env, "0") != 0 && std::strcmp(attn_env, "1") != 0) {
++        throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_ATTN_OUT_SPLIT must be 0 or 1");
++    }
++    const bool split_attn = attn_env && std::strcmp(attn_env, "1") == 0 &&
++        cparams.causal_attn && ubatch.n_seqs > 1 && ubatch.n_seq_tokens == 1;
++    if (split_attn) {
++        const char * ffn_env = std::getenv("VRAMBRIDGE_EXPERIMENT_FFN_SPLIT");
++        if (!ffn_env || std::strcmp(ffn_env, "1") != 0) {
++            throw std::runtime_error("Experimental attention split requires the FFN split budget");
++        }
++        if (!ubatch.equal_seqs() || ubatch.n_seqs_unq != ubatch.n_seqs ||
++            ubatch.n_tokens != ubatch.n_seqs || cur->ne[1] != ubatch.n_tokens) {
++            throw std::runtime_error("Experimental attention split requires independent single-token sequences");
++        }
++        ggml_tensor * combined = nullptr;
++        for (uint32_t seq = 0; seq < ubatch.n_seqs; ++seq) {
++            auto * input = ggml_view_2d(ctx0, cur, cur->ne[0], 1, cur->nb[1], seq * cur->nb[1]);
++            auto * part = build_lora_mm(model.layers[il].wo, input, model.layers[il].wo_s);
++            combined = combined ? ggml_concat(ctx0, combined, part, 1) : part;
++        }
++        cur = combined;
++        if (il == 3) std::fprintf(stderr, "EXPERIMENT_ATTN_OUT_SPLIT sequences=%u\n", ubatch.n_seqs);
++    } else {
++        cur = build_lora_mm(model.layers[il].wo, cur, model.layers[il].wo_s);
++    }
+     cb(cur, "attn_output", il);
+ 
+     return cur;

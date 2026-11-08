@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-07",
+  "status": "experimental_candidate_not_qualified",
+  "model_sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c",
+  "base_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+  "patch": "third_party/patches/llama-clover-router-transfer-experimental.patch",
+  "patch_sha256": "5bed66be5c13facd54f7c387d355c7df399c772fcf65f59c0907946dfc29f74a",
+  "candidate_binary_sha256": {
+    "llama_server": "ab8b064db7e6b171f419da5e596427b89d97674f3b86b7570160f0ab8d7a7b53",
+    "libllama": "c640a6ada3ae25ff682c3197a665ec0c2f22676818f583b7be63e70a399f4180",
+    "libggml_cuda": "c9c439fd2ddc0759166d270bd442f45feb47136cc28692a5aa6c0739d92022cc"
+  },
+  "crash_diagnostic": {
+    "backend": "unmodified prototype",
+    "debug_build_note": "Separate -O3 CPU and base libraries with debug symbols; remaining libraries from prototype build.",
+    "signal": "SIGSEGV",
+    "operation": "CPU GGML_OP_CPY",
+    "source": "CPU-pinned host coreset logits",
+    "destination": "CUDA-resident router logits",
+    "observed_tensor_shape_f32": [256, 3],
+    "observed_layer_index": 22
+  },
+  "comparison": {
+    "hardware": "Ryzen 9 9950X and RTX 5070 Ti 16 GB",
+    "path": "direct loopback llama-server",
+    "context_requested": 16384,
+    "generation_threads": 8,
+    "prompt_threads": 16,
+    "placement": "automatic GPU/CPU fit",
+    "fit_margin_mib": 1024,
+    "kv_cache": "f16",
+    "corpus_sha256": "3adac0227429ef7a01327ba8c947dfdbe0591f1502a1924f7949e9cccb7f8577",
+    "sampling": "greedy, seed 42, prompt cache off, low reasoning effort",
+    "excluded_warmup_output_tokens": 64,
+    "measured_output_tokens": 128,
+    "forced_length": true,
+    "fresh_pairs": 3,
+    "pair_order": ["ar,self", "self,ar", "ar,self"],
+    "draft_max": 2,
+    "samples": [
+      {
+        "category": "coding",
+        "prompt_tokens": 104,
+        "ar_wall_decode_tokens_per_second": [66.9408, 67.0851, 67.5025],
+        "self_wall_decode_tokens_per_second": [35.0896, 35.2660, 35.8886],
+        "ar_end_to_end_tokens_per_second": [54.9705, 55.4827, 55.8024],
+        "self_end_to_end_tokens_per_second": [31.7240, 31.8766, 32.4309],
+        "accepted_per_proposed": [[77, 86], [77, 86], [77, 86]],
+        "all_paired_output_hashes_match": true
+      },
+      {
+        "category": "reasoning",
+        "prompt_tokens": 125,
+        "ar_wall_decode_tokens_per_second": [66.1889, 67.7642, 68.2464],
+        "self_wall_decode_tokens_per_second": [37.4581, 37.1422, 36.8619],
+        "ar_end_to_end_tokens_per_second": [54.3764, 55.4148, 55.8794],
+        "self_end_to_end_tokens_per_second": [33.4848, 33.2371, 32.9384],
+        "accepted_per_proposed": [[83, 84], [83, 84], [83, 84]],
+        "all_paired_output_hashes_match": false
+      },
+      {
+        "category": "prose",
+        "prompt_tokens": 102,
+        "ar_wall_decode_tokens_per_second": [66.5287, 67.2900, 67.0232],
+        "self_wall_decode_tokens_per_second": [34.2800, 33.6631, 34.6313],
+        "ar_end_to_end_tokens_per_second": [55.4480, 56.0148, 55.6912],
+        "self_end_to_end_tokens_per_second": [31.1639, 30.6280, 31.3905],
+        "accepted_per_proposed": [[71, 86], [71, 86], [71, 86]],
+        "all_paired_output_hashes_match": false
+      }
+    ]
+  },
+  "limitations": [
+    "Activation is shown by draft counters; exact logits, recurrent rollback, natural answers and broad quality remain unqualified.",
+    "Greedy output hashes differ between modes for two workloads and are not an error diagnosis.",
+    "Automatic fit can change tensor placement; individual load placement was not retained.",
+    "Forced 128-token single-user screens at allocated 16K context do not establish long-input or multi-user performance.",
+    "No batching optimization, production rollout or default is approved."
+  ]
+}

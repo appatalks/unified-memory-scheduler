@@ -1,0 +1,37 @@
+diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
+index cffd083d3..427f7edc2 100644
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -1655,6 +1655,32 @@ ggml_tensor * llm_graph_context::build_lora_mm(
+         ggml_prec_set_acc(res, GGML_PREC_BF16);
+     }
+ 
++    const char * scalar_env = std::getenv("VRAMBRIDGE_EXPERIMENT_SCALAR_PROJECTIONS");
++    if (scalar_env && std::strcmp(scalar_env, "0") != 0 && std::strcmp(scalar_env, "1") != 0) {
++        throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_SCALAR_PROJECTIONS must be 0 or 1");
++    }
++    const bool scalar = scalar_env && std::strcmp(scalar_env, "1") == 0 &&
++        cparams.causal_attn && ubatch.n_seqs > 1 && ubatch.n_seq_tokens == 1 &&
++        n_tokens == n_outputs && ggml_nrows(cur_mm) == ubatch.n_tokens;
++    if (scalar) {
++        const char * budget = std::getenv("VRAMBRIDGE_EXPERIMENT_FFN_SPLIT");
++        if (!budget || std::strcmp(budget, "1") != 0 || !ubatch.equal_seqs() ||
++            ubatch.n_seqs_unq != ubatch.n_seqs || !loras->empty() ||
++            !ggml_is_contiguous(cur_mm) || w->ne[2] != 1 || w->ne[3] != 1 ||
++            w->type == GGML_TYPE_NVFP4) {
++            throw std::runtime_error("Experimental scalar projections require independent contiguous decode and FFN budget");
++        }
++        auto * flat = ggml_reshape_2d(ctx0, cur_mm, cur_mm->ne[0], ubatch.n_tokens);
++        ggml_tensor * combined = nullptr;
++        for (uint32_t row = 0; row < ubatch.n_tokens; ++row) {
++            auto * input = ggml_view_2d(ctx0, flat, flat->ne[0], 1, flat->nb[1], row * flat->nb[1]);
++            auto * part = ggml_mul_mat(ctx0, w, input);
++            if (prec_policy) prec_policy->apply(part);
++            combined = combined ? ggml_concat(ctx0, combined, part, 1) : part;
++        }
++        res = ggml_reshape_4d(ctx0, combined, w->ne[1], cur_mm->ne[1], cur_mm->ne[2], cur_mm->ne[3]);
++    }
++
+     if (w_s) {
+         res = ggml_mul(ctx0, res, w_s);
+     }

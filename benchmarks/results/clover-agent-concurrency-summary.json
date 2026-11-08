@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-07",
+  "status": "performance_measured_numerical_gate_failed",
+  "model": "Clover-35B-A3B-Preview-Q4_K_M.gguf",
+  "model_sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c",
+  "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+  "backend_sha256": {
+    "llama_server": "62521cdb24abc16d25772e5c5b9c491bc554fe551c26a1386894502231986979",
+    "libllama": "0773fa408e9de586aa1f1ffdc27cdc699b980ca573d66acdb7dafedab1bcfcee",
+    "libggml_cpu": "7f06357f58937a4579540a4cd1fd11a9c80c20e00a2fb015e6c458f9f248594e",
+    "libggml_cuda": "846f25212c08736bead9562031a09cfd6626025bafda64876bcfd8e3df9954cd"
+  },
+  "corpus_sha256": "adca3fae9f63f6c8f7e33e1812a16b4837399c9b6cec16c8ba4f6bbfca9591b8",
+  "throughput_runner_sha256": "8cfa90af67808e98a0f15d83c8d99a9bf0fbfa658a639de6bc4fa5f1fc1d4ccf",
+  "numerical_runner_sha256": "e9a66d44cc7ee1476f79049cc2b73f761c86055056be83d9e9d1778498c69ea9",
+  "current_throughput_runner_sha256": "02d5751c6dd578b420dca8be825148c430c92d341ee383848880e74230c5028f",
+  "current_numerical_runner_sha256": "62e977fa658b24f32402ceb93b42bbd4a4aa69e0929ec7819d4aeabafce12f68",
+  "runner_change": "After the primary measurements, the scripts were hardened to create private artifacts with umask 077; their measurement logic is unchanged.",
+  "hardware": "Ryzen 9 9950X and RTX 5070 Ti 16 GB",
+  "protocol": {
+    "path": "isolated direct llama-server",
+    "backend_slots": 8,
+    "context_per_slot": 16384,
+    "requests_per_cohort": 8,
+    "distinct_synthetic_prompts": 8,
+    "output_tokens_per_request": 256,
+    "forced_length": true,
+    "generation_threads": 8,
+    "prompt_threads": 16,
+    "kv_cache": "f16",
+    "fit_target_mib": 1024,
+    "sampling": "greedy, seed 42, prompt cache off, low reasoning effort",
+    "fresh_runs_per_level": 3,
+    "order": ["1,2,4,8", "8,4,2,1", "1,2,4,8"],
+    "model_buffer_mib_per_load": {"CPU_Mapped": 11680.51, "CUDA0": 10241.61},
+    "prompt_token_counts": [79, 83, 82, 79, 84, 87, 74, 80]
+  },
+  "fixed_capacity_results": [
+    {
+      "concurrency": 1,
+      "aggregate_end_to_end_output_tok_s": [53.9875, 53.5505, 54.1131],
+      "median_agent_ttft_seconds": 17.0876,
+      "max_agent_ttft_seconds": 33.6916,
+      "median_agent_latency_seconds": 21.3369,
+      "max_agent_latency_seconds": 37.9341,
+      "median_active_agent_decode_tok_s": 59.6949,
+      "peak_gpu_mib_samples": [14118, 14118, 14118],
+      "matched_one_agent_output_hashes": 24,
+      "compared_output_hashes": 24
+    },
+    {
+      "concurrency": 2,
+      "aggregate_end_to_end_output_tok_s": [67.8875, 68.0311, 68.4815],
+      "median_agent_ttft_seconds": 11.7633,
+      "max_agent_ttft_seconds": 23.2250,
+      "median_agent_latency_seconds": 18.7210,
+      "max_agent_latency_seconds": 30.1032,
+      "median_active_agent_decode_tok_s": 37.0195,
+      "peak_gpu_mib_samples": [14102, 14102, 14102],
+      "matched_one_agent_output_hashes": 0,
+      "compared_output_hashes": 24
+    },
+    {
+      "concurrency": 4,
+      "aggregate_end_to_end_output_tok_s": [86.5531, 86.6605, 85.8014],
+      "median_agent_ttft_seconds": 6.6594,
+      "max_agent_ttft_seconds": 12.5209,
+      "median_agent_latency_seconds": 17.5900,
+      "max_agent_latency_seconds": 23.6605,
+      "median_active_agent_decode_tok_s": 23.2376,
+      "peak_gpu_mib_samples": [14094, 14094, 14094],
+      "matched_one_agent_output_hashes": 0,
+      "compared_output_hashes": 24
+    },
+    {
+      "concurrency": 8,
+      "aggregate_end_to_end_output_tok_s": [105.6347, 104.9284, 105.8923],
+      "median_agent_ttft_seconds": 1.6972,
+      "max_agent_ttft_seconds": 1.6987,
+      "median_agent_latency_seconds": 19.3859,
+      "max_agent_latency_seconds": 19.3862,
+      "median_active_agent_decode_tok_s": 14.4288,
+      "peak_gpu_mib_samples": [14094, 14094, 14094],
+      "matched_one_agent_output_hashes": 0,
+      "compared_output_hashes": 24
+    }
+  ],
+  "dedicated_one_slot_control": {
+    "context_per_slot": 16384,
+    "aggregate_end_to_end_output_tok_s": [61.1057, 61.2966, 61.1900],
+    "median_agent_latency_seconds": 18.8078,
+    "median_active_agent_decode_tok_s": 67.0179,
+    "model_buffer_mib_per_load": {"CPU_Mapped": 8956.51, "CUDA0": 12965.61},
+    "peak_gpu_mib_samples": [14160, 14160, 14160]
+  },
+  "first_token_logprob_diagnostics": {
+    "endpoint": "raw /completion",
+    "vocabulary": 248320,
+    "position_count_per_request": 1,
+    "threshold_max_absolute": 0.01,
+    "threshold_relative_l2": 0.001,
+    "gpu": {
+      "model_buffer_mib": {"CPU_Mapped": 12112.51, "CUDA0": 9809.61},
+      "sequential_repeat": {"passes": 8, "total": 8, "max_absolute": 0.0, "max_relative_l2": 0.0},
+      "2": {"passes": 6, "total": 8, "same_first_token": 8, "max_absolute": 2.070398, "max_relative_l2": 0.036273},
+      "4": {"passes": 1, "total": 8, "same_first_token": 7, "max_absolute": 2.651439, "max_relative_l2": 0.021174},
+      "8": {"passes": 0, "total": 8, "same_first_token": 7, "max_absolute": 2.481780, "max_relative_l2": 0.029691}
+    },
+    "cpu": {
+      "sequential_repeat": {"passes": 8, "total": 8, "max_absolute": 0.0, "max_relative_l2": 0.0},
+      "8": {"passes": 0, "total": 8, "same_first_token": 7, "max_absolute": 2.865539, "max_relative_l2": 0.040122}
+    }
+  },
+  "privacy_hardened_confirmation": {
+    "fresh_runs_per_level": 3,
+    "model_buffer_variants_mib": [
+      {"CPU_Mapped": 11820.37, "CUDA0": 10101.75},
+      {"CPU_Mapped": 11680.51, "CUDA0": 10241.61}
+    ],
+    "placement_note": "Automatic fit varied between two model-buffer totals, so this is not a fixed-placement comparison.",
+    "levels": [
+      {"concurrency": 1, "aggregate_end_to_end_output_tok_s": [53.3969, 54.0456, 53.4453], "median_active_agent_decode_tok_s": 59.2021, "matched_one_agent_output_hashes": 24, "compared_output_hashes": 24},
+      {"concurrency": 2, "aggregate_end_to_end_output_tok_s": [67.6762, 67.2475, 67.9848], "median_active_agent_decode_tok_s": 36.8169, "matched_one_agent_output_hashes": 1, "compared_output_hashes": 24},
+      {"concurrency": 4, "aggregate_end_to_end_output_tok_s": [83.7606, 86.1764, 85.7421], "median_active_agent_decode_tok_s": 23.0335, "matched_one_agent_output_hashes": 0, "compared_output_hashes": 24},
+      {"concurrency": 8, "aggregate_end_to_end_output_tok_s": [106.1615, 102.2772, 104.0665], "median_active_agent_decode_tok_s": 14.0964, "matched_one_agent_output_hashes": 0, "compared_output_hashes": 24}
+    ],
+    "one_slot_aggregate_output_tok_s": [61.2066, 61.3131, 61.3523],
+    "gpu_logprob_checks": {
+      "sequential_repeat": {"passes": 8, "total": 8, "max_absolute": 0.0, "max_relative_l2": 0.0},
+      "2": {"passes": 0, "total": 8, "same_first_token": 8, "max_absolute": 2.757711, "max_relative_l2": 0.032395},
+      "4": {"passes": 1, "total": 8, "same_first_token": 8, "max_absolute": 2.747157, "max_relative_l2": 0.022749},
+      "8": {"passes": 0, "total": 8, "same_first_token": 8, "max_absolute": 2.602598, "max_relative_l2": 0.040867}
+    },
+    "cpu_logprob_checks": {
+      "sequential_repeat": {"passes": 8, "total": 8, "max_absolute": 0.0, "max_relative_l2": 0.0},
+      "8": {"passes": 0, "total": 8, "same_first_token": 8, "max_absolute": 2.865539, "max_relative_l2": 0.040122}
+    }
+  },
+  "limitations": [
+    "The direct-server experiment is not the serialized Synapse app or its hybrid backend.",
+    "Eight simultaneous arrivals are queued by the harness when active-client concurrency is smaller.",
+    "Aggregate output rate includes prefill, queueing and response overhead; latency and time to first text include client queueing.",
+    "Reserved context is not occupied context; prompts are short and generated lengths are forced.",
+    "Placement of individual tensors was not captured; model buffer totals matched across the fixed-capacity performance runs.",
+    "One-second GPU sampling may miss transient peaks or short-lived competing processes.",
+    "Log probabilities are not raw logits; hash differences and numerical deviations do not by themselves establish incorrect answers.",
+    "The prototype remains unqualified and no production concurrency change is approved."
+  ]
+}

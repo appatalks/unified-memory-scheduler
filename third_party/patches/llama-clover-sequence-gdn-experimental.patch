@@ -1,0 +1,37 @@
+diff --git a/src/models/clover-moe.cpp b/src/models/clover-moe.cpp
+--- a/src/models/clover-moe.cpp
++++ b/src/models/clover-moe.cpp
+@@ -536,8 +536,31 @@ ggml_tensor * llama_model_clover_moe::graph::build_layer_attn_linear(
+ 
+     ggml_tensor * qkv_mixed = qkvz.first;
+     ggml_tensor * z         = qkvz.second;
+-    ggml_tensor * beta      = build_lora_mm(model.layers[il].ssm_beta, cur, model.layers[il].ssm_beta_s);
+-    ggml_tensor * alpha     = build_lora_mm(model.layers[il].ssm_alpha, cur, model.layers[il].ssm_alpha_s);
++    ggml_tensor * beta      = nullptr;
++    ggml_tensor * alpha     = nullptr;
++    const char * gdn_env = std::getenv("VRAMBRIDGE_EXPERIMENT_GDN_SPLIT");
++    if (gdn_env && std::strcmp(gdn_env, "0") != 0 && std::strcmp(gdn_env, "1") != 0) {
++        throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_GDN_SPLIT must be 0 or 1");
++    }
++    const bool split_gdn = gdn_env && std::strcmp(gdn_env, "1") == 0 &&
++        cparams.causal_attn && ubatch.n_seqs > 1 && ubatch.n_seq_tokens == 1;
++    if (split_gdn) {
++        if (!ubatch.equal_seqs() || ubatch.n_seqs_unq != ubatch.n_seqs ||
++            ubatch.n_tokens != ubatch.n_seqs || cur->ne[1] != ubatch.n_tokens) {
++            throw std::runtime_error("Experimental GDN split requires independent single-token sequences");
++        }
++        for (uint32_t seq = 0; seq < ubatch.n_seqs; ++seq) {
++            auto * input = ggml_view_2d(ctx0, cur, cur->ne[0], 1, cur->nb[1], seq * cur->nb[1]);
++            auto * part_b = build_lora_mm(model.layers[il].ssm_beta, input, model.layers[il].ssm_beta_s);
++            auto * part_a = build_lora_mm(model.layers[il].ssm_alpha, input, model.layers[il].ssm_alpha_s);
++            beta = beta ? ggml_concat(ctx0, beta, part_b, 1) : part_b;
++            alpha = alpha ? ggml_concat(ctx0, alpha, part_a, 1) : part_a;
++        }
++        if (il == 0) std::fprintf(stderr, "EXPERIMENT_GDN_SPLIT sequences=%u\n", ubatch.n_seqs);
++    } else {
++        beta  = build_lora_mm(model.layers[il].ssm_beta, cur, model.layers[il].ssm_beta_s);
++        alpha = build_lora_mm(model.layers[il].ssm_alpha, cur, model.layers[il].ssm_alpha_s);
++    }
+     beta = ggml_reshape_4d(ctx0, beta, 1, num_v_heads, n_seq_tokens, n_seqs);
+     cb(beta, "beta", il);
+ 

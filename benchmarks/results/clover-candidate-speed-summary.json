@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-07",
+  "status": "bounded_decode_improvement_not_production_qualified",
+  "model_sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c",
+  "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+  "cpu_candidate_libllama_sha256": "e15ec9eea415bebedb43fde0feba67880a372a60a3ccf101a9f27f3673310ced",
+  "gpu_candidate_libllama_sha256": "45e7ac3591fad71dd5635aa44da39d68f97ebf6cf6a32fa1dd69ffe1b93476fe",
+  "gpu_patch": "third_party/patches/llama-clover-scalar-projections-experimental.patch",
+  "gpu_patch_sha256": "0f6b85ef71e4422f64069f496d861b996690fa74ace4df0db68285a9e7a636da",
+  "speed_probe_sha256": "ceba94fd9ce05b97be95b51964ed09aad1238f7ee6b9d1f4b6910759f2304b00",
+  "speed_probe_binary_sha256": "ace2e672ad900120fa6ec8f777e611b0c0d8a884beffdd1a17b2dec621051ff6",
+  "session_runner_sha256": "d78d6707576ace31f680824a6a38d9b86caf0cb7b7a719db74c611401c876730",
+  "protocol": {
+    "hardware": "Ryzen 9 9950X and RTX 5070 Ti 16 GB",
+    "context_per_sequence": 16384,
+    "sequence_capacity": 8,
+    "requests": 8,
+    "prompt_tokens": [8, 7, 9, 9, 7, 7, 9, 10],
+    "generation_threads": 8,
+    "batch_threads": 16,
+    "kv_cache": "f16",
+    "sampling": "greedy argmax; fixed 64-token outputs including possible output after EOS",
+    "prefill": "each prompt evaluated separately, one excluded prefill warmup",
+    "fresh_runs_per_arm": 3,
+    "arm_order": [
+      "original-1,original-8,candidate-8",
+      "candidate-8,original-8,original-1",
+      "original-1,original-8,candidate-8"
+    ],
+    "decode_rate": "8 * 63 evaluated generation tokens / accumulated decode wall seconds",
+    "whole_cohort_rate": "8 * 64 output tokens / cohort wall seconds including serialized prefill and state clearing",
+    "gpu_placement": "GPU backbone and KV; every routed expert tensor on CPU; not auto-fit hybrid-cache placement"
+  },
+  "cpu": {
+    "original_serial": {
+      "aggregate_decode_tok_s": [11.1089187, 11.5212181, 11.5939276],
+      "aggregate_end_to_end_tok_s": [10.6120829, 10.9820429, 11.0554111]
+    },
+    "original_batched_unqualified": {
+      "aggregate_decode_tok_s": [28.3039494, 28.6599542, 28.120352],
+      "aggregate_end_to_end_tok_s": [26.2967002, 26.6097146, 26.0975898],
+      "complete_output_sequences_matching_serial": 6,
+      "compared_output_sequences": 24
+    },
+    "candidate_batched": {
+      "aggregate_decode_tok_s": [26.6148709, 26.7632437, 26.9724558],
+      "aggregate_end_to_end_tok_s": [24.8570142, 24.9580613, 25.1235528],
+      "complete_output_sequences_matching_serial": 24,
+      "compared_output_sequences": 24
+    }
+  },
+  "gpu": {
+    "original_serial": {
+      "aggregate_decode_tok_s": [42.9508030, 44.0368191, 43.6812548],
+      "aggregate_end_to_end_tok_s": [40.4252946, 41.3781840, 41.1256240]
+    },
+    "original_batched_unqualified": {
+      "aggregate_decode_tok_s": [75.3778365, 75.2071771, 73.3303024],
+      "aggregate_end_to_end_tok_s": [67.4418446, 66.9413927, 65.7839872],
+      "complete_output_sequences_matching_serial": 6,
+      "compared_output_sequences": 24
+    },
+    "candidate_batched": {
+      "aggregate_decode_tok_s": [55.0737831, 54.7693857, 54.7140351],
+      "aggregate_end_to_end_tok_s": [50.8884403, 50.6694164, 50.6045045],
+      "complete_output_sequences_matching_serial": 24,
+      "compared_output_sequences": 24
+    }
+  },
+  "gpu_candidate_numerical_check": {
+    "reference": "same-placement original single-sequence raw logits; distinct from CPU reference",
+    "teacher_forced_steps": 32,
+    "vocabulary": 248320,
+    "results": [
+      {"sequences": 2, "passed": 64, "total": 64, "max_absolute": 0.0, "max_relative_l2": 0.0},
+      {"sequences": 4, "passed": 128, "total": 128, "max_absolute": 0.0, "max_relative_l2": 0.0},
+      {"sequences": 8, "passed": 256, "total": 256, "max_absolute": 0.0, "max_relative_l2": 0.0}
+    ],
+    "serial_prefill_checks": {"passed": 14, "total": 14, "max_absolute": 0.0},
+    "disabled_patch": "all 463 metric records match the prior GPU candidate"
+  },
+  "limitations": [
+    "These are bounded direct-library decode tests, not HTTP multi-agent throughput, natural-answer quality or general model qualification.",
+    "The tested corrected path uses serialized prefill; concurrent and chunked prefill remain unqualified.",
+    "Corrected CPU/GPU batch speed is lower than the numerically unqualified batch implementation, but higher than serialized requests.",
+    "The candidate is not the installed Synapse hybrid backend; no backend pin, installed profile or saved state was changed.",
+    "An earlier exploratory speed run did not bind an immutable candidate library and was not used for these results.",
+    "Long occupied context, state rollback, cancellation and cross-family qualification remain incomplete."
+  ]
+}

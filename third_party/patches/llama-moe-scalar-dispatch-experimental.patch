@@ -1,0 +1,97 @@
+diff --git a/src/llama-graph.cpp b/src/llama-graph.cpp
+index cffd083d3..3981fddb2 100644
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -1655,6 +1655,47 @@ ggml_tensor * llm_graph_context::build_lora_mm(
+         ggml_prec_set_acc(res, GGML_PREC_BF16);
+     }
+ 
++    const char * scalar_env = std::getenv("VRAMBRIDGE_EXPERIMENT_SCALAR_PROJECTIONS");
++    if (scalar_env && std::strcmp(scalar_env, "0") != 0 && std::strcmp(scalar_env, "1") != 0) {
++        throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_SCALAR_PROJECTIONS must be 0 or 1");
++    }
++    const bool scalar = scalar_env && std::strcmp(scalar_env, "1") == 0 &&
++        cparams.causal_attn && ubatch.n_seqs_unq > 1 && ubatch.n_tokens == ubatch.n_seqs_unq &&
++        n_tokens == n_outputs && ggml_nrows(cur_mm) == ubatch.n_tokens;
++    if (scalar_env && std::strcmp(scalar_env, "1") == 0 && std::strcmp(w->name, "output.weight") == 0) {
++        LLAMA_LOG_INFO("EXPERIMENT_PROJECTION_ROLE scalar=%d causal=%d tokens=%u outputs=%u unique=%u rows=%lld\n",
++                       scalar, cparams.causal_attn, ubatch.n_tokens, n_outputs, ubatch.n_seqs_unq,
++                       static_cast<long long>(ggml_nrows(cur_mm)));
++    }
++    if (scalar) {
++        const char * budget = std::getenv("VRAMBRIDGE_EXPERIMENT_FFN_SPLIT");
++        if (!budget || std::strcmp(budget, "1") != 0 || !loras->empty() ||
++            !ubatch.n_seq_id || !ubatch.seq_id ||
++            !ggml_is_contiguous(cur_mm) || w->ne[2] != 1 || w->ne[3] != 1 ||
++            w->type == GGML_TYPE_NVFP4) {
++            throw std::runtime_error("Experimental scalar projections require independent contiguous decode and FFN budget");
++        }
++        for (uint32_t row = 0; row < ubatch.n_tokens; ++row) {
++            if (ubatch.n_seq_id[row] != 1 || !ubatch.seq_id[row]) {
++                throw std::runtime_error("Experimental scalar projections reject coupled sequence rows");
++            }
++            for (uint32_t previous = 0; previous < row; ++previous) {
++                if (ubatch.seq_id[row][0] == ubatch.seq_id[previous][0]) {
++                    throw std::runtime_error("Experimental scalar projections require one token per sequence");
++                }
++            }
++        }
++        auto * flat = ggml_reshape_2d(ctx0, cur_mm, cur_mm->ne[0], ubatch.n_tokens);
++        ggml_tensor * combined = nullptr;
++        for (uint32_t row = 0; row < ubatch.n_tokens; ++row) {
++            auto * input = ggml_view_2d(ctx0, flat, flat->ne[0], 1, flat->nb[1], row * flat->nb[1]);
++            auto * part = ggml_mul_mat(ctx0, w, input);
++            if (prec_policy) prec_policy->apply(part);
++            combined = combined ? ggml_concat(ctx0, combined, part, 1) : part;
++        }
++        res = ggml_reshape_4d(ctx0, combined, w->ne[1], cur_mm->ne[1], cur_mm->ne[2], cur_mm->ne[3]);
++    }
++
+     if (w_s) {
+         res = ggml_mul(ctx0, res, w_s);
+     }
+@@ -1730,6 +1771,44 @@ ggml_tensor * llm_graph_context::build_lora_mm_id(
+         ggml_mul_mat_id(ctx0, w, cur_mm, ids) :
+         ggml_mul_mat_id(ctx0, moe_cache->get_experts(w), cur_mm, slots);
+ 
++    const char * expert_env = std::getenv("VRAMBRIDGE_EXPERIMENT_SCALAR_EXPERTS");
++    if (expert_env && std::strcmp(expert_env, "0") != 0 && std::strcmp(expert_env, "1") != 0) {
++        throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_SCALAR_EXPERTS must be 0 or 1");
++    }
++    const bool scalar_experts = expert_env && std::strcmp(expert_env, "1") == 0 &&
++        cparams.causal_attn && ubatch.n_seqs_unq > 1 && ubatch.n_tokens == ubatch.n_seqs_unq &&
++        n_tokens == n_outputs && cur_mm->ne[2] == ubatch.n_tokens;
++    if (scalar_experts) {
++        const char * budget = std::getenv("VRAMBRIDGE_EXPERIMENT_FFN_SPLIT");
++        if (!budget || std::strcmp(budget, "1") != 0 || slots || !loras->empty() ||
++            !ubatch.n_seq_id || !ubatch.seq_id ||
++            cur_mm->ne[3] != 1 || ids->ne[1] != ubatch.n_tokens ||
++            ids->ne[2] != 1 || ids->ne[3] != 1) {
++            throw std::runtime_error("Experimental scalar experts require independent uncached decode and FFN budget");
++        }
++        for (uint32_t row = 0; row < ubatch.n_tokens; ++row) {
++            if (ubatch.n_seq_id[row] != 1 || !ubatch.seq_id[row]) {
++                throw std::runtime_error("Experimental scalar experts reject coupled sequence rows");
++            }
++            for (uint32_t previous = 0; previous < row; ++previous) {
++                if (ubatch.seq_id[row][0] == ubatch.seq_id[previous][0]) {
++                    throw std::runtime_error("Experimental scalar experts require one token per sequence");
++                }
++            }
++        }
++        ggml_tensor * combined = nullptr;
++        for (uint32_t row = 0; row < ubatch.n_tokens; ++row) {
++            auto * input = ggml_view_3d(ctx0, cur_mm, cur_mm->ne[0], cur_mm->ne[1], 1,
++                                      cur_mm->nb[1], cur_mm->nb[2], row * cur_mm->nb[2]);
++            auto * selection = ggml_view_2d(ctx0, ids, ids->ne[0], 1, ids->nb[1], row * ids->nb[1]);
++            auto * part = ggml_mul_mat_id(ctx0, w, input, selection);
++            if (prec_policy) prec_policy->apply(part);
++            if (w->type == GGML_TYPE_NVFP4) ggml_prec_set_acc(part, GGML_PREC_BF16);
++            combined = combined ? ggml_concat(ctx0, combined, part, 2) : part;
++        }
++        res = combined;
++    }
++
+     if (prec_policy) {
+         prec_policy->apply(res);
+     }

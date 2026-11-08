@@ -1,0 +1,127 @@
+diff --git a/tools/server/server-context.cpp b/tools/server/server-context.cpp
+index 610cca522..7fd344b5f 100644
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -1,4 +1,5 @@
+ #include "server-context.h"
++#include "src/llama-memory-hybrid.h"
+ #include <atomic>
+ #include <thread>
+ #include "base64.hpp"
+@@ -529,6 +530,38 @@ struct server_slot {
+     bool can_batch_with(server_slot & other_slot) const {
+         GGML_ASSERT(task);
+ 
++        const char * prefill_env = std::getenv("VRAMBRIDGE_EXPERIMENT_SERIAL_PREFILL");
++        if (prefill_env && std::strcmp(prefill_env, "1") == 0 &&
++            state == SLOT_STATE_GENERATING && other_slot.state == SLOT_STATE_GENERATING) {
++            // This pinned KV implementation pads active attention rows to multiples of 256.
++            const auto bucket = [](const server_slot & slot) {
++                auto * memory = llama_get_memory(slot.ctx_tgt);
++                auto * kv = dynamic_cast<llama_kv_cache *>(memory);
++                if (auto * hybrid = dynamic_cast<llama_memory_hybrid *>(memory)) kv = hybrid->get_mem_attn();
++                if (!kv) throw std::runtime_error("Experimental scheduling requires the pinned KV implementation");
++                auto token = slot.sampled;
++                auto position = slot.prompt.tokens.pos_next();
++                auto id = slot.id;
++                llama_seq_id * ids[] = {&id};
++                int32_t n_ids = 1;
++                llama_ubatch one{};
++                one.b_equal_seqs = 1;
++                one.n_tokens = one.n_seq_tokens = one.n_seqs = one.n_seqs_unq = 1;
++                one.token = &token;
++                one.pos = &position;
++                one.n_seq_id = &n_ids;
++                one.seq_id = ids;
++                one.seq_id_unq = &id;
++                const auto allocation = kv->find_slot(one, false);
++                if (allocation.empty() || allocation.idxs.size() != 1 || allocation.idxs[0].size() != 1) {
++                    throw std::runtime_error("Experimental scheduling could not predict a single-token KV allocation");
++                }
++                const auto used = std::max(kv->get_cells(id).used_max_p1(), allocation.idxs[0][0] + 1);
++                return std::min(kv->get_size(), std::max(256u, ((used + 255) / 256) * 256));
++            };
++            if (bucket(*this) != bucket(other_slot)) return false;
++        }
++
+         // a joint decision head reads the whole batch
+         if (!task->decision.order.empty() || !other_slot.task->decision.order.empty()) {
+             return false;
+@@ -1102,6 +1135,7 @@ private:
+ 
+     // slots / clients
+     std::vector<server_slot> slots;
++    size_t experimental_decode_cursor = 0;
+ 
+     int trace = 0;        // env: LLAMA_TRACE
+     int slots_debug = 0;  // env: LLAMA_SERVER_SLOTS_DEBUG
+@@ -3831,14 +3865,51 @@ private:
+         // start populating the batch for this iteration
+         batch.clear();
+ 
++        server_slot * prefill_owner = nullptr;
++        const char * prefill_env = std::getenv("VRAMBRIDGE_EXPERIMENT_SERIAL_PREFILL");
++        if (prefill_env && std::strcmp(prefill_env, "0") != 0 && std::strcmp(prefill_env, "1") != 0) {
++            throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_SERIAL_PREFILL must be 0 or 1");
++        }
++        const bool isolated_prefill = prefill_env && std::strcmp(prefill_env, "1") == 0;
++        if (isolated_prefill) {
++            if (!llama_get_causal_attn(ctx_tgt) ||
++                std::any_of(params_base.speculative.types.begin(), params_base.speculative.types.end(),
++                            [](auto type) { return type != COMMON_SPECULATIVE_TYPE_NONE; })) {
++                throw std::runtime_error("Experimental serial prefill requires causal, non-speculative execution");
++            }
++            for (auto & candidate : slots) {
++                if (candidate.state != SLOT_STATE_STARTED && candidate.state != SLOT_STATE_PROCESSING_PROMPT) continue;
++                if (!candidate.task || candidate.task->type != SERVER_TASK_TYPE_COMPLETION ||
++                    candidate.task->tokens.has_mtmd || !candidate.lora.empty()) {
++                    throw std::runtime_error("Experimental serial prefill supports text completions without adapters only");
++                }
++                const bool continuing = candidate.state == SLOT_STATE_PROCESSING_PROMPT;
++                const bool owner_continuing = prefill_owner && prefill_owner->state == SLOT_STATE_PROCESSING_PROMPT;
++                if (!prefill_owner || (continuing && !owner_continuing) ||
++                    (continuing == owner_continuing && candidate.task->id < prefill_owner->task->id)) {
++                    prefill_owner = &candidate;
++                }
++            }
++        }
++
+         // track if given slot can be batched with slots already in the batch
+         auto & slot_batched = batch.slot_batched;
++        if (isolated_prefill && !prefill_owner) {
++            for (size_t offset = 0; offset < slots.size(); ++offset) {
++                auto & candidate = slots[(experimental_decode_cursor + offset) % slots.size()];
++                if (candidate.state != SLOT_STATE_GENERATING) continue;
++                slot_batched = &candidate;
++                experimental_decode_cursor = (candidate.id + 1) % slots.size();
++                break;
++            }
++        }
+ 
+         std::vector<server_slot *> generating;
+         std::vector<server_slot *> drafting;
+ 
+         // determine which slots are generating and drafting
+         iterate(slots, [&](server_slot & slot) {
++            if (prefill_owner) return;
+             if (slot.state != SLOT_STATE_GENERATING || slot.task->type == SERVER_TASK_TYPE_TTS || slot.task->type == SERVER_TASK_TYPE_REALTIME) {
+                 return;
+             }
+@@ -3981,6 +4052,7 @@ private:
+             bool add_ok = true; // false means the batch is full, skip remaining slots
+ 
+             iterate(slots, [&](server_slot & slot) {
++                if (prefill_owner && &slot != prefill_owner) return;
+                 if (!add_ok || batch.size() >= n_batch) {
+                     return; // batch is full, skip remaining slots
+                 }
+@@ -4534,6 +4606,9 @@ private:
+ 
+                     // the number of tokens added to the batch for the current slot
+                     const auto n_tokens_cur = batch.size() - n_tokens_prev;
++                    if (isolated_prefill && n_tokens_cur > 0) {
++                        SRV_INF("EXPERIMENT_SERIAL_PREFILL slot=%d tokens=%d\n", slot.id, static_cast<int>(n_tokens_cur));
++                    }
+ 
+                     const auto n_tokens_start = slot.prompt.n_tokens() - n_tokens_cur;
+ 

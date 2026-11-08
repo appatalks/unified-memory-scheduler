@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-07",
+  "status": "serialized_integration_passed_parallel_rollout_blocked",
+  "synapse_commit": "4f6fc050364ba989a8f14edbc6d3cf1b726b70d1",
+  "synapse_app_sha256": "003f1b10bd07775c49cb5c692e987978bdaeed352a4002108ed09039f73c70f3",
+  "prototype_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+  "backend_sha256": "62521cdb24abc16d25772e5c5b9c491bc554fe551c26a1386894502231986979",
+  "model_sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c",
+  "corpus_sha256": "adca3fae9f63f6c8f7e33e1812a16b4837399c9b6cec16c8ba4f6bbfca9591b8",
+  "isolated_app_smoke": {
+    "harness_sha256": "a5096e924e8f6823fffbd22e0f8f25c80f721a70047ee3f1bf6bd99d3ace3a97",
+    "execution_mode": "standard",
+    "backend_slots": 1,
+    "context_per_slot": 16384,
+    "client_requests": 2,
+    "peak_queued": 1,
+    "completed_streams": 2,
+    "forced_output_tokens_per_stream": 128,
+    "cohort_wall_seconds": 4.6667,
+    "prompt_token_counts": [79, 83],
+    "client_ttft_seconds": [2.792, 0.436],
+    "client_elapsed_seconds": [4.660, 2.312],
+    "prompt_cache_tokens": [0, 0],
+    "runtime_configuration": "temporary XDG config; no installed profile or backend modification"
+  },
+  "microbatch_one_diagnostic": {
+    "harness_sha256": "ac4a60b135ed2e70ed2fa03e657b517dcb6b7a8154067a40d58ea24cd72f3b4d",
+    "endpoint": "raw /completion",
+    "vocabulary": 248320,
+    "backend_slots": 8,
+    "context_per_slot": 16384,
+    "actual_microbatch_size": 1,
+    "model_buffer_mib": {"CPU_Mapped": 11182.51, "CUDA0": 10739.61},
+    "sequential_repeat": {"passes": 8, "total": 8, "max_absolute": 0.0, "max_relative_l2": 0.0},
+    "2": {"passes": 0, "total": 8, "same_first_token": 8, "max_absolute": 2.594154, "max_relative_l2": 0.034500},
+    "4": {"passes": 0, "total": 8, "same_first_token": 8, "max_absolute": 2.021574, "max_relative_l2": 0.037199}
+  },
+  "limitations": [
+    "The Synapse smoke verifies existing serialized streaming, not simultaneous backend execution or model quality.",
+    "The real-model smoke uses an unqualified prototype in an isolated runtime, not the installed Synapse backend.",
+    "The microbatch probe compares one position of full-vocabulary pre-sampling log probabilities, not raw logits or broad answer quality.",
+    "Microbatch size one did not remove the observed discrepancy; it does not identify its cause.",
+    "No concurrency implementation, default, saved state or backend pin was changed."
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-07",
+  "model": {
+    "filename": "Clover-35B-A3B-Preview-Q4_K_M.gguf",
+    "revision": "32e22a02b885e173177b7ce7661ad13448b4f89e",
+    "size_bytes": 22998009248,
+    "sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c"
+  },
+  "prototype": {
+    "source_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+    "server_sha256": "62521cdb24abc16d25772e5c5b9c491bc554fe551c26a1386894502231986979",
+    "libllama_sha256": "0773fa408e9de586aa1f1ffdc27cdc699b980ca573d66acdb7dafedab1bcfcee",
+    "cuda_sha256": "846f25212c08736bead9562031a09cfd6626025bafda64876bcfd8e3df9954cd"
+  },
+  "merged_upstream_load": {
+    "source_commit": "e4b6c8ca6a6e8da70248da30709e897e7cc8615e",
+    "status": "failed",
+    "error": "Missing clover_moe.expert_shared_count; read-time override then failed with 853 file tensors and 733 graph tensors."
+  },
+  "autoregressive_baseline": {
+    "runner": "tools/benchmark/vrambridge-synapse-baseline.py",
+    "corpus_sha256": "3adac0227429ef7a01327ba8c947dfdbe0591f1502a1924f7949e9cccb7f8577",
+    "context_requested": 16384,
+    "generation_threads": 8,
+    "prompt_threads": 16,
+    "kv_cache": "f16",
+    "placement": "automatic GPU/CPU",
+    "output_tokens": 512,
+    "forced_length": true,
+    "fresh_loads": 3,
+    "median_wall_decode_tokens_per_second": {
+      "coding": 65.52483549108324,
+      "reasoning": 65.48952472181605,
+      "prose": 65.92342477532452
+    },
+    "median_end_to_end_tokens_per_second": {
+      "coding": 62.213782040247956,
+      "reasoning": 62.06395676950056,
+      "prose": 62.66082326341125
+    },
+    "prompt_tokens": {
+      "coding": 104,
+      "reasoning": 125,
+      "prose": 102
+    },
+    "repeated_output_hashes_all_match": false,
+    "bounded_answer_checks_passed": 2,
+    "bounded_answer_checks_total": 2,
+    "placement_diagnostic": {
+      "separate_load": true,
+      "actual_context": 16384,
+      "offloaded_layers": "41/41",
+      "cuda_model_mib": 12825.75,
+      "cpu_mapped_tensors_present": true
+    }
+  },
+  "self_speculation": {
+    "draft_max": 2,
+    "gpu_auto_fit": "failed: server exited with SIGSEGV during first request",
+    "gpu_cpu_experts": "failed: server exited with SIGSEGV during first request",
+    "cpu_pair": {
+      "fresh_loads_per_mode": 1,
+      "output_tokens": 128,
+      "forced_length": true,
+      "samples": [
+        {
+          "category": "coding",
+          "ar_wall_decode_tokens_per_second": 11.398778035448077,
+          "self_wall_decode_tokens_per_second": 10.50784837354918,
+          "draft_tokens": 86,
+          "accepted_tokens": 77,
+          "output_hash_matches": true
+        },
+        {
+          "category": "reasoning",
+          "ar_wall_decode_tokens_per_second": 10.61945104030145,
+          "self_wall_decode_tokens_per_second": 11.027014718860976,
+          "draft_tokens": 84,
+          "accepted_tokens": 83,
+          "output_hash_matches": true
+        },
+        {
+          "category": "prose",
+          "ar_wall_decode_tokens_per_second": 11.124449635722408,
+          "self_wall_decode_tokens_per_second": 9.962038189764373,
+          "draft_tokens": 85,
+          "accepted_tokens": 73,
+          "output_hash_matches": false
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "The prototype is unqualified; no full-vocabulary numerical gate or broad answer-quality evaluation was performed.",
+    "A separate placement diagnostic does not establish identical placement in every automatic-fit load.",
+    "Allocated context is not occupied context and fixed-length generation can continue past EOS.",
+    "The CPU pairs have one sample per workload, fixed ordering, and are not GPU comparisons.",
+    "Output hash matches are not proof of logit or semantic equivalence; differences are unexplained.",
+    "No diffusion performance or production rollout is established."
+  ]
+}

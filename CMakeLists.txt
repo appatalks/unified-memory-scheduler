@@ -395,6 +395,12 @@ if(BUILD_TESTING)
     add_test(NAME vrambridge-synapse-baseline
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_synapse_baseline.py
     )
+    add_test(NAME vrambridge-agent-concurrency
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_agent_concurrency.py
+    )
+    add_test(NAME vrambridge-agent-numerics
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_agent_numerics.py
+    )
     add_test(NAME vrambridge-synapse-critical-path
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_synapse_critical_path.py
     )

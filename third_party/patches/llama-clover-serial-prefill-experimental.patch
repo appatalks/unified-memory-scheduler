@@ -1,0 +1,64 @@
+diff --git a/tools/server/server-context.cpp b/tools/server/server-context.cpp
+index 610cca522..bc6d9f142 100644
+--- a/tools/server/server-context.cpp
++++ b/tools/server/server-context.cpp
+@@ -3831,6 +3831,33 @@ private:
+         // start populating the batch for this iteration
+         batch.clear();
+ 
++        server_slot * prefill_owner = nullptr;
++        const char * prefill_env = std::getenv("VRAMBRIDGE_EXPERIMENT_SERIAL_PREFILL");
++        if (prefill_env && std::strcmp(prefill_env, "0") != 0 && std::strcmp(prefill_env, "1") != 0) {
++            throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_SERIAL_PREFILL must be 0 or 1");
++        }
++        const bool isolated_prefill = prefill_env && std::strcmp(prefill_env, "1") == 0;
++        if (isolated_prefill) {
++            if (!llama_get_causal_attn(ctx_tgt) ||
++                std::any_of(params_base.speculative.types.begin(), params_base.speculative.types.end(),
++                            [](auto type) { return type != COMMON_SPECULATIVE_TYPE_NONE; })) {
++                throw std::runtime_error("Experimental serial prefill requires causal, non-speculative execution");
++            }
++            for (auto & candidate : slots) {
++                if (candidate.state != SLOT_STATE_STARTED && candidate.state != SLOT_STATE_PROCESSING_PROMPT) continue;
++                if (!candidate.task || candidate.task->type != SERVER_TASK_TYPE_COMPLETION ||
++                    candidate.task->tokens.has_mtmd || !candidate.lora.empty()) {
++                    throw std::runtime_error("Experimental serial prefill supports text completions without adapters only");
++                }
++                const bool continuing = candidate.state == SLOT_STATE_PROCESSING_PROMPT;
++                const bool owner_continuing = prefill_owner && prefill_owner->state == SLOT_STATE_PROCESSING_PROMPT;
++                if (!prefill_owner || (continuing && !owner_continuing) ||
++                    (continuing == owner_continuing && candidate.task->id < prefill_owner->task->id)) {
++                    prefill_owner = &candidate;
++                }
++            }
++        }
++
+         // track if given slot can be batched with slots already in the batch
+         auto & slot_batched = batch.slot_batched;
+ 
+@@ -3839,6 +3866,7 @@ private:
+ 
+         // determine which slots are generating and drafting
+         iterate(slots, [&](server_slot & slot) {
++            if (prefill_owner) return;
+             if (slot.state != SLOT_STATE_GENERATING || slot.task->type == SERVER_TASK_TYPE_TTS || slot.task->type == SERVER_TASK_TYPE_REALTIME) {
+                 return;
+             }
+@@ -3981,6 +4009,7 @@ private:
+             bool add_ok = true; // false means the batch is full, skip remaining slots
+ 
+             iterate(slots, [&](server_slot & slot) {
++                if (prefill_owner && &slot != prefill_owner) return;
+                 if (!add_ok || batch.size() >= n_batch) {
+                     return; // batch is full, skip remaining slots
+                 }
+@@ -4534,6 +4563,9 @@ private:
+ 
+                     // the number of tokens added to the batch for the current slot
+                     const auto n_tokens_cur = batch.size() - n_tokens_prev;
++                    if (isolated_prefill && n_tokens_cur > 0) {
++                        SRV_INF("EXPERIMENT_SERIAL_PREFILL slot=%d tokens=%d\n", slot.id, static_cast<int>(n_tokens_cur));
++                    }
+ 
+                     const auto n_tokens_start = slot.prompt.n_tokens() - n_tokens_cur;
+ 

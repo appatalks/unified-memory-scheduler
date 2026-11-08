@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-08",
+  "status": "research_only_long_stream_and_cross_family_gates_failed",
+  "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+  "model_sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c",
+  "protocol": {
+    "hardware": "Ryzen 9 9950X and RTX 5070 Ti 16 GB",
+    "sequence_capacity": 8,
+    "context_per_sequence": 16384,
+    "kv_cache": "f16",
+    "generation_threads": 8,
+    "batch_threads": 16,
+    "gpu_placement": "CUDA backbone and KV, all routed experts CPU-resident; not adaptive hybrid caching",
+    "raw_logit_max_absolute_threshold": 0.01,
+    "raw_logit_relative_l2_threshold": 0.001,
+    "numerical_decode_steps": 32,
+    "prefill": "serialized per request; no decode mixed into a prefill owner"
+  },
+  "builds": {
+    "clover_scalar_libllama_sha256": "45e7ac3591fad71dd5635aa44da39d68f97ebf6cf6a32fa1dd69ffe1b93476fe",
+    "logical_kv_server_impl_sha256": "b1d69bd08e209b908e74eb82b94dc6d75d573f14a75845ce82066f8ca983bc2b",
+    "physical_kv_server_impl_sha256": "93518ee9767af48e5857a3ed32751aa4d910bb5e72f8438ff3e4b23bb8e87e65",
+    "generic_experts_v2_libllama_sha256": "adc080bd28baae95584ddfaf28d21c1e946e19bb9a4981dde433421ccee094d5",
+    "generic_role_diagnostic_libllama_sha256": "1a65d7ad26af549abb74db005d5aae57a8bf594b5f3791296f29e6d6b13ca274",
+    "decode_probe_binary_sha256": "60d800d35dd343cdd2049e1d2ac8578c43bbf10235a5dd6c2b4f32f652f43e74",
+    "family_runner_sha256": "03e9d57fd0eeb678b90404ac8642fe6b0aac4aacc286a57f8d340669168b6928",
+    "physical_kv_patch_sha256": "544d02c2269a6be35a5417e352216811a7a60c2d2203d533e58503f0d1255cd8",
+    "generic_role_diagnostic_patch_sha256": "ec44e34b0bfbcc8350e731c334ed89570aa3a3ce91a761471d59fabab0391e11"
+  },
+  "request_screens": {
+    "logical_kv_cpu_and_gpu": {
+      "forced_short_output_tokens": 64,
+      "short_matches_per_placement": [
+        {"clients": 2, "passed": 8, "total": 8},
+        {"clients": 4, "passed": 8, "total": 8},
+        {"clients": 8, "passed": 8, "total": 8}
+      ],
+      "mixed_input_tokens": [4174, 2129, 72, 69],
+      "mixed_output_tokens": 32,
+      "mixed_matches_per_placement": {"passed": 4, "total": 4},
+      "cancellation_and_recovery": "pass",
+      "arithmetic": "pass",
+      "coding": "pass; AST-only, generated code never executed",
+      "forced_tool_call_format": "pass",
+      "runner_sha256": "126d261ac997c2e3b9a852effb756780fcb6c11060a0455687a7b26ff6d7a2ce",
+      "cpu_private_report_sha256": "015ac4081f33ac220369da1a17b8a4d2d3f953ddc0a436a725bcbf6288cde372",
+      "gpu_private_report_sha256": "fe654827dc09d0ecf894776c7f17e037e30898bdcaae458cd9f936e329ab1eb7"
+    },
+    "physical_kv_gpu": {
+      "forced_short_output_tokens": 256,
+      "short_matches": [
+        {"clients": 2, "passed": 8, "total": 8},
+        {"clients": 4, "passed": 8, "total": 8},
+        {"clients": 8, "passed": 5, "total": 8}
+      ],
+      "mixed_input_and_cancellation_and_answer_screens": "pass",
+      "runner_sha256": "a51f2f496da87d5b1af8671281ea9ce8040e12ba143c05bf158cf87905488c8b",
+      "private_report_sha256": "32b238d7cd841bf1cd8910f3f330324323a397b6f3bea3f015d8cd3847173c2c",
+      "status": "failed_equivalence_gate"
+    }
+  },
+  "whole_state_rollback": {
+    "placements": ["cpu", "gpu-cpu-experts"],
+    "snapshot": "all active sequences before three teacher-forced decode steps; full per-sequence state restored",
+    "per_placement": {
+      "before_reference": {"passed": 14, "total": 14},
+      "restored_reference": {"passed": 14, "total": 14},
+      "restore_repeatability": {"passed": 14, "total": 14},
+      "max_absolute": 0,
+      "max_relative_l2": 0
+    },
+    "cpu_and_gpu_metric_report_sha256": "2deaf2d3a6a137fb6358ae3150af71012168eced33e43865a1c955d85b0d8605",
+    "limitation": "Not a qualification of partial suffix removal or arbitrary rollback."
+  },
+  "http_throughput": {
+    "scheduler": "logical_kv",
+    "fresh_runs_per_client_level": 3,
+    "requests_per_run": 8,
+    "forced_output_tokens": 256,
+    "cpu_mapped_model_mib": 19433.31,
+    "cuda_model_mib": 2488.81,
+    "results": [
+      {"clients": 1, "median_aggregate_tok_s": 39.565575662908785, "matched_outputs": 24, "total_outputs": 24, "median_agent_latency_seconds": 29.133639973499157},
+      {"clients": 2, "median_aggregate_tok_s": 40.40613570626386, "matched_outputs": 24, "total_outputs": 24, "median_agent_latency_seconds": 31.62896992449896},
+      {"clients": 4, "median_aggregate_tok_s": 43.27211396824806, "matched_outputs": 24, "total_outputs": 24, "median_agent_latency_seconds": 36.40165648600305},
+      {"clients": 8, "median_aggregate_tok_s": 45.28912043866767, "matched_outputs": 7, "total_outputs": 24, "median_agent_latency_seconds": 44.434292760501194, "status": "unqualified"}
+    ],
+    "runner_sha256": "15a9ce26c4007dc95c53e3a2603c8051890525122e12922174769d8805acfdff",
+    "wrapper_sha256": "19be0518b72bc9c35c18798a1a7d92dea3e9b853b40b26ec8126037f0e8c67a6",
+    "private_report_sha256": "eb2756430b6e578bef7ba00efc6c2329fb04d19d1426d1e6af68cbc7b47c2304"
+  },
+  "family_raw_logits": {
+    "reference": "original same-placement single-sequence logits; serialized prefills match 14/14 on each family",
+    "widths": [2, 4, 8],
+    "positions_per_width": [64, 128, 256],
+    "coder": {
+      "model_sha256": ["fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"],
+      "scalar_passed": [0, 0, 0],
+      "scalar_max_absolute": [2.22947121, 2.22947121, 6.91047108],
+      "experts_v2_passed": [0, 0, 0],
+      "experts_v2_max_absolute": [2.22947121, 2.22947121, 6.95346546],
+      "experts_v2_report_sha256": "1854b15344108899147853dfc327711fd27b5969eee26bf7b4d0888b43da474b"
+    },
+    "qwen38": {
+      "model_sha256": ["40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c", "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"],
+      "scalar_passed": [64, 128, 128],
+      "scalar_max_absolute": [0, 0, 3.48740745],
+      "experts_v2_passed": [64, 128, 256],
+      "experts_v2_max_absolute": [0, 0, 0],
+      "experts_v2_report_sha256": "d34dc9f8c99e9acf2a61702c50c88fa91584539b8217086f121d02f94e55ae97"
+    },
+    "gpt120": {
+      "model_sha256": ["01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3", "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"],
+      "scalar_passed": [0, 0, 0],
+      "scalar_max_absolute": [1.13075519, 1.13075519, 1.1932888],
+      "experts_v2_passed": [0, 0, 0],
+      "experts_v2_max_absolute": [1.13075519, 1.13075519, 1.1932888],
+      "experts_v2_report_sha256": "571d919cfdc3a82aebd2b4f56a6ebecf4ce36a8d2b0a1ea95fbde462b07c53ad"
+    }
+  },
+  "limitations": [
+    "All-widths 1-8 short Clover decode checks pass; this does not explain or fix longer-stream divergence.",
+    "Output-hash matches do not establish raw-logit equivalence or broad answer quality.",
+    "Logical-KV throughput is not a measurement of the later physical-KV scheduler.",
+    "The generic role-diagnostic patch is a later variant, not the exact experts-v2 binary measured on Qwen3.8.",
+    "Earlier summary runner hashes identify earlier source revisions and must not be relabeled as current.",
+    "No installed backend, profile, saved state, weights or Synapse application behavior changed.",
+    "Production promotion is blocked by longer-stream and cross-family numerical failures."
+  ]
+}

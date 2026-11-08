@@ -24,6 +24,95 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## Clover: Initial Autoregressive And Self-Speculative Screens
+
+The [scheduling/family checkpoint](results/clover-scheduling-family-summary.json)
+retains both successes and release blockers. Isolated prefill and logical-KV
+decode buckets match all 64-token short CPU/GPU streams, mixed 4K/2K inputs,
+cancellation/recovery and bounded arithmetic/code/tool-call screens.
+Whole-state restoration passes 42 raw-logit comparisons per placement.
+At 256 outputs, the later physical-KV scheduler still matches only 5/8
+eight-client outputs.
+
+Three-run logical-KV HTTP medians for 1/2/4/8 clients are
+39.57/40.41/43.27/45.29 aggregate tok/s. Four clients match 24/24 serial
+outputs, but eight match only 7/24: the eight-client speed is unqualified.
+Median agent latency increases from 29.13s at one client to 36.40s at four
+for the same eight-request arrival burst. This is throughput, not a
+per-agent latency win.
+
+All required family assets are now available and fully hashed. The later
+generic expert-dispatch refinement passes Qwen3.8 448/448 bounded decode
+positions with zero error, superseding the earlier eight-width failure for
+that variant only. Coder and GPT-OSS still fail every tested decode
+position. **No production integration is qualified.**
+
+The later [candidate-speed follow-up](results/clover-candidate-speed-summary.json)
+passes 448/448 bounded GPU raw-logit decode checks with a default-off
+scalar-projection experiment. On eight short requests with serialized
+prefill, three-run median aggregate decode rates improve from serial
+11.52 to corrected-batch 26.76 tok/s on CPU and 43.68 to 54.77 tok/s with a
+GPU backbone and CPU experts. Corrected outputs match serial controls 24/24
+on both placements. The faster original batch path is numerically
+unqualified, and these are not HTTP streaming or long-input results.
+Concurrent/chunked prefill and cross-family qualification remain blocked.
+
+The [multi-agent summary](results/clover-agent-concurrency-summary.json) uses
+eight distinct synthetic requests, eight reserved 16K slots and three fresh
+loads per active-client level. End-to-end aggregate rates for 1/2/4/8 active
+clients are 53.99/68.03/86.55/105.63 tok/s; the corresponding median active
+per-agent decode rates are 59.69/37.02/23.24/14.43 tok/s. An otherwise
+matched dedicated one-slot control is 61.19 aggregate tok/s. These are direct
+server measurements, not Synapse app or hybrid-engine concurrency.
+An independent repeat gives 53.45/67.68/85.74/104.07 tok/s but has two
+different automatic-fit buffer totals; both cohorts remain in the summary.
+
+The full-vocabulary first-token log-probability diagnostic fails its
+unchanged thresholds for 2/8, 7/8 and 8/8 requests at 2/4/8 active clients;
+sequential repeats pass 8/8. A separate CPU-only 8-client check also fails
+8/8. These are not raw-logit or broad answer-quality checks, and they do not
+identify the cause or prove incorrect answers. **No production concurrency
+change is qualified.** The independent numerical repeat also fails at every
+tested concurrent level.
+
+The [Synapse integration checkpoint](results/clover-synapse-integration-summary.json)
+confirms two real Clover streams complete through an isolated Synapse
+instance by using its existing one-slot queue. It does not enable concurrent
+backend execution. An additional prototype diagnostic with physical
+microbatch size one still fails all eight log-probability comparisons at
+both two and four active clients.
+
+The [raw-logit localization](results/clover-sequence-correctness-summary.json)
+identifies batch-sensitive expert arithmetic and a second GDN projection
+effect. A default-off, per-sequence research candidate passes 448 / 448
+CPU raw-logit checks for 32 teacher-forced decode steps after serialized
+prefill, but fails all corresponding GPU/CPU-expert checks. Chunked
+single-sequence prefill and the combined candidate's diverse
+concurrent-prefill checks also fail.
+That earlier candidate establishes no performance win or Synapse rollout;
+the later bounded speed study is recorded separately above.
+
+The [reviewed summary](results/clover-initial-summary.json) and
+[study](../docs/research/clover-diffusion.md) record a verified official
+Q4_K_M GGUF and an isolated pre-merge prototype. At requested 16K context,
+three fresh Standard loads with forced 512-token held-out requests give
+65.52/65.49/65.92 wall-decode tok/s for coding/reasoning/prose. Greedy output
+hashes vary between loads; two bounded answer checks pass. These are not
+diffusion rates or general quality qualification.
+
+The merged autoregressive upstream backend rejects the same official GGUF.
+The unmodified prototype's `draft-self` path segfaults during its first
+request with both auto-fit GPU placement and GPU layers with CPU experts.
+A separate single-pair CPU-only screen completes but has mixed speed changes
+and one different output hash.
+
+A [separate experimental router-transfer candidate](results/clover-router-experiment-summary.json)
+completes three 128-output auto-fit GPU pairs, but self-speculation is
+approximately 45–49% slower than same-build autoregression and two of three
+workloads have different output hashes. The candidate is not numerically
+qualified and is not a production fix. No batching win, production rollout
+or default is approved.
+
 ## SC117 Core Decode At Normal Context Capacities
 
 The [reviewed aggregate](results/sc117-core-decode-summary.json) and
