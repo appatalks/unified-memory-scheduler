@@ -66,6 +66,13 @@ The [study and remaining gates](../docs/research/native-cache-autotune.md)
 separate this completed application adaptation from unqualified CPU/GPU
 sharing, drafts and Clover backend deployment.
 
+The [serialized Clover investigation](../docs/research/clover-diffusion.md#serialized-causal-prefill-investigation)
+records a default-off one-token correction, bounded numerical comparisons
+and a near-capacity 128K operational run. A later instrumented build has a
+post-request execution marker and passes bounded numerical controls and an
+independently repeated 128K near-capacity operational test. This qualifies
+only the specific measured package, model and host; it is not a release.
+
 The [SC117/hosted follow-up](../docs/research/sc117-hosted-porting-baseline.md)
 records fresh alternating held-out measurements on the exact SC117 IQ3_S
 target and Qwen3-Coder-30B, plus retained long-context fit failures.
@@ -911,8 +918,8 @@ expert-workload-aware prefill scheduler.
 ## Explicit SSD Model Staging
 
 The Linux research helper uses the existing root-drive SSD, not the Samsung
-NTFS volume. The current staging directory is
-`/home/mj420/Desktop/TOR/llm/model-staging`, owned by the user with mode 0700.
+NTFS volume. Its user-selected staging directory is owned by the user with
+mode 0700.
 Its marker records the user-selected **16 GiB minimum free-space reserve**.
 This is a working-copy cache, not a backup or a downstream Synapse feature.
 

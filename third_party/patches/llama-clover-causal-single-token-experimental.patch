@@ -1,0 +1,32 @@
+diff --git a/src/models/clover-moe.cpp b/src/models/clover-moe.cpp
+index b0b0cb931..25274968b 100644
+--- a/src/models/clover-moe.cpp
++++ b/src/models/clover-moe.cpp
+@@ -3,6 +3,10 @@
+ #include "llama-memory-recurrent.h"
+
+ #include <algorithm>
++#include <atomic>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
+ #include <numeric>
+
+ class llm_graph_input_clover_selection : public llm_graph_input_i {
+@@ -556,8 +560,15 @@ ggml_tensor * llama_model_clover_moe::graph::build_layer_attn_linear(
+     cb(k_conv, "k_conv", il);
+     cb(v_conv, "v_conv", il);
+
+-    const bool prefill = n_tokens != n_outputs;
++    const char * singleton_env = std::getenv("VRAMBRIDGE_EXPERIMENT_CAUSAL_SINGLE_TOKEN");
++    const bool singleton = singleton_env && std::strcmp(singleton_env, "1") == 0 &&
++        cparams.causal_attn && ubatch.n_seqs == 1 && n_seq_tokens == 1;
++    const bool prefill = n_tokens != n_outputs && !singleton;
++    if (singleton && il == 0) {
++        static std::atomic<bool> reported{false};
++        if (!reported.exchange(true)) std::fprintf(stderr, "EXPERIMENT_CAUSAL_SINGLE_TOKEN enabled\n");
++    }
+     q_conv = build_clover_l2_norm(q_conv, false);
+     k_conv = build_clover_l2_norm(k_conv, false);
+
+     const bool repeat_heads = num_k_heads != num_v_heads;

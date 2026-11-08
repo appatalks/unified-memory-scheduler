@@ -19,6 +19,117 @@ The later [attention-core follow-up](#attention-core-follow-up) resolves the
 tested GPU eight-sequence long-stream discrepancy and measures a bounded
 aggregate gain. It does not qualify CPU-only longer streams or a release.
 
+## Serialized causal-prefill investigation
+
+The original prototype is not generally chunk-consistent for one request.
+With the CUDA backbone and CPU routed experts, each of three splits of a
+13-token prefill failed a full-vocabulary comparison against unchunked prefill,
+including one top-token mismatch. The largest absolute differences were
+3.84, 8.58 and 1.69. A one-token microbatch alone also failed all six
+real-server prefix-reuse comparisons against fresh requests.
+
+The default-off
+[`llama-clover-causal-single-token-experimental.patch`](../../third_party/patches/llama-clover-causal-single-token-experimental.patch)
+applies only to prototype `cb09d4355d8bf968bb907c5de03cf42d8aa073ce`.
+With causal, single-sequence, one-token graphs it selects the recurrent
+decode branch independently of the output flag. With `--ubatch-size 1`,
+the corrected GPU/CPU placement matched the unmodified prototype's
+per-token all-output raw-logit reference at the tested 13- and 559-token
+prefill and split boundaries, with zero observed error. After a 559-token
+prefill, all 96 full-vocabulary continuation comparisons over three splits
+and 32 subsequent steps also matched. Both enabled and disabled builds
+matched all 2,568 existing serialized decode comparisons.
+
+In a single-slot F16 real-server screen, all six 13- and 559-token
+prefix-reuse log-probability comparisons passed with the correction; the
+disabled control failed all six. This is bounded evidence, not proof for
+arbitrary prompts, concurrent slots, rollback, speculation or diffusion.
+The early `EXPERIMENT_CAUSAL_SINGLE_TOKEN enabled` marker confirms graph
+construction, but can originate in graph reservation rather than actual
+execution; it is not sufficient by itself as a production activation guard.
+The corrected runtime must not be silently selected or installed.
+
+One separate unmodified-backend 559-token performance screen measured
+467.05 prompt tokens/s with microbatch 512 and 65.30 with microbatch 1.
+This comparison illustrates the potential prefill cost, not a fully
+qualified corrected-backend benchmark. A corrected 16K near-capacity
+diagnostic retrieved its anchor, but its activation marker was not retained;
+it is not a marker-verified qualification. A 128K run on the original
+prototype likewise does not qualify its inconsistent fast prefill.
+
+On the same Linux/NVIDIA host, a separate corrected-backend Synapse run
+confirmed one 131,072-token slot, causal attention, microbatch 1 and F16
+K/V cache. A 122,878-token input retrieved its anchor; its prefill took
+1,939 seconds at 63.37 tokens/s. The small arithmetic and AST-only code
+checks passed. Three short 128-token output screens on that load measured
+61.68–62.15 wall decode tokens/s. These are single-run results, not a
+repeated performance leaderboard or a broad answer-quality assessment.
+
+The corrected library's graph-construction marker was captured before the
+bounded app log discarded it, and the library hash matched the tested
+overlay. That marker alone does not establish graph execution: a separate
+execution-time guard was required. The benchmark ran in an isolated runtime
+and did not update the installed backend or profile. Full-context accuracy,
+other model variants and platforms remain unqualified.
+
+### Execution-marker follow-up
+
+A first execution-time marker fired in the backend's own startup diagnostic,
+before any client request, and therefore did not prove request execution.
+The later
+[`llama-clover-causal-execution-marker-experimental.patch`](../../third_party/patches/llama-clover-causal-execution-marker-experimental.patch)
+includes the correction and tags the selected singleton prefill graph. It
+reports only after that tagged graph has been submitted and synchronized at
+position 8 or later. A no-warmup server test confirmed the marker was absent
+at readiness and present after an actual request; the disabled control emitted
+no execution marker. It is still an experimental, single-slot, causal guard,
+not proof that arbitrary multi-slot or speculative paths are safe.
+
+The instrumented `libllama` SHA-256
+`409dfaa4dd1f10c9471f804cc30de740388438d326cca10d92776c83025be845`
+matched the existing 559-token all-output oracle in all 101 tested
+full-vocabulary prefill and continuation comparisons, with zero observed
+error. It also matched all 2,568 serialized 320-step decode comparisons.
+On the real server, all six prefix-reuse comparisons and two cold repeats
+passed; the disabled control failed all six reuse comparisons. An additional
+unmodified batched-decode run failed 4,480 comparisons; this remains outside
+the qualified single-slot scope and must not be enabled as a fallback.
+
+The first 128K near-capacity run above used the earlier library, not the
+instrumented library. A separate local package replaces absolute session
+RUNPATHs with `$ORIGIN` and contains the instrumented build and the matching prototype
+dependencies. In the 16K real-server prefix-reuse screen, `/proc` confirmed
+that all eight required libraries were mapped from the package, with no
+overlay or inherited library path. The execution marker appeared only after
+the request, and six reuse comparisons and two cold repeats passed.
+[`vrambridge-stage-causal-backend.py`](../../tools/benchmark/vrambridge-stage-causal-backend.py)
+recreates the exact staged component hashes from the locally measured source
+binaries using `patchelf 0.19.3`; it refuses other inputs, an existing output
+directory, or any altered relocated component. It does not install or register
+the package, and is not a general-purpose build or qualification mechanism.
+
+An isolated Synapse run with that package confirmed the post-request marker,
+all eight mapped libraries, one causal slot, microbatch 1, GPU model placement
+and F16 K/V. At a 16,384-token slot it retrieved its anchors from 14,333
+input tokens in 190 seconds. Arithmetic and AST-only code checks passed;
+three short-output screens measured 66.40–67.25 wall decode tokens/s on
+that one load. Those bounded checks do not qualify other architectures or
+general answer quality.
+
+An independently repeated run of the same packaged component hashes confirmed
+a 131,072-token slot and retrieved all anchors from 122,878 input tokens.
+Prefill took 2,035 seconds at 60.37 tokens/s; the arithmetic and AST-only
+checks passed. The execution marker, single-slot/microbatch/F16/GPU contract,
+and package-local mappings were checked. Three short-output screens on that
+load measured 57.49–57.89 wall decode tokens/s. This was a single run on a
+shared host, with other local test activity, not a sustained-speed claim.
+The installed model hash matched the publisher's verified GGUF hash.
+
+The package has not been installed or published. An isolated Synapse
+integration smoke selected it automatically, verified the execution marker
+and bound libraries, and returned a short completion. Reproducible source
+builds, cross-platform and other-model scope remain open.
+
 ## Attention-core follow-up
 
 Reviewed evidence:
@@ -674,6 +785,27 @@ is made.
 
 ## Initial local smoke: explicit failure
 
+### Follow-up: incompatible converter contracts
+
+On November 8, 2026, the current upstream loader and converter were
+inspected at `7d7f0287530bc8981690f361d8c1627dbae1c99a` and the official
+Q4_K_M file was rechecked against the publisher's existing revision and
+SHA-256. The 120 unclaimed tensors in the 853-tensor file are now
+identified: each of the 30 recurrent layers has one
+`ssm_conv1d.weight_right`, `ssm_bd_logit_scale.weight`,
+`ssm_bd_history.bias` and `ssm_bd_history.weight`. The upstream AR-only
+converter deliberately omits those four source tensors; the older
+prototype registers them and uses them in its separate diffusion graph.
+These are not missing routed experts.
+
+The formats also encode the recurrent `ssm_a` parameter differently:
+the prototype converter retains the original `A_log` and its graph applies
+`-exp`, while the newer conversion performs that transformation before
+writing and the newer AR graph consumes the transformed value. An override
+of `expert_shared_count` alone cannot bridge those contracts. Do not ignore
+the tensor-count failure, rename architecture metadata, alter the user's
+GGUF or equate AR-only conversion with full diffusion support.
+
 On the Ryzen 9950X / RTX 5070 Ti host, an isolated CUDA build of merged
 upstream commit `e4b6c8ca6a6e8da70248da30709e897e7cc8615e` was exercised
 through a private Synapse runtime and the existing owned-baseline runner.
@@ -694,8 +826,8 @@ done_getting_tensors: wrong number of tensors; expected 853, got 733
 ```
 
 In this loader the first number is the tensor count in the file and the second
-is the count claimed by the model graph. The 120 unclaimed tensors have not
-yet been individually qualified; suppressing the error or dropping them
+is the count claimed by the model graph. The later classification above
+identifies the 120 unclaimed tensors; suppressing the error or dropping them
 would not establish a correct conversion.
 
 Consequently that merged-backend attempt has no placement, context,

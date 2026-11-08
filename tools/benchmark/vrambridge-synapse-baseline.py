@@ -10,6 +10,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import statistics
 import sys
 import tempfile
@@ -83,8 +84,57 @@ def trial_order(variants: list[str], repetition: int) -> list[str]:
     return list(reversed(variants)) if repetition % 2 else list(variants)
 
 
-def capacity_probe(server, runtime, context: int, timeout: float) -> dict:
+def track_runtime_marker(runtime, marker: str):
+    observed = threading.Event()
+    original = runtime._read_logs
+
+    def tracked(process, key):
+        source = process.stdout
+
+        class Stream:
+            def __iter__(self):
+                for line in source:
+                    if marker in line:
+                        observed.set()
+                    yield line
+
+            def close(self):
+                source.close()
+
+        process.stdout = Stream()
+        return original(process, key)
+
+    runtime._read_logs = tracked
+    return observed
+
+
+def wait_runtime_marker(runtime, marker: str, timeout: float = 10, observed=None) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = runtime.status()
+        if (observed is not None and observed.is_set()) or any(marker in line for line in state["logs"]):
+            return
+        if state["state"] != "ready":
+            raise RuntimeError("Backend stopped before confirming its required marker.")
+        time.sleep(0.1)
+    raise RuntimeError("Required backend activation marker was not observed.")
+
+
+def verify_causal_singleton_log(log: str, context: int) -> None:
+    batches = re.findall(r"n_ubatch\s*=\s*(\d+)\b", log)
+    causal = re.findall(r"causal_attn\s*=\s*(\d+)\b", log)
+    slots = re.findall(r"n_slots\s*=\s*(\d+),\s*n_ctx_slot\s*=\s*(\d+)\b", log)
+    caches = re.findall(r"K \(([^)]+)\):[^\n]*V \(([^)]+)\):", log)
+    gpu = re.findall(r"CUDA\d+ model buffer size\s*=\s*(\d+(?:\.\d+)?)\s+MiB", log)
+    if (not batches or set(batches) != {"1"} or not causal or set(causal) != {"1"} or
+            not slots or set(slots) != {("1", str(context))} or
+            not caches or set(caches) != {("f16", "f16")} or not any(float(size) > 0 for size in gpu)):
+        raise RuntimeError("The required single-slot, causal, F16, GPU and microbatch contract was not confirmed.")
+
+
+def capacity_probe(server, runtime, context: int, timeout: float, progress_log: Path | None = None) -> dict:
     expired = threading.Event()
+    done = threading.Event()
 
     def cancel():
         expired.set()
@@ -92,6 +142,25 @@ def capacity_probe(server, runtime, context: int, timeout: float) -> dict:
 
     timer = threading.Timer(timeout, cancel)
     timer.start()
+    monitor = None
+    if progress_log is not None:
+        def watch_progress():
+            import re
+            offset = progress_log.stat().st_size if progress_log.exists() else 0
+            while not done.wait(3):
+                try:
+                    with progress_log.open("r", encoding="utf-8", errors="replace") as stream:
+                        stream.seek(offset)
+                        text = stream.read(1024 * 1024)
+                        offset = stream.tell()
+                    for line in text.splitlines():
+                        match = re.search(r"prompt processing, n_tokens =\s*(\d+), progress =\s*([\d.]+)", line)
+                        if match:
+                            print(f"CAPACITY processed={match[1]} progress={match[2]}", flush=True)
+                except OSError:
+                    pass
+        monitor = threading.Thread(target=watch_progress, daemon=True)
+        monitor.start()
     try:
         try:
             result = server.tuner._probe(runtime, context)
@@ -103,6 +172,9 @@ def capacity_probe(server, runtime, context: int, timeout: float) -> dict:
             raise RuntimeError("Near-capacity probe completed after its deadline; capacity remains unverified.")
         return result
     finally:
+        done.set()
+        if monitor is not None:
+            monitor.join(timeout=5)
         timer.cancel()
         timer.join()
 
@@ -145,6 +217,8 @@ def execute(args) -> int:
 
     sweep = load_module("baseline_sweep", ROOT / "tools/benchmark/vrambridge-execution-sweep.py")
     matrix = load_module("baseline_matrix", ROOT / "tools/benchmark/vrambridge-model-matrix.py")
+    bindings = (load_module("baseline_bindings", ROOT / "tools/benchmark/vrambridge-serial-reuse-check.py")
+                if args.require_causal_singleton else None)
     profiles = {"installed": app.read_hybrid_profile(args.profile.resolve(strict=True))}
     if args.candidate_profile:
         profiles["candidate"] = app.read_hybrid_profile(args.candidate_profile.resolve(strict=True))
@@ -188,6 +262,11 @@ def execute(args) -> int:
             "Warmup is excluded; adaptive expert residency continues across workload requests within a load.",
         ],
     }
+    if args.require_causal_singleton:
+        directory = args.backend.resolve().parent
+        report["model_sha256"] = sha256(model)
+        report["standard_backend_identity"]["components_sha256"] = {
+            name: sha256(directory / name) for name in ("llama-server", *bindings.LOCAL_LIBRARY_NAMES)}
     failed = False
     sweep.save_report(args.output, report)
     for context in args.contexts:
@@ -197,6 +276,7 @@ def execute(args) -> int:
                 profile = dict(profiles["candidate" if variant in ("candidate-classic", "hosted") else "installed"])
                 profile["hybrid_context"] = context
                 runtime = app.Runtime(str(args.backend), execution_mode="standard", **profile)
+                marker_observed = track_runtime_marker(runtime, args.require_runtime_marker) if args.require_runtime_marker else None
                 server = app.AppServer(("127.0.0.1", 0), runtime, update_checks=False)
                 thread = threading.Thread(target=server.serve_forever, daemon=True)
                 thread.start()
@@ -218,6 +298,14 @@ def execute(args) -> int:
                                execution_profile=state["execution_profile"],
                                selection_reason=state["selection_reason"])
                     sweep.sample(base, 64, prompt=corpus[0]["prompt"])
+                    if args.require_runtime_marker:
+                        wait_runtime_marker(runtime, args.require_runtime_marker, observed=marker_observed)
+                        run["required_runtime_marker_verified"] = args.require_runtime_marker
+                    if args.require_causal_singleton:
+                        verify_causal_singleton_log(args.progress_log.read_text(), context)
+                        bindings.verify_local_libraries(Path(f"/proc/{runtime.process.pid}/maps").read_text(),
+                                                        args.backend.resolve().parent)
+                        run["causal_singleton_contract_verified"] = True
                     for row in corpus:
                         sample = sweep.sample(base, args.tokens, prompt=row["prompt"])
                         sample.update(category=row["category"], prompt_sha256=hashlib.sha256(row["prompt"].encode()).hexdigest())
@@ -230,7 +318,11 @@ def execute(args) -> int:
                         ):
                             run["answer_checks"].append(matrix.quality_sample(base, name, prompt))
                     if args.capacity_check and repetition == 0:
-                        run["capacity_check"] = capacity_probe(server, runtime, context, args.capacity_timeout)
+                        run["capacity_check"] = capacity_probe(server, runtime, context, args.capacity_timeout,
+                                                               args.progress_log)
+                    if args.require_causal_singleton:
+                        bindings.verify_local_libraries(Path(f"/proc/{runtime.process.pid}/maps").read_text(),
+                                                        args.backend.resolve().parent)
                     run.update(status="completed", resources=runtime.status()["resources"])
                 except KeyboardInterrupt:
                     run.update(status="cancelled", error="Owned trial interrupted; unfinished capacity and throughput checks are not qualified.")
@@ -271,12 +363,22 @@ def main() -> int:
                         help="Also run Synapse's near-capacity input and anchor-retrieval probe.")
     parser.add_argument("--capacity-timeout", type=int, default=300,
                         help="Maximum seconds per capacity probe; expiration is a reported trial failure.")
+    parser.add_argument("--require-runtime-marker", help="Require a bounded backend log marker before benchmarking.")
+    parser.add_argument("--progress-log", type=Path, help="Read backend prompt-progress counters for this owned run.")
+    parser.add_argument("--require-causal-singleton", action="store_true",
+                        help="Verify actual single-slot causal GPU/F16 placement and local library bindings.")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if not 2 <= args.tokens <= 4096 or not 1 <= args.repetitions <= 10 or not 1 <= args.cache_mib <= 65536:
         parser.error("Invalid output length, repetitions, or expert-cache budget.")
     if not 1 <= args.capacity_timeout <= 2700:
         parser.error("Capacity timeout must be between 1 and 2700 seconds.")
+    if args.require_runtime_marker is not None and (not args.require_runtime_marker or len(args.require_runtime_marker) > 160):
+        parser.error("The activation marker must contain 1-160 characters.")
+    if args.require_causal_singleton and (sys.platform != "linux" or args.progress_log is None or
+                                          args.require_runtime_marker != "EXPERIMENT_CAUSAL_SINGLE_TOKEN prefill executed" or
+                                          args.variants != ["standard"] or args.repetitions != 1):
+        parser.error("The causal singleton contract requires Linux, its execution marker, one standard run and a private log.")
     if len(set(args.variants)) != len(args.variants) or len(set(args.contexts)) != len(args.contexts):
         parser.error("Duplicate variants or contexts are not independent trials.")
     for context in args.contexts:
