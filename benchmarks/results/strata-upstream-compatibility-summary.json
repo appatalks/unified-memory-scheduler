@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-08",
+  "status": "bounded_strata_same_engine_mtp_and_synapse_research_adapter_qualified",
+  "release": "v0.2.12",
+  "engine_version": "0.1.58",
+  "engine_source_declared_by_release": "8a42a9457db62568d1663c8c1bcc01cfffae5355",
+  "inspected_protocol_and_docs_revision": "146df3c468739147f520ac3816de806f71232571",
+  "engine_archive_sha256": "bbbfa8260125b94591cae30747cb0e4a9cee26d9cb0b2e284e33000c91509d54",
+  "engine_component_files": [
+    {
+      "path": "strata",
+      "sha256": "a6ca30de01cf938764820a3fabe0725cb734e59933863a13f86c82c768be5692",
+      "bytes": 315960672
+    },
+    {
+      "path": "BUILD.json",
+      "sha256": "7d9ba6d597ae5db6785e753e509173666df4831761f3a87c5fcdd6b1981ea705",
+      "bytes": 187
+    },
+    {
+      "path": "SYSTEM-LIBS.txt",
+      "sha256": "438bf959ad70b9f3f914e561399772e5dfdd007bbbc1c7d3cefa255cf016bda4",
+      "bytes": 87
+    },
+    {
+      "path": "libcublas.so.13",
+      "sha256": "25cde432108543626df85d887c730bf2cab96803ca16f9654e4abc8d2b45833e",
+      "bytes": 54177976
+    },
+    {
+      "path": "libcublasLt.so.13",
+      "sha256": "1489aeb75d55ee55782798343ac66f57771d561cc1fe1e0491568deefa0e6515",
+      "bytes": 541607888
+    },
+    {
+      "path": "libcudart.so.13",
+      "sha256": "96c42e418cec19054186b9429c321603cc190bf26a18104e19408117a2a817b0",
+      "bytes": 704288
+    },
+    {
+      "path": "libstrata_kq.so",
+      "sha256": "6681fbc4fc8816b8a675197b9e49ecc2fbf3171e162fc9e98d94720ce0655e7b",
+      "bytes": 35881360
+    },
+    {
+      "path": "strata-split-2-sm120",
+      "sha256": "1a28cc6f2bdd30f453adfb42849df71450137927fa3f0430a77179d3fe915ed6",
+      "bytes": 61887832
+    },
+    {
+      "path": "strata-split-2-sm86",
+      "sha256": "27ca8bafbfaa603a093b7e3878edcd5f39cd26cd346a05d76455e67946e813aa",
+      "bytes": 56391000
+    },
+    {
+      "path": "strata-vision",
+      "sha256": "8dc5dd83a3e64498051447b6804b6aa8d7ccca237c1c6ed5609d9104778c14f3",
+      "bytes": 124767240
+    }
+  ],
+  "component_signature_present_not_independently_verified": true,
+  "engine_weights_context": {
+    "architecture": "qwen4exp",
+    "geometry": {
+      "block_count": 48,
+      "embedding_length": 2560,
+      "expert_feed_forward_length": 640,
+      "expert_count": 512,
+      "expert_used_count": 10
+    },
+    "previously_verified_shards": [
+      {
+        "name": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf",
+        "bytes": 54817524224,
+        "sha256": "4c1eb2ceb4915e1192f4f386021897bde56a97f40a0bb78bb86465e0f7d2aca3"
+      },
+      {
+        "name": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00002-of-00002.gguf",
+        "bytes": 28800138432,
+        "sha256": "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+      }
+    ],
+    "fresh_complete_shard_hashes_repeated": false,
+    "target_weights_modified_by_experiment": false,
+    "context": 16384,
+    "kv": "F16",
+    "expert_slots": 3067,
+    "tail_skip": 0,
+    "routing_prior": 0,
+    "resident_routing_bias": 0,
+    "lookup_chain": 0,
+    "cpu_miss_gpu_tier": 0,
+    "dynamic_cpu_prefill_share": 0,
+    "native_iq_arithmetic_min": 1,
+    "spec_prob": 1,
+    "window_capacity": 2
+  },
+  "reused_evidence": [
+    {
+      "source": "Niko1221/Strata releases/v0.2.12",
+      "use": "published hardware cohorts and operation checks; not rerun"
+    },
+    {
+      "source": "Niko1221/Strata src/core/spec_admission_test.cpp",
+      "use": "enumerated proposal rule"
+    },
+    {
+      "source": "Niko1221/Strata src/core/gated_proposal_test.cpp",
+      "use": "gated proposal contract"
+    },
+    {
+      "source": "Niko1221/Strata src/kernels/spec_proposal_parity.cpp",
+      "use": "GPU/CPU proposal verification"
+    },
+    {
+      "source": "Niko1221/Strata src/kernels/cpu/native_arithmetic_parity.cpp",
+      "use": "native CPU expert width parity"
+    },
+    {
+      "source": "benchmarks/results/model-agnostic-architecture-summary.json",
+      "sha256": "84752ecbebdb50dedf32b28230330a55168c16874202f670511bd81713ba65a8",
+      "use": "existing three-pair full-routing Strata two-row performance and output consistency; not rerun"
+    }
+  ],
+  "new_checks": {
+    "scope": "three fixed held-out continuations, 32 positions each, scalar versus MTP in the same released engine",
+    "numerics": {
+      "positions": 96,
+      "passed": 96,
+      "max_absolute": 0.0,
+      "max_relative_l2": 0.0,
+      "all_passed": true
+    },
+    "scalar_capture": {
+      "captured_rows": 96,
+      "scored_rows": 96,
+      "unscored_window_suffix_rows": 0,
+      "vocab": 248320
+    },
+    "mtp_capture": {
+      "captured_rows": 97,
+      "scored_rows": 96,
+      "unscored_window_suffix_rows": 1,
+      "vocab": 248320
+    },
+    "every_capture_scored_position_and_target_matches_control": true,
+    "every_selected_raw_head_reproduces_upstream_fp32_scored_probabilities": true,
+    "final_request_drafts_offered": 17,
+    "final_request_drafts_accepted": 14,
+    "synapse_api_context": 4096,
+    "synapse_api_checks": {
+      "load_verified": true,
+      "nonstream": true,
+      "stream": true,
+      "slots": true,
+      "unload": true
+    },
+    "owned_backend_stopped": true,
+    "new_speed_claim": false
+  },
+  "source_artifacts_sha256": {
+    "compatibility-private-report.json": "a8b7ed0d5ae558331ad171a6b0bb010f7cb0e4b5a43e8d3d58d2f94bf04f8368",
+    "aligned-review.json": "b61f07ce61f97a9547b30372f69c038f08c9b91729228e4dd582943a519741b1",
+    "synapse-api-private-report.json": "5cd0310e14c2a1597c0b256693d09fdc0932b387c24740be29ead4e18a360caa",
+    "scalar-positions.tsv": "4daef97a991e2da059ff068dcd6f9acea5f281a557da84de454cceac6b4b40c6",
+    "mtp-positions.tsv": "4daef97a991e2da059ff068dcd6f9acea5f281a557da84de454cceac6b4b40c6",
+    "scalar-logits.bin": "515c3dc3b0344e9fbd267b897a7cd4fd6bb66e4dc0c52267ed3cce1b5fc68d39",
+    "mtp-logits.bin": "85db0d80c6f56cb0559e5e916d5c174e2d1534ec25159f35192b964c6fd96c13"
+  },
+  "history": [
+    "First adapter attempt masked an incomplete-output check because current close clears the process handle.",
+    "Second attempt counted upstream None/PP heartbeats as tokens; actual engine generated its requested count.",
+    "Third capture had one unscored final-window suffix row. Original operation_failed artifact preserved; scoring-aligned review computed without a hardware rerun.",
+    "First Synapse API attempt supplied an Event where upstream expects a lifecycle callback; corrected adapter delegates shutdown to upstream."
+  ],
+  "limitations": [
+    "Not a native llama.cpp MTP port, global engine replacement or production Automatic-provider promotion.",
+    "Original Qwen first shard differs from the modified SC117 first shard; do not transfer the pack binding by name.",
+    "Not a fresh 512-token numerical, arbitrary-context, stochastic-distribution, broad quality or platform qualification.",
+    "The research bridge reuses the llama-compatible CLI boundary; production must record Strata provider/build identity separately.",
+    "No installed backend or default model/engine profile was changed.",
+    "Clover/diffusion and GPT-OSS are not established by this Qwen-engine result."
+  ]
+}

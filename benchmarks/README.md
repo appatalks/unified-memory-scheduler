@@ -28,6 +28,26 @@ checked and matched isolated CUDA binaries built. The
 [source/build summary](results/tandem-source-build-summary.json) identifies
 both binaries; published speed claims remain author measurements, with no
 model-level numerical/performance qualification or production promotion.
+The later [local qualification screen](results/tandem-qualification-summary.json)
+records loader compatibility, faster but numerically unqualified hybrid
+arms, and exact matched-cache controls with no broad speed win. Clover
+is unsupported by this pinned base. Raw-logit and HTTP results must not
+be confused with the earlier source/build-only checkpoint.
+
+The [component/attention follow-up](results/moe-component-qualification-summary.json)
+isolates preserving tandem components and resolves the tested Clover GPU
+eight-sequence attention drift. Corrected Clover passes 320-step raw logits,
+longer real streams and bounded full-state rollback; eight-client HTTP
+aggregate throughput improves about 12.8% over the matched serial cohort.
+CPU-only longer streams remain unqualified. Tandem's preserving bundle has
+small Coder gains but regresses other tested families, so neither result
+authorizes an untested default or a wholesale backend port.
+
+The [inverse-placement screen](results/clover-inverse-placement-summary.json)
+tests CPU backbone/KV/recurrent state with GPU experts on Clover. Actual
+decode placement is verified, but this single-load configuration is much
+slower than native fitting. The result is model/configuration-specific,
+not a universal rule about CPU/GPU partitioning.
 
 [RESULTS.md](RESULTS.md) is the reviewed benchmark ledger. It links each committed evidence artifact, distinguishes valid measurements from retained failed commands, and records the fixed comparison conditions. New generated JSON remains ignored until it has been reviewed and added to that ledger.
 
@@ -36,6 +56,15 @@ Raw files under `results/`, including nested output and logs, are ignored unless
 Ignore rules do not remove already tracked content or historical copies. Before publishing the repository, review both the current files and Git history, including commit author and committer identities.
 
 ## Owned Synapse Engine Baselines
+
+The [native-cache Auto Tune adaptation](results/synapse-native-cache-autotune-summary.json)
+checks the actual installer-pinned b11669 backend without modifying it.
+Existing cache operation is now a guarded, measured Standard candidate;
+real Coder/Qwen/GPT application checks verify choice persistence and
+Automatic reload, including Coder near-capacity input at 16K.
+The [study and remaining gates](../docs/research/native-cache-autotune.md)
+separate this completed application adaptation from unqualified CPU/GPU
+sharing, drafts and Clover backend deployment.
 
 The [SC117/hosted follow-up](../docs/research/sc117-hosted-porting-baseline.md)
 records fresh alternating held-out measurements on the exact SC117 IQ3_S
@@ -988,6 +1017,27 @@ generation windows. It does not reproduce historical UI behavior, qualify
 every model, or establish any RAM-disk acceleration.
 
 ## Matched Architecture And Accepted-output Study
+
+The [Strata upstream-reuse follow-up](results/strata-upstream-compatibility-summary.json)
+does not rerun published speed cohorts. It checks the official isolated
+0.1.58 engine, full routing and existing unchanged Qwen assets: all 96
+teacher-forced full-vocabulary scalar/MTP positions match with zero error.
+The [research adapter](../tools/benchmark/vrambridge-strata-server.py)
+also passes actual Synapse load, non-streamed/SSE chats, slot telemetry
+and unload. The [study](../docs/research/strata-upstream-reuse.md) separates
+this completed research API boundary from production provider/Automatic
+integration; it is not a native llama.cpp MTP port.
+
+The subsequent [provider/cache integration](results/synapse-strata-cache-integration-summary.json)
+clears that production adapter boundary: metadata-bound optional provider
+selection, remembered Automatic reload, a separate legacy-compatible
+winner store, and actual near-capacity 16K input pass. The original Qwen
+1K comparison selects Strata at 57.26 against native 31.32 and its
+refined 9 GiB cache at 39.69 decode-probe tok/s. Native measurements are
+reused after a transport-only fix, not rerun as a new cohort.
+The full Strata ranking caches 3,991 rather than 3,067 experts and again
+passes all 96 raw-logit positions with zero error. These are bounded
+engineering results, not cache-only or general quality claims.
 
 The [protocol/results](../docs/research/model-agnostic-architecture-study.md),
 [reviewed aggregates](results/model-agnostic-architecture-summary.json) and

@@ -1,6 +1,7 @@
 #define main sequence_decode_contract_main
 #include "sequence-decode-probe.cpp"
 #undef main
+static_assert(kSteps >= 3, "Rollback probe needs three reference positions");
 
 int main(int argc, char ** argv) {
     if (argc != 3 && argc != 4) {
@@ -13,6 +14,15 @@ int main(int argc, char ** argv) {
 #endif
         const bool gpu = argc == 4 && std::strcmp(argv[3], "gpu-cpu-experts") == 0;
         require(argc == 3 || gpu, "invalid placement");
+        int rollback_step = 0;
+        if (const char * step_env = std::getenv("VRAMBRIDGE_PROBE_ROLLBACK_STEP")) {
+            char * end = nullptr;
+            const auto step = std::strtoul(step_env, &end, 10);
+            require(end != step_env && *end == '\0' && step < static_cast<unsigned long>(kSteps) &&
+                    static_cast<unsigned long>(kSteps) - step >= 3,
+                    "Rollback step must leave three bounded reference positions");
+            rollback_step = static_cast<int>(step);
+        }
         llama_backend_init();
         ggml_backend_dev_t devices[] = {nullptr, nullptr};
         auto mp = llama_model_default_params();
@@ -68,6 +78,7 @@ int main(int argc, char ** argv) {
         for (int sequences : {2, 4, 8}) {
             llama_memory_clear(llama_get_memory(ctx.get()), true);
             for (int seq = 0; seq < sequences; ++seq) prefill(ctx.get(), refs[seq].prompt, seq, count);
+            for (int step = 0; step < rollback_step; ++step) decode(ctx.get(), refs, sequences, step, count);
             std::vector<std::vector<uint8_t>> snapshots;
             for (int seq = 0; seq < sequences; ++seq) {
                 const size_t size = llama_state_seq_get_size_ext(ctx.get(), seq, LLAMA_STATE_SEQ_FLAGS_NONE);
@@ -76,19 +87,21 @@ int main(int argc, char ** argv) {
                 require(llama_state_seq_get_data_ext(ctx.get(), snapshots.back().data(), size, seq,
                         LLAMA_STATE_SEQ_FLAGS_NONE) == size, "state capture failed");
             }
-            const auto before = decode(ctx.get(), refs, sequences, 0, count);
-            decode(ctx.get(), refs, sequences, 1, count);
-            decode(ctx.get(), refs, sequences, 2, count);
+            const auto before = decode(ctx.get(), refs, sequences, rollback_step, count);
+            decode(ctx.get(), refs, sequences, rollback_step + 1, count);
+            decode(ctx.get(), refs, sequences, rollback_step + 2, count);
             for (int seq = 0; seq < sequences; ++seq) {
                 const auto & state = snapshots[seq];
                 require(llama_state_seq_set_data_ext(ctx.get(), state.data(), state.size(), seq,
                         LLAMA_STATE_SEQ_FLAGS_NONE) == state.size(), "state restore failed");
             }
-            const auto after = decode(ctx.get(), refs, sequences, 0, count);
+            const auto after = decode(ctx.get(), refs, sequences, rollback_step, count);
             for (int seq = 0; seq < sequences; ++seq) {
-                passed = compare("before_reference", sequences, seq, 0, refs[seq].decode[0], before[seq]) && passed;
-                passed = compare("restored_reference", sequences, seq, 0, refs[seq].decode[0], after[seq]) && passed;
-                passed = compare("restore_repeatability", sequences, seq, 0, before[seq], after[seq]) && passed;
+                passed = compare("before_reference", sequences, seq, rollback_step,
+                                 refs[seq].decode[rollback_step], before[seq]) && passed;
+                passed = compare("restored_reference", sequences, seq, rollback_step,
+                                 refs[seq].decode[rollback_step], after[seq]) && passed;
+                passed = compare("restore_repeatability", sequences, seq, rollback_step, before[seq], after[seq]) && passed;
             }
         }
         ctx.reset();

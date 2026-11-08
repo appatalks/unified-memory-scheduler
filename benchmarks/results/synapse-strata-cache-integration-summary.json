@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-08",
+  "status": "optional_strata_provider_integrated_registered_and_validated",
+  "engine_version": "0.1.58",
+  "release": "v0.2.12",
+  "component_signature_verified": true,
+  "engine_source": "8a42a9457db62568d1663c8c1bcc01cfffae5355",
+  "native_backend_pin_unchanged": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "automatic": {
+    "scope": "Bounded 1K local Auto Tune decode probes, same original Qwen target; not a general leaderboard.",
+    "native_trials_reused_after_transport_only_fix": true,
+    "native_uncached_decode_tok_s": 31.321853750619344,
+    "native_cache_winner_mib": 9216,
+    "native_cache_decode_tok_s": 39.69388823513784,
+    "selected_provider": "strata-mtp",
+    "selected_decode_tok_s": 57.260445557842,
+    "measured_winner_reload_verified": true,
+    "installed_identical_component_reload": {
+      "scope": "Installed identical component; reuse measured winner and verify Automatic reload.",
+      "status": "passed",
+      "provider": "strata-mtp",
+      "context": 1024,
+      "actual_cache_mib": 7786,
+      "measured_choice_reused": true
+    },
+    "provider_candidates": "Metadata/asset binding, Linux/NVIDIA/F16 and actual activation; no name rules or new UI toggles.",
+    "maximum_goal_does_not_shorten_context": true,
+    "balanced_can_recommend_faster_supported_context_with_explicit_client_limits": true
+  },
+  "cache_review": {
+    "native_budget_policy": "Aggregate detected NVIDIA VRAM minus 1GiB/card, capped64GiB, measured loads decide fit.",
+    "native_gap_refinement": "Up to two1GiB-resolution trials between observed fitting and OOM banks.",
+    "native_trials": [
+      {
+        "cache_mib": 0,
+        "passed": true,
+        "decode_tok_s": 31.321853750619344,
+        "allocation_mib": 0.0
+      },
+      {
+        "cache_mib": 14336,
+        "passed": false,
+        "decode_tok_s": null,
+        "allocation_mib": null
+      },
+      {
+        "cache_mib": 12288,
+        "passed": false,
+        "decode_tok_s": null,
+        "allocation_mib": null
+      },
+      {
+        "cache_mib": 8192,
+        "passed": true,
+        "decode_tok_s": 37.547903141783834,
+        "allocation_mib": 8187.01
+      },
+      {
+        "cache_mib": 4096,
+        "passed": true,
+        "decode_tok_s": 25.67436655070748,
+        "allocation_mib": 4088.58
+      },
+      {
+        "cache_mib": 2048,
+        "passed": true,
+        "decode_tok_s": 20.887697540876566,
+        "allocation_mib": 2039.26
+      },
+      {
+        "cache_mib": 1024,
+        "passed": true,
+        "decode_tok_s": 17.74099323299847,
+        "allocation_mib": 971.78
+      },
+      {
+        "cache_mib": 10240,
+        "passed": false,
+        "decode_tok_s": null,
+        "allocation_mib": null
+      },
+      {
+        "cache_mib": 9216,
+        "passed": true,
+        "decode_tok_s": 39.69388823513784,
+        "allocation_mib": 9209.84
+      }
+    ],
+    "native_counter_check": {
+      "ubatch <= 8": {
+        "hits": 49454,
+        "misses": 16074,
+        "hit_rate_percent": 75.47,
+        "uploaded_mib": 31206.2,
+        "scope": "Cumulative backend load; <=8 includes decode and small input batches."
+      }
+    },
+    "counter_scope": "A separate128-output counter-transport check; cumulative load counters, not a repeat speed cohort.",
+    "strata_partial_rank_slots": 3067,
+    "strata_full_rank_slots": 3991,
+    "strata_actual_cache_mib": 7786,
+    "byte_budget_proxy_distinct_from_actual_expert_count": true,
+    "full_rank_scalar_mtp_numerics": {
+      "positions": 96,
+      "passed": 96,
+      "max_absolute": 0.0,
+      "max_relative_l2": 0.0,
+      "all_passed": true
+    }
+  },
+  "capacity": {
+    "context": 16384,
+    "actual_prompt_tokens": 14333,
+    "decode_tok_s": 55.85373303661038,
+    "actual_provider_verified": true
+  },
+  "compatibility": {
+    "profiles": 6,
+    "no_silent_native_or_target_only_fallback": true,
+    "provider_choices_use_separate_side_store": true,
+    "unrelated_models_keep_native_machine_choice_keys": true,
+    "provider_build_key_includes_code_libraries_python_and_tokenizer_dependency_versions": true,
+    "native_engine_and_hybrid_profile_not_replaced": true,
+    "app_deployed_and_restarted_with_explicit_consent": true,
+    "deployment": {
+      "app_responsive": true,
+      "frontend_responsive": true,
+      "optional_provider_detected": true,
+      "native_backend_preserved": true,
+      "state": "stopped",
+      "installed_archive_sha256": "2bc92fc6bbe9a780b9910c4003352d677b8fdeff4769f4b67b85c7f40ba820a2"
+    },
+    "raw_tokens_logits_paths_and_api_keys_excluded": true
+  },
+  "code_sha256": {
+    "synapse_app/app.py": "deabfcc6a76fc9757da146a146487a8834add712d821174b9a27e6a2a59efb2e",
+    "synapse_app/tuning.py": "484e8d25e008810ae57f0bcea59530f4a07874bc11cd1cbc1e14e9d4cf5cf173",
+    "synapse_app/strata_profile.py": "47b5bc4e5bab54d2cbe81d12aedcca30e5d672e2a7bf724b5163628b2a09e1bc",
+    "synapse_app/execution-profiles.json": "37d8ac9d65826c03de7240d4516b7362bb3ca8204088f6814e46ddd5f786b71f"
+  },
+  "source_artifacts_sha256": {
+    "strata-provider-autotune-private.json": "9fc0d495f2e770a407b6bf15023e7e342be958142c3a2d7cbf0ac19b581810ac",
+    "strata-provider-autotune-r1-private.json": "1ea41509b908eec405bc4879218e8974bcb3287788955bb4c90be60cd0e0ab0a",
+    "strata-provider-16k-private.json": "4a58d1a6ef831475742a78e7437d6081fdde5d46bdfe002ce65098666e276ab6",
+    "strata-installed-reload-private.json": "186f467274066b393315074fb838919523468495b06497782e304ce8d5457a8e",
+    "native-cache-counter-check-private.json": "762797598d84d20628eb6cf41f5291eba36cdfafccab9c0eaa642f9a5c7b767b",
+    "strata-0158-full-cache-compatibility/private-report.json": "3e777a86ba2c7bb94c1e9408504e952965f3a576e49ea8900a7a8987255ca97d"
+  },
+  "limitations": [
+    "Original Qwen target is not the modified SC117 first shard; pack binding is not transferred by name.",
+    "The57.26tok/s gain is whole Strata provider plus MTP/cache, not cache alone.",
+    "These checks do not establish broad intelligence, arbitrary long-context sampling or every platform/model.",
+    "Clover/diffusion and GPT-OSS native port remain separate research gates.",
+    "The updated app was backed up, deployed and restarted after separate explicit approval; its listener/frontend and provider detection pass."
+  ]
+}

@@ -1,0 +1,140 @@
+{
+  "kind": "inverse-expert-placement-feasibility",
+  "model_sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c",
+  "backend_sha256": {
+    "llama-server": "62521cdb24abc16d25772e5c5b9c491bc554fe551c26a1386894502231986979",
+    "libllama.so": "0773fa408e9de586aa1f1ffdc27cdc699b980ca573d66acdb7dafedab1bcfcee",
+    "libggml-cuda.so": "846f25212c08736bead9562031a09cfd6626025bafda64876bcfd8e3df9954cd"
+  },
+  "context": 16384,
+  "slots": 1,
+  "kv_cache": "f16",
+  "threads": 8,
+  "batch_threads": 16,
+  "warmup_tokens": 32,
+  "output_tokens": 128,
+  "fresh_runs_per_arm": 1,
+  "limitations": [
+    "Single-load short-prompt feasibility screen, not broad numerical or quality qualification.",
+    "Placements and memory allocations differ; unchanged model bytes and selected experts.",
+    "Inverse expert cache uses 12 GiB; misses are uploaded, not skipped.",
+    "Scheduler debug verifies placement separately and is absent from timed runs."
+  ],
+  "schema_version": 1,
+  "date_utc": "2026-11-08",
+  "status": "inverse_slower_in_bounded_clover_screen_not_numerically_qualified",
+  "private_report_sha256": "1c6ac255af09531f59c2da26206c82b472ddd58f4a8fb0769d597d273fc8038f",
+  "runs": [
+    {
+      "arm": "inverse",
+      "diagnostic": true,
+      "status": "completed",
+      "gpu_loaded_mib": 12746,
+      "model_buffer_mib": {
+        "CPU_Mapped": 21794.82,
+        "CUDA0": 127.5
+      },
+      "log_sha256": "ca245601d1217b2f6cb2e90ccccedf186eda86f7ac96cef6c057c58878894169",
+      "gpu_expert_cache_mib": 12285.3,
+      "placement_check": {
+        "gpu_expert_matmuls": 120,
+        "cpu_dense_matmuls": 341
+      },
+      "samples": []
+    },
+    {
+      "arm": "automatic-fit",
+      "diagnostic": false,
+      "status": "completed",
+      "gpu_loaded_mib": 13312,
+      "model_buffer_mib": {
+        "CPU_Mapped": 9675.44,
+        "CUDA0": 12246.68
+      },
+      "log_sha256": "83f239481812c41ffe1dda5bf56b0a0e2ce09ab0bf787437f8260d14b3062388",
+      "samples": [
+        {
+          "category": "coding",
+          "wall_decode_tok_s": 63.57432480684328,
+          "end_to_end_tok_s": 52.95324381896443,
+          "first_token_seconds": 0.421164866995241
+        },
+        {
+          "category": "reasoning",
+          "wall_decode_tok_s": 63.254010498244355,
+          "end_to_end_tok_s": 51.612948366395756,
+          "first_token_seconds": 0.47392814100021496
+        },
+        {
+          "category": "prose",
+          "wall_decode_tok_s": 63.317619548878874,
+          "end_to_end_tok_s": 52.24980705257372,
+          "first_token_seconds": 0.4457504929960123
+        }
+      ]
+    },
+    {
+      "arm": "gpu-backbone",
+      "diagnostic": false,
+      "status": "completed",
+      "gpu_loaded_mib": 3716,
+      "model_buffer_mib": {
+        "CPU_Mapped": 19433.309999999998,
+        "CUDA0": 2488.81
+      },
+      "log_sha256": "557fecf52d041b8f39deace4358a1f8a39a6d43bfb77972bf5428c3f14821e20",
+      "samples": [
+        {
+          "category": "coding",
+          "wall_decode_tok_s": 44.16527238063726,
+          "end_to_end_tok_s": 34.767648441081484,
+          "first_token_seconds": 0.8077102280003601
+        },
+        {
+          "category": "reasoning",
+          "wall_decode_tok_s": 44.1479190558834,
+          "end_to_end_tok_s": 33.98876073469681,
+          "first_token_seconds": 0.8909099520024029
+        },
+        {
+          "category": "prose",
+          "wall_decode_tok_s": 43.713809251247206,
+          "end_to_end_tok_s": 34.01765132978845,
+          "first_token_seconds": 0.8593517970002722
+        }
+      ]
+    },
+    {
+      "arm": "inverse",
+      "diagnostic": false,
+      "status": "completed",
+      "gpu_loaded_mib": 12746,
+      "model_buffer_mib": {
+        "CPU_Mapped": 21794.82,
+        "CUDA0": 127.5
+      },
+      "log_sha256": "6fc1e9234a47f40b42272f1a618b28a21fc70639f7fa8af356b91ba861f9d50e",
+      "gpu_expert_cache_mib": 12285.3,
+      "samples": [
+        {
+          "category": "coding",
+          "wall_decode_tok_s": 12.653089029241428,
+          "end_to_end_tok_s": 11.931925325613854,
+          "first_token_seconds": 0.6921809399937047
+        },
+        {
+          "category": "reasoning",
+          "wall_decode_tok_s": 12.712718299178292,
+          "end_to_end_tok_s": 11.822047583237309,
+          "first_token_seconds": 0.8389793610040215
+        },
+        {
+          "category": "prose",
+          "wall_decode_tok_s": 12.938767135988284,
+          "end_to_end_tok_s": 12.132779892711612,
+          "first_token_seconds": 0.7364557729961234
+        }
+      ]
+    }
+  ]
+}

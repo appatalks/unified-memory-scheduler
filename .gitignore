@@ -107,6 +107,12 @@ htmlcov/
 !/benchmarks/results/clover-candidate-speed-summary.json
 !/benchmarks/results/clover-scheduling-family-summary.json
 !/benchmarks/results/tandem-source-build-summary.json
+!/benchmarks/results/tandem-qualification-summary.json
+!/benchmarks/results/moe-component-qualification-summary.json
+!/benchmarks/results/clover-inverse-placement-summary.json
+!/benchmarks/results/synapse-native-cache-autotune-summary.json
+!/benchmarks/results/strata-upstream-compatibility-summary.json
+!/benchmarks/results/synapse-strata-cache-integration-summary.json
 !/benchmarks/results/gpt120-prefill-real-workload-summary.json
 !/benchmarks/results/deepseek-v41-disk-feasibility.json
 !/benchmarks/results/deepseek-v41-row-stream-blocked.json

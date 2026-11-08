@@ -1,0 +1,63 @@
+--- a/ggml/src/ggml-backend.cpp
++++ b/ggml/src/ggml-backend.cpp
+@@ -1946,6 +1946,12 @@
+                 user_done = set_packed(split_backend, (int) dst.size(), dst.data(), src.data(), nb.data());
+             }
+             if (user_done) {
++                static const bool trace = getenv("VRAMBRIDGE_COMPONENT_TRACE") && atoi(getenv("VRAMBRIDGE_COMPONENT_TRACE")) != 0;
++                static thread_local bool traced = false;
++                if (trace && !traced) {
++                    GGML_LOG_INFO("EXPERIMENT_COMPONENT_PACKED_INPUTS active\n");
++                    traced = true;
++                }
+                 // staged by the host already: nothing to wait for before the inputs are written again
+             } else if (n_user > 1 && no_wait && sched->input_copy_events[split_backend_id] != NULL) {
+                 // the copies queue on the split backend after its previous work, so they cannot overwrite inputs a
+--- a/ggml/src/ggml-cuda/ggml-cuda.cu
++++ b/ggml/src/ggml-cuda/ggml-cuda.cu
+@@ -3077,6 +3077,12 @@
+     if (!by_shape) {
+         return cgraph->nodes[0];
+     }
++    static const bool trace = getenv("VRAMBRIDGE_COMPONENT_TRACE") && atoi(getenv("VRAMBRIDGE_COMPONENT_TRACE")) != 0;
++    static thread_local bool traced = false;
++    if (trace && !traced) {
++        GGML_LOG_INFO("EXPERIMENT_COMPONENT_GRAPH_SHAPE active\n");
++        traced = true;
++    }
+     const ggml_tensor * last = cgraph->nodes[cgraph->n_nodes - 1];
+     uintptr_t k = (uintptr_t) cgraph->nodes[0];
+     k ^= ((uintptr_t) cgraph->n_nodes << 40) ^ ((uintptr_t) (last->ne[1] & 0xffff) << 24) ^ ((uintptr_t) (cgraph->nodes[0]->ne[1] & 0xffff) << 8);
+--- a/ggml/src/ggml-cuda/mmvq.cu
++++ b/ggml/src/ggml-cuda/mmvq.cu
+@@ -2019,6 +2019,13 @@
+         const int64_t s12 = src1->nb[2] / ts_src1;
+         const int64_t s13 = src1->nb[3] / ts_src1;
+         quantize_row_q8_1_cuda(src1_d, nullptr, q8_d, src0->type, ne10, s11, s12, s13, ne10_padded, ne11, ne12, ne13, stream);
++    } else {
++        static const bool trace = getenv("VRAMBRIDGE_COMPONENT_TRACE") && atoi(getenv("VRAMBRIDGE_COMPONENT_TRACE")) != 0;
++        static thread_local bool traced = false;
++        if (trace && !traced) {
++            GGML_LOG_INFO("EXPERIMENT_COMPONENT_Q8_REUSE hit\n");
++            traced = true;
++        }
+     }
+ 
+     const int64_t s01 = src0->nb[1] / ts_src0;
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -2783,6 +2783,14 @@
+     slot->used   = ++graph_pool_clock;
+     gf_res_prev_active = hit ? cur.get() : nullptr;
+     (hit ? n_pool_hits : n_pool_misses)++;
++    if (hit) {
++        static const bool trace = getenv("VRAMBRIDGE_COMPONENT_TRACE") && atoi(getenv("VRAMBRIDGE_COMPONENT_TRACE")) != 0;
++        static thread_local bool traced = false;
++        if (trace && !traced) {
++            LLAMA_LOG_INFO("EXPERIMENT_COMPONENT_GRAPH_POOL reuse\n");
++            traced = true;
++        }
++    }
+     return hit;
+ }
+ 

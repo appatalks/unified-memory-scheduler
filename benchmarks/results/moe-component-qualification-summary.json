@@ -1,0 +1,1234 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-08",
+  "status": "bounded_clover_gpu_concurrency_win_not_production_qualified",
+  "hardware": "Ryzen 9 9950X and RTX 5070 Ti 16 GB",
+  "source_artifacts_sha256": {
+    "tandem-component-raw-v1-private.json": "689714be46f3954de3c964ddd28e46c194d159b62a7edf153ad8683bc8cbc5ab",
+    "tandem-component-raw-8g-private.json": "488aac8b4175077d23c0fc604e294424fd652abce5552e17289de65be051f822",
+    "tandem-component-combined-4g-private.json": "55fb6f369b90f331290ce33801680176f2321abeb3421570ffb34b6022a78f67",
+    "tandem-component-control-8g-private.json": "f7446c7574e581547165333bbb42f2f0703fe0e9321a5ada567b10b96201de9e",
+    "tandem-component-reference-8g-private.json": "0a8b754068a6fa3035cac1d0eb2c4cfc411293c6354e5b9514094317bd88fce7",
+    "tandem-component-matched-8g-private.json": "fb591a030671ae2a3feda4b1fda18538109200bbfac91bf815710f5b1b2249e4",
+    "tandem-component-speed-8g-private.json": "1d814b785a71c88b6e0523b512e462756c835771f474f54d0adbf5c69307cbb2",
+    "clover-long-320-private.json": "c85d21ef7f6b51b7afffc9c701a7986617d1b7c9b73eeb2a18f15a64348b1d84",
+    "clover-long-attention-320-private.json": "a36c11a142246ca97f48bd2342320c5d3ec20e0c5dadaeca5d08b62541aba616",
+    "clover-attention-request-gates-gpu-cpu-experts-private.json": "095cd5810f8cd7a8a0f4df9cc3410cb157fad28a980b5a75c53f2d64c2c3d1c1",
+    "clover-attention-throughput-private.json": "f51e7c951e78b051a7d5b673f477f41ae8bc073e2288622117be88c63ca74e28",
+    "clover-attention-cpu-interrupted.json": "3f05706c95413dbe7cd54faeeebde749be2e9f6b82c93cc176f9562f4052e647",
+    "clover-long-rollback-gpu.jsonl": "c14ffde0a14c65702e7cfe20f6ee0d71c5e704079c079b6ce942d43305cbf520",
+    "clover-attention-request-gates-cpu-private.log": "1d4bca8ac34271f5b21082c76751a7975dc21c97fc68bf81fd79ecb40dbba351"
+  },
+  "tandem": {
+    "research_commit": "e1acb8877bfcf92b4ae7c9f0e0f1d896dbf6c683",
+    "backend_commit": "f5222f25c18da062ab2b8a2dbbfbf4feae398566",
+    "component_trace_patch_sha256": "092f0839ed569ad5691881e81519187a5116561989ae04aecb4959199ee097a6",
+    "numerical_screens": {
+      "tandem-component-raw-v1": {
+        "protocol": {
+          "context": 16384,
+          "slots": 1,
+          "cache_mib": 4096,
+          "kv_cache": "f16",
+          "threads": 8,
+          "batch_threads": 16,
+          "teacher_forced_steps": 32,
+          "prompts": 8,
+          "reference": "same-family unpatched GPU-only 4 GiB expert cache",
+          "absolute_threshold": 0.01,
+          "relative_l2_threshold": 0.001
+        },
+        "backend_sha256": {
+          "libggml-cpu.so": "a99fe8efd0485b6479100fc1fe573b9752b7366271a40b0216130194ffe23bf7",
+          "libggml.so": "16e3432aad450865cb8770dcec87b91537432338ed98fea442587bc487a71784",
+          "libggml-cuda.so": "17e0cbf13b51e76d3f2df509e66987b93d101700e37f10dcdf2bc443fef399f3",
+          "libllama.so": "d598b731b91e774793fded2bca4a7b730eb33500a3550e26d11b139e3559dc1b",
+          "libllama-server-impl.so": "849a3491793f78e9eb11ca1837a2f249dffd3520d4629d40ea0e6f1621b7f97b",
+          "libllama-common.so": "52c7f90379b121618a213c531bb65e4a79419f9a1738cd6e3212dcb2d3e6f080",
+          "libggml-base.so": "fee7bb2560690bbda0cfadb25a09b485abb4245e80a5a039fbb638c5f3f23e4c",
+          "libmtmd.so": "2a00ca88b29e21395d2816032cde3473a07b031cd85ccac20a07e4b32d725d4d"
+        },
+        "runner_sha256": "d4380958d5504379f21bb5d6aceba845318b8a396809b5cc53088e48e9ff8593",
+        "probe_sha256": "666dc52b8e0196da77a741c78d43aaa85d5a812fe0bebd9d5f783a7dd87ffc92",
+        "runs": [
+          {
+            "family": "coder",
+            "variant": "trace-control",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "coder",
+            "variant": "cpu-fixed",
+            "status": "completed",
+            "passed": 0,
+            "total": 264,
+            "max_absolute": 5.77616864,
+            "max_relative_l2": 0.717224218,
+            "first_difference": {
+              "case": "scalar_prefill",
+              "sequences": 1,
+              "sequence": 0,
+              "step": -1,
+              "max_absolute": 0.46068567,
+              "relative_l2": 0.0354728418,
+              "passes": false,
+              "top_equal": true
+            },
+            "missing_markers": [],
+            "qualified": false,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "coder",
+            "variant": "packed",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "coder",
+            "variant": "graphs",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "coder",
+            "variant": "q8-reuse",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "coder",
+            "variant": "launch-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "trace-control",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "cpu-fixed",
+            "status": "completed",
+            "passed": 0,
+            "total": 264,
+            "max_absolute": 3.90542603,
+            "max_relative_l2": 0.271337737,
+            "first_difference": {
+              "case": "scalar_prefill",
+              "sequences": 1,
+              "sequence": 0,
+              "step": -1,
+              "max_absolute": 1.96522498,
+              "relative_l2": 0.140650153,
+              "passes": false,
+              "top_equal": true
+            },
+            "missing_markers": [],
+            "qualified": false,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "packed",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "graphs",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "q8-reuse",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "launch-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "trace-control",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "cpu-fixed",
+            "status": "completed",
+            "passed": 4,
+            "total": 264,
+            "max_absolute": 1.21892971,
+            "max_relative_l2": 0.0849272564,
+            "first_difference": {
+              "case": "scalar_prefill",
+              "sequences": 1,
+              "sequence": 0,
+              "step": -1,
+              "max_absolute": 0.451139927,
+              "relative_l2": 0.0221412988,
+              "passes": false,
+              "top_equal": true
+            },
+            "missing_markers": [],
+            "qualified": false,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "packed",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "graphs",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "q8-reuse",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "launch-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          }
+        ]
+      },
+      "tandem-component-raw-8g": {
+        "protocol": {
+          "context": 16384,
+          "slots": 1,
+          "cache_mib": 8192,
+          "kv_cache": "f16",
+          "threads": 8,
+          "batch_threads": 16,
+          "teacher_forced_steps": 32,
+          "prompts": 8,
+          "reference": "same-family unpatched GPU-only 4 GiB expert cache",
+          "absolute_threshold": 0.01,
+          "relative_l2_threshold": 0.001
+        },
+        "backend_sha256": {
+          "libggml-cpu.so": "a99fe8efd0485b6479100fc1fe573b9752b7366271a40b0216130194ffe23bf7",
+          "libggml.so": "16e3432aad450865cb8770dcec87b91537432338ed98fea442587bc487a71784",
+          "libggml-cuda.so": "17e0cbf13b51e76d3f2df509e66987b93d101700e37f10dcdf2bc443fef399f3",
+          "libllama.so": "d598b731b91e774793fded2bca4a7b730eb33500a3550e26d11b139e3559dc1b",
+          "libllama-server-impl.so": "849a3491793f78e9eb11ca1837a2f249dffd3520d4629d40ea0e6f1621b7f97b",
+          "libllama-common.so": "52c7f90379b121618a213c531bb65e4a79419f9a1738cd6e3212dcb2d3e6f080",
+          "libggml-base.so": "fee7bb2560690bbda0cfadb25a09b485abb4245e80a5a039fbb638c5f3f23e4c",
+          "libmtmd.so": "2a00ca88b29e21395d2816032cde3473a07b031cd85ccac20a07e4b32d725d4d"
+        },
+        "runner_sha256": "a022845117fea84da8eb6767037a70889a42c34bdb4b19426193ade28e27e7c1",
+        "probe_sha256": "666dc52b8e0196da77a741c78d43aaa85d5a812fe0bebd9d5f783a7dd87ffc92",
+        "runs": [
+          {
+            "family": "coder",
+            "variant": "safe-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "safe-bundle",
+            "status": "completed",
+            "passed": 132,
+            "total": 264,
+            "max_absolute": 1.53691489,
+            "max_relative_l2": 0.157313901,
+            "first_difference": {
+              "case": "scalar_prefill",
+              "sequences": 1,
+              "sequence": 0,
+              "step": -1,
+              "max_absolute": 1.09778798,
+              "relative_l2": 0.0710477236,
+              "passes": false,
+              "top_equal": true
+            },
+            "missing_markers": [],
+            "qualified": false,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "safe-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          }
+        ]
+      },
+      "tandem-component-combined-4g": {
+        "protocol": {
+          "context": 16384,
+          "slots": 1,
+          "cache_mib": 4096,
+          "kv_cache": "f16",
+          "threads": 8,
+          "batch_threads": 16,
+          "teacher_forced_steps": 32,
+          "prompts": 8,
+          "reference": "same-family unpatched GPU-only 4 GiB expert cache",
+          "absolute_threshold": 0.01,
+          "relative_l2_threshold": 0.001
+        },
+        "backend_sha256": {
+          "libggml-cpu.so": "a99fe8efd0485b6479100fc1fe573b9752b7366271a40b0216130194ffe23bf7",
+          "libggml.so": "16e3432aad450865cb8770dcec87b91537432338ed98fea442587bc487a71784",
+          "libggml-cuda.so": "17e0cbf13b51e76d3f2df509e66987b93d101700e37f10dcdf2bc443fef399f3",
+          "libllama.so": "d598b731b91e774793fded2bca4a7b730eb33500a3550e26d11b139e3559dc1b",
+          "libllama-server-impl.so": "849a3491793f78e9eb11ca1837a2f249dffd3520d4629d40ea0e6f1621b7f97b",
+          "libllama-common.so": "52c7f90379b121618a213c531bb65e4a79419f9a1738cd6e3212dcb2d3e6f080",
+          "libggml-base.so": "fee7bb2560690bbda0cfadb25a09b485abb4245e80a5a039fbb638c5f3f23e4c",
+          "libmtmd.so": "2a00ca88b29e21395d2816032cde3473a07b031cd85ccac20a07e4b32d725d4d"
+        },
+        "runner_sha256": "a022845117fea84da8eb6767037a70889a42c34bdb4b19426193ade28e27e7c1",
+        "probe_sha256": "666dc52b8e0196da77a741c78d43aaa85d5a812fe0bebd9d5f783a7dd87ffc92",
+        "runs": [
+          {
+            "family": "coder",
+            "variant": "safe-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "safe-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "safe-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          }
+        ]
+      },
+      "tandem-component-control-8g": {
+        "protocol": {
+          "context": 16384,
+          "slots": 1,
+          "cache_mib": 8192,
+          "kv_cache": "f16",
+          "threads": 8,
+          "batch_threads": 16,
+          "teacher_forced_steps": 32,
+          "prompts": 8,
+          "reference": "same-family unpatched GPU-only 4 GiB expert cache",
+          "absolute_threshold": 0.01,
+          "relative_l2_threshold": 0.001
+        },
+        "backend_sha256": {
+          "libggml-cpu.so": "a99fe8efd0485b6479100fc1fe573b9752b7366271a40b0216130194ffe23bf7",
+          "libggml.so": "16e3432aad450865cb8770dcec87b91537432338ed98fea442587bc487a71784",
+          "libggml-cuda.so": "17e0cbf13b51e76d3f2df509e66987b93d101700e37f10dcdf2bc443fef399f3",
+          "libllama.so": "d598b731b91e774793fded2bca4a7b730eb33500a3550e26d11b139e3559dc1b",
+          "libllama-server-impl.so": "849a3491793f78e9eb11ca1837a2f249dffd3520d4629d40ea0e6f1621b7f97b",
+          "libllama-common.so": "52c7f90379b121618a213c531bb65e4a79419f9a1738cd6e3212dcb2d3e6f080",
+          "libggml-base.so": "fee7bb2560690bbda0cfadb25a09b485abb4245e80a5a039fbb638c5f3f23e4c",
+          "libmtmd.so": "2a00ca88b29e21395d2816032cde3473a07b031cd85ccac20a07e4b32d725d4d"
+        },
+        "runner_sha256": "a022845117fea84da8eb6767037a70889a42c34bdb4b19426193ade28e27e7c1",
+        "probe_sha256": "666dc52b8e0196da77a741c78d43aaa85d5a812fe0bebd9d5f783a7dd87ffc92",
+        "runs": [
+          {
+            "family": "coder",
+            "variant": "trace-control",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "trace-control",
+            "status": "completed",
+            "passed": 132,
+            "total": 264,
+            "max_absolute": 1.53691489,
+            "max_relative_l2": 0.157313901,
+            "first_difference": {
+              "case": "scalar_prefill",
+              "sequences": 1,
+              "sequence": 0,
+              "step": -1,
+              "max_absolute": 1.09778798,
+              "relative_l2": 0.0710477236,
+              "passes": false,
+              "top_equal": true
+            },
+            "missing_markers": [],
+            "qualified": false,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "trace-control",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          }
+        ]
+      },
+      "tandem-component-reference-8g": {
+        "protocol": {
+          "context": 16384,
+          "slots": 1,
+          "cache_mib": 8192,
+          "kv_cache": "f16",
+          "threads": 8,
+          "batch_threads": 16,
+          "teacher_forced_steps": 32,
+          "prompts": 8,
+          "reference_cache_mib": 8192,
+          "absolute_threshold": 0.01,
+          "relative_l2_threshold": 0.001
+        },
+        "backend_sha256": {
+          "libggml-cpu.so": "48760c8994254244d4d3e4f0caee1bd3850f891a8e7efda6e81a57db37f1c6fd",
+          "libggml.so": "a663d5a996ae43f98a77bf4045c29d5f0f44b3a55115e580dfa18eda4c7111d3",
+          "libggml-cuda.so": "7f9439557f5e7a23a9ccc04c8cf47d17610cc3711b88eb636b7d6cc5f0334c8c",
+          "libllama.so": "b7b28ca136228e9b43fa7a28bd9c4e773f7441f6cdc3ca9813d23436c0323c9a",
+          "libllama-server-impl.so": "26f28e0c8e6bea8eccf674136983b7da46f127cc84321f30ec2217cf53896633",
+          "libllama-common.so": "700d4297d3fae06c40894a5050866bd235c5df3d86ad2bea4ca4affe2f80728c",
+          "libggml-base.so": "4c734599b82bee7534ebb57ff8d11a8b476150abb33172a2c3ba0fd4d33ab077",
+          "libmtmd.so": "ad99d9b3c36d29d688fc4a6812cf0d6dcd6ac512865ea019444d2e32131401ac"
+        },
+        "runner_sha256": "c3943d1e3938eb652ded915af2d77893495844a12525ea815667d5c71d66a724",
+        "probe_sha256": "0dc1e7f7b9e31696468577924b1008978b0953baf941996109b9f22a4882b00e",
+        "runs": [
+          {
+            "family": "coder",
+            "variant": "trace-control",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "trace-control",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "trace-control",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          }
+        ]
+      },
+      "tandem-component-matched-8g": {
+        "protocol": {
+          "context": 16384,
+          "slots": 1,
+          "cache_mib": 8192,
+          "kv_cache": "f16",
+          "threads": 8,
+          "batch_threads": 16,
+          "teacher_forced_steps": 32,
+          "prompts": 8,
+          "reference_cache_mib": 8192,
+          "absolute_threshold": 0.01,
+          "relative_l2_threshold": 0.001
+        },
+        "backend_sha256": {
+          "libggml-cpu.so": "a99fe8efd0485b6479100fc1fe573b9752b7366271a40b0216130194ffe23bf7",
+          "libggml.so": "16e3432aad450865cb8770dcec87b91537432338ed98fea442587bc487a71784",
+          "libggml-cuda.so": "17e0cbf13b51e76d3f2df509e66987b93d101700e37f10dcdf2bc443fef399f3",
+          "libllama.so": "d598b731b91e774793fded2bca4a7b730eb33500a3550e26d11b139e3559dc1b",
+          "libllama-server-impl.so": "849a3491793f78e9eb11ca1837a2f249dffd3520d4629d40ea0e6f1621b7f97b",
+          "libllama-common.so": "52c7f90379b121618a213c531bb65e4a79419f9a1738cd6e3212dcb2d3e6f080",
+          "libggml-base.so": "fee7bb2560690bbda0cfadb25a09b485abb4245e80a5a039fbb638c5f3f23e4c",
+          "libmtmd.so": "2a00ca88b29e21395d2816032cde3473a07b031cd85ccac20a07e4b32d725d4d"
+        },
+        "runner_sha256": "c3943d1e3938eb652ded915af2d77893495844a12525ea815667d5c71d66a724",
+        "probe_sha256": "666dc52b8e0196da77a741c78d43aaa85d5a812fe0bebd9d5f783a7dd87ffc92",
+        "runs": [
+          {
+            "family": "coder",
+            "variant": "safe-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            ]
+          },
+          {
+            "family": "qwen38",
+            "variant": "safe-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+              "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            ]
+          },
+          {
+            "family": "gpt120",
+            "variant": "safe-bundle",
+            "status": "completed",
+            "passed": 264,
+            "total": 264,
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "first_difference": null,
+            "missing_markers": [],
+            "qualified": true,
+            "model_sha256": [
+              "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+              "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            ]
+          }
+        ]
+      }
+    },
+    "speed": [
+      {
+        "family": "coder",
+        "medians": [
+          {
+            "arm": "reference-cache",
+            "completed_runs": 3,
+            "expected_runs": 3,
+            "workloads": [
+              {
+                "category": "coding",
+                "wall_decode_tok_s": 118.49892922929331,
+                "end_to_end_tok_s": 107.5219509666562,
+                "first_token_seconds": 0.2305321539970464
+              },
+              {
+                "category": "reasoning",
+                "wall_decode_tok_s": 134.5064690774242,
+                "end_to_end_tok_s": 109.5522434539939,
+                "first_token_seconds": 0.4422403540011146
+              },
+              {
+                "category": "prose",
+                "wall_decode_tok_s": 159.7743895393661,
+                "end_to_end_tok_s": 133.41480913185322,
+                "first_token_seconds": 0.32448870499501936
+              }
+            ]
+          },
+          {
+            "arm": "tandem-safe",
+            "completed_runs": 3,
+            "expected_runs": 3,
+            "workloads": [
+              {
+                "category": "coding",
+                "wall_decode_tok_s": 121.40430357533255,
+                "end_to_end_tok_s": 109.74643632465464,
+                "first_token_seconds": 0.2322176430025138
+              },
+              {
+                "category": "reasoning",
+                "wall_decode_tok_s": 139.74847283979312,
+                "end_to_end_tok_s": 113.09463126587598,
+                "first_token_seconds": 0.4419745289997081
+              },
+              {
+                "category": "prose",
+                "wall_decode_tok_s": 165.56274266825648,
+                "end_to_end_tok_s": 137.04375055262324,
+                "first_token_seconds": 0.33107936699525453
+              }
+            ]
+          }
+        ],
+        "matching_outputs": 9,
+        "output_comparisons": 9,
+        "passing_first_token_probability_checks": 9
+      },
+      {
+        "family": "qwen38",
+        "medians": [
+          {
+            "arm": "reference-cache",
+            "completed_runs": 3,
+            "expected_runs": 3,
+            "workloads": [
+              {
+                "category": "coding",
+                "wall_decode_tok_s": 35.48430241825374,
+                "end_to_end_tok_s": 28.783092676075263,
+                "first_token_seconds": 1.7128928560050554
+              },
+              {
+                "category": "reasoning",
+                "wall_decode_tok_s": 36.05414870283862,
+                "end_to_end_tok_s": 28.72745753769376,
+                "first_token_seconds": 1.8406996240009903
+              },
+              {
+                "category": "prose",
+                "wall_decode_tok_s": 34.902099201121075,
+                "end_to_end_tok_s": 27.580614094866043,
+                "first_token_seconds": 1.977994139000657
+              }
+            ]
+          },
+          {
+            "arm": "tandem-safe",
+            "completed_runs": 3,
+            "expected_runs": 3,
+            "workloads": [
+              {
+                "category": "coding",
+                "wall_decode_tok_s": 34.77548371190977,
+                "end_to_end_tok_s": 28.30049221414436,
+                "first_token_seconds": 1.7150500409989036
+              },
+              {
+                "category": "reasoning",
+                "wall_decode_tok_s": 35.01724301433875,
+                "end_to_end_tok_s": 28.097697092856883,
+                "first_token_seconds": 1.828919143001258
+              },
+              {
+                "category": "prose",
+                "wall_decode_tok_s": 34.878450801115974,
+                "end_to_end_tok_s": 27.816025286423056,
+                "first_token_seconds": 1.878911119994882
+              }
+            ]
+          }
+        ],
+        "matching_outputs": 9,
+        "output_comparisons": 9,
+        "passing_first_token_probability_checks": 9
+      },
+      {
+        "family": "gpt120",
+        "medians": [
+          {
+            "arm": "reference-cache",
+            "completed_runs": 3,
+            "expected_runs": 3,
+            "workloads": [
+              {
+                "category": "coding",
+                "wall_decode_tok_s": 19.407139007848325,
+                "end_to_end_tok_s": 15.141845559616137,
+                "first_token_seconds": 3.9383673810007167
+              },
+              {
+                "category": "reasoning",
+                "wall_decode_tok_s": 16.02270957767859,
+                "end_to_end_tok_s": 12.823414790490155,
+                "first_token_seconds": 4.313118115998805
+              },
+              {
+                "category": "prose",
+                "wall_decode_tok_s": 19.56299429516171,
+                "end_to_end_tok_s": 15.227851414409013,
+                "first_token_seconds": 4.044474551999883
+              }
+            ]
+          },
+          {
+            "arm": "tandem-safe",
+            "completed_runs": 3,
+            "expected_runs": 3,
+            "workloads": [
+              {
+                "category": "coding",
+                "wall_decode_tok_s": 18.471527826345667,
+                "end_to_end_tok_s": 14.59056905918105,
+                "first_token_seconds": 3.9181140329965274
+              },
+              {
+                "category": "reasoning",
+                "wall_decode_tok_s": 15.223697907185162,
+                "end_to_end_tok_s": 12.30387218844048,
+                "first_token_seconds": 4.240672745996562
+              },
+              {
+                "category": "prose",
+                "wall_decode_tok_s": 19.51624706444118,
+                "end_to_end_tok_s": 15.1934557076264,
+                "first_token_seconds": 3.952631610998651
+              }
+            ]
+          }
+        ],
+        "matching_outputs": 9,
+        "output_comparisons": 9,
+        "passing_first_token_probability_checks": 9
+      }
+    ],
+    "speed_protocol": {
+      "context": 16384,
+      "slots": 1,
+      "kv_cache": "f16",
+      "tokens": 256,
+      "threads": 8,
+      "batch_threads": 16,
+      "repetitions": 3,
+      "arms": [
+        "reference-cache",
+        "tandem-safe"
+      ],
+      "fixed_cache_mib": 8192,
+      "runner_sha256": "53e2299aa3fd2e7f1ee494b3745b185625bc5584350f12df2e5a4115439edca0"
+    }
+  },
+  "clover": {
+    "backend_commit": "cb09d4355d8bf968bb907c5de03cf42d8aa073ce",
+    "model_sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c",
+    "attention_patch_sha256": "28a6e38d6377129a8870e12674b52048f518d18e33bb52335a8cbaa1e60e1832",
+    "long_decode": {
+      "status": "completed",
+      "steps": 320,
+      "context_per_sequence": 16384,
+      "sequence_capacity": 8,
+      "kv_cache": "f16",
+      "threads": 8,
+      "batch_threads": 16,
+      "placement": "GPU backbone/KV and CPU experts",
+      "probe_sha256": "3ac59c87e1232d0fc9f079c424ee4e0bc62ae6e05ee1c681304d7937118a812d",
+      "model_sha256": "4d439bb832487fbb91d0a739a5746cf3089bde4137c17050576b24e6dba3539c",
+      "runs": [
+        {
+          "variant": "attention-off",
+          "status": "completed",
+          "libllama_sha256": "5209a4aa3f983f1633c11708570d520d5c733d411d7d96c259c3f893543ea8f2",
+          "exit_code": 2,
+          "results": [
+            {
+              "width": 2,
+              "passed": 640,
+              "total": 640,
+              "max_absolute": 0,
+              "first_difference": null
+            },
+            {
+              "width": 4,
+              "passed": 1280,
+              "total": 1280,
+              "max_absolute": 0,
+              "first_difference": null
+            },
+            {
+              "width": 8,
+              "passed": 1968,
+              "total": 2560,
+              "max_absolute": 6.82938099,
+              "first_difference": {
+                "case": "batched_decode",
+                "sequences": 8,
+                "sequence": 0,
+                "step": 246,
+                "max_absolute": 0.400447845,
+                "relative_l2": 0.0034965491,
+                "passes": false,
+                "top_equal": true
+              }
+            }
+          ],
+          "report_sha256": "2537e7b51bb1b83232b89a7f272adc7196b73fed3261fdf3171cc03bfb9a1cdf",
+          "reference_sha256": "c310a8f108ea0ae669910318b31c6d7983c9324d8652f194af9a923c41b44917"
+        },
+        {
+          "variant": "attention-on",
+          "status": "completed",
+          "libllama_sha256": "5209a4aa3f983f1633c11708570d520d5c733d411d7d96c259c3f893543ea8f2",
+          "exit_code": 0,
+          "results": [
+            {
+              "width": 2,
+              "passed": 640,
+              "total": 640,
+              "max_absolute": 0,
+              "first_difference": null
+            },
+            {
+              "width": 4,
+              "passed": 1280,
+              "total": 1280,
+              "max_absolute": 0,
+              "first_difference": null
+            },
+            {
+              "width": 8,
+              "passed": 2560,
+              "total": 2560,
+              "max_absolute": 0,
+              "first_difference": null
+            }
+          ],
+          "report_sha256": "5e12a28aad4e2007a3b02db2d36994f8b984da43d71b31532e119c18536d6180",
+          "reference_sha256": "c310a8f108ea0ae669910318b31c6d7983c9324d8652f194af9a923c41b44917"
+        }
+      ]
+    },
+    "request_gates": {
+      "placement": "gpu-cpu-experts",
+      "checks": [
+        {
+          "name": "short-request-equivalence",
+          "concurrency": 2,
+          "passed": 8,
+          "total": 8
+        },
+        {
+          "name": "short-request-equivalence",
+          "concurrency": 4,
+          "passed": 8,
+          "total": 8
+        },
+        {
+          "name": "short-request-equivalence",
+          "concurrency": 8,
+          "passed": 8,
+          "total": 8
+        },
+        {
+          "name": "long-request-equivalence",
+          "concurrency": 4,
+          "input_tokens": [
+            4174,
+            2129,
+            72,
+            69
+          ],
+          "passed": 4,
+          "total": 4
+        },
+        {
+          "name": "cancel-one-keep-other-and-recover",
+          "passed": 1,
+          "total": 1
+        },
+        {
+          "name": "arithmetic",
+          "passed": 1,
+          "total": 1
+        },
+        {
+          "name": "coding",
+          "passed": 1,
+          "total": 1
+        },
+        {
+          "name": "forced-tool-call-format",
+          "passed": 1,
+          "total": 1
+        }
+      ],
+      "candidate_libllama_sha256": "5209a4aa3f983f1633c11708570d520d5c733d411d7d96c259c3f893543ea8f2",
+      "candidate_server_impl_sha256": "93518ee9767af48e5857a3ed32751aa4d910bb5e72f8438ff3e4b23bb8e87e65",
+      "runner_sha256": "5db8ee1db53ad9dceca2c40b9bddc6efd09b8211671053b77b03e0f470f1984b",
+      "attention_marker_count": 1
+    },
+    "throughput_protocol": {
+      "backend_slots": 8,
+      "per_slot_context": 16384,
+      "output_tokens": 256,
+      "requests": 8,
+      "repetitions": 3,
+      "threads": 8,
+      "batch_threads": 16,
+      "gpu_placement": "cpu-experts",
+      "candidate_libllama_sha256": "5209a4aa3f983f1633c11708570d520d5c733d411d7d96c259c3f893543ea8f2",
+      "candidate_server_impl_sha256": "93518ee9767af48e5857a3ed32751aa4d910bb5e72f8438ff3e4b23bb8e87e65",
+      "runner_sha256": "15a9ce26c4007dc95c53e3a2603c8051890525122e12922174769d8805acfdff",
+      "wrapper_sha256": "9c0535f4d8512176415022546fade29884ce6b599e09d41b6244576d3afbdf36"
+    },
+    "throughput": [
+      {
+        "concurrency": 1,
+        "completed_runs": 3,
+        "expected_runs": 3,
+        "aggregate_end_to_end_output_tok_s": 38.98371959817786,
+        "median_agent_ttft_seconds": 23.599318193002546,
+        "max_agent_ttft_seconds": 46.70028918699245,
+        "median_agent_latency_seconds": 29.36524930450105,
+        "max_agent_latency_seconds": 52.53411479699571,
+        "median_active_agent_decode_tok_s": 44.133525436937674,
+        "outputs_matching_serial": 24,
+        "outputs_compared": 24
+      },
+      {
+        "concurrency": 2,
+        "completed_runs": 3,
+        "expected_runs": 3,
+        "aggregate_end_to_end_output_tok_s": 39.40499379006227,
+        "median_agent_ttft_seconds": 20.495766941498005,
+        "max_agent_ttft_seconds": 40.40437725699303,
+        "median_agent_latency_seconds": 32.31971761049499,
+        "max_agent_latency_seconds": 51.97239133199764,
+        "median_active_agent_decode_tok_s": 20.7533496008179,
+        "outputs_matching_serial": 24,
+        "outputs_compared": 24
+      },
+      {
+        "concurrency": 4,
+        "completed_runs": 3,
+        "expected_runs": 3,
+        "aggregate_end_to_end_output_tok_s": 42.085646485177165,
+        "median_agent_ttft_seconds": 13.853207310497964,
+        "max_agent_ttft_seconds": 27.112053742006538,
+        "median_agent_latency_seconds": 36.060585939500015,
+        "max_agent_latency_seconds": 48.661279673004174,
+        "median_active_agent_decode_tok_s": 10.912663898580746,
+        "outputs_matching_serial": 24,
+        "outputs_compared": 24
+      },
+      {
+        "concurrency": 8,
+        "completed_runs": 3,
+        "expected_runs": 3,
+        "aggregate_end_to_end_output_tok_s": 43.970906703853316,
+        "median_agent_ttft_seconds": 3.4807191904983483,
+        "max_agent_ttft_seconds": 6.1953972470000735,
+        "median_agent_latency_seconds": 45.8247081260015,
+        "max_agent_latency_seconds": 46.57457859400165,
+        "median_active_agent_decode_tok_s": 5.660396666445893,
+        "outputs_matching_serial": 24,
+        "outputs_compared": 24
+      }
+    ],
+    "rollback": {
+      "step": 280,
+      "reference_steps": 320,
+      "state_restore": "full snapshots of all active sequences",
+      "results": [
+        {
+          "case": "before_reference",
+          "passed": 14,
+          "total": 14,
+          "max_absolute": 0
+        },
+        {
+          "case": "restored_reference",
+          "passed": 14,
+          "total": 14,
+          "max_absolute": 0
+        },
+        {
+          "case": "restore_repeatability",
+          "passed": 14,
+          "total": 14,
+          "max_absolute": 0
+        }
+      ]
+    },
+    "cpu_only": {
+      "status": "interrupted_after_failed_cpu_only_gate",
+      "placement": "cpu",
+      "output_tokens": 256,
+      "observed_checks": [
+        {
+          "name": "short-request-equivalence",
+          "concurrency": 2,
+          "passed": 4,
+          "total": 8
+        },
+        {
+          "name": "short-request-equivalence",
+          "concurrency": 4,
+          "passed": 3,
+          "total": 8
+        }
+      ],
+      "source": "captured shell 437 output and private backend log",
+      "reason": "Stopped the owned test after numerical/output equivalence failed; did not continue performance qualification.",
+      "limitations": [
+        "The remaining checks were not completed.",
+        "This is not a matched CPU attention-off/on localization and does not identify the faulty component.",
+        "GPU qualification does not qualify the CPU-only placement."
+      ]
+    }
+  },
+  "limitations": [
+    "Numerical agreement is with the specified same-placement/backend reference, not broad answer quality.",
+    "Tandem CPU-miss sharing remains unqualified; only the GPU-cache preserving subset is timed.",
+    "Changing Qwen3.8 cache capacity changes its numerical reference even with the components disabled.",
+    "Clover results are causal autoregression, not native block diffusion or speculative speed.",
+    "Clover GPU checks cover short prompts, 320 forced decode steps, mixed 4K/2K input and bounded rollback.",
+    "CPU-only Clover longer concurrent streams failed; the incomplete test was stopped and retained.",
+    "These results do not qualify full occupied 16K context, all rollback types or other platforms.",
+    "No installed backend, saved state, target weights, selected experts or production defaults changed."
+  ]
+}

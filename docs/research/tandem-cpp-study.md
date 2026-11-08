@@ -1,9 +1,10 @@
 # tandem.cpp: expert offload and execution study
 
 Date: 2026-11-08 UTC (November 7 local time).
-Status: pinned source reviewed, patch application verified, and matched
-CUDA builds completed; **no model-level numerical, performance or
-production qualification yet**.
+Status: pinned builds and local compatibility/speed screens completed.
+The initial hybrid/default speed gains are numerically unqualified;
+the matched cache-only path passes bounded checks but has no broad
+performance win. **No production promotion.**
 
 ## Source and claim boundary
 
@@ -148,5 +149,200 @@ them. Do not download draft heads for the initial study.
    and tensor metadata, retain activation guards, and enter
    Automatic -> Auto Tune -> remember without new engine toggles.
 
-The current deliverable is a reproducible source/build checkpoint and
-bounded study protocol, not a validated inference candidate or release.
+The initial deliverable was a source/build checkpoint and bounded study
+protocol. The local follow-up below does not establish a release candidate.
+
+## Local compatibility and initial speed follow-up
+
+The [reviewed qualification summary](../../benchmarks/results/tandem-qualification-summary.json)
+records the local evidence. The
+[`vrambridge-tandem-screen.py`](../../tools/benchmark/vrambridge-tandem-screen.py)
+runner owns loopback servers, checks GPU contamination, uses temporary
+configuration, verifies all model shards against a private manifest, and
+requires the requested cache/CPU mechanism and actual execution counters.
+It does not load or change the installed Synapse application.
+
+Coder Q4_K_M, the existing SC117 Qwen3.8 IQ3_S two-shard target and
+GPT-OSS-120B MXFP4 two-shard target load and finish the tested requests.
+Clover Q4_K_M fails in both pinned builds with
+`unknown model architecture: 'clover_moe'`. This is a limitation of these
+exact builds, not a claim that all upstream revisions reject Clover.
+
+The first screen uses one fresh load per arm, one 16K slot, F16 KV,
+8 generation/16 batch threads, 64 excluded warmup tokens, and three
+held-out coding/reasoning/prose prompts with 128 forced greedy outputs.
+Drafts, prompt reuse, expert skipping and pinned-weight copies are off.
+Upstream automatic fit and tandem automatic caching use a 1,024 MiB
+free-memory margin but have different expert placement.
+The fixed arm disables the default bundle and uploads 20% of misses;
+the default arm enables the published bundle and its adaptive sharing.
+The table is decode tok/s, **not repeated-load medians or qualified wins**:
+
+| Model / workload | Upstream fit | Tandem fixed | Tandem defaults |
+|---|---:|---:|---:|
+| Coder / coding | 79.61 | 99.49 | 112.48 |
+| Coder / reasoning | 80.27 | 120.47 | 134.61 |
+| Coder / prose | 81.18 | 139.71 | 167.66 |
+| SC117 Qwen3.8 / coding | 31.13 | 43.19 | 46.38 |
+| SC117 Qwen3.8 / reasoning | 31.03 | 43.75 | 41.65 |
+| SC117 Qwen3.8 / prose | 31.02 | 42.32 | 33.24 |
+| GPT-OSS / coding | 24.51 | 40.04 | 42.63 |
+| GPT-OSS / reasoning | 25.39 | 34.54 | 25.32 |
+| GPT-OSS / prose | 25.44 | 34.69 | 35.59 |
+
+Whole-request rates also improve in this screen, but not by the same
+amount. For example, Qwen3.8 coding is 22.74 -> 38.51 tok/s with defaults;
+GPT coding is 15.04 -> 30.75; Coder coding is 68.70 -> 98.51.
+Fixed sharing generally has worse TTFT than the default bundle.
+The default arm does not improve every workload: GPT reasoning decode
+is slightly slower than control. Natural-answer quality is not measured.
+
+All 18 candidate first-token full-vocabulary log-probability comparisons
+fail the unchanged diagnostic thresholds. Complete outputs match only
+1/3 Coder, 2/3 Qwen3.8 and 0/3 GPT controls per candidate arm.
+This blocks claiming equivalent execution, but does not by itself prove
+the generated answers are wrong.
+
+## Separating patch effects from placement effects
+
+The extended
+[`sequence-decode-probe.cpp`](../../tools/trace/sequence-decode-probe.cpp)
+supports `VRAMBRIDGE_PROBE_SERIAL_ONLY=1`: one 16K slot, eight short prompts,
+32 teacher-forced steps and full-vocabulary raw logits, giving 264
+prefill/decode comparisons per family. Compile it separately against each
+build's matching headers and libraries; do not mix struct ABIs. The
+optional `VRAMBRIDGE_PROBE_MOE_CACHE_MIB=4096` is bounded and rejects
+non-scalar or CPU-only placement.
+
+Against original CUDA-backbone/CPU-expert scalar references, tandem with
+cache and feature defaults disabled passes 792/792 checks with zero error.
+The 4 GiB fixed-share cache arm fails all 792 checks, and GPU-only caching
+also differs from those CPU-expert references.
+
+That comparison changes the experts' execution placement, so those
+differences cannot simply be blamed on a tandem cache bug. A second
+control enables upstream's existing GPU-only expert cache at the same
+4 GiB size and generates new scalar references. Tandem's GPU-only
+cache path, with defaults disabled and no CPU-miss computation, then
+passes **792/792 raw-logit checks with zero error**. Cache activation and
+actual lookups are confirmed. This localizes a preserving control and
+separates existing CPU/GPU arithmetic differences from a patch regression.
+It does not qualify the faster hybrid/default bundle.
+
+Three fresh alternating runs per arm then measure this preserving
+GPU-only control at the same fixed 4 GiB cache, not the larger automatic
+caches of the initial screen. Both arms use defaults off, no CPU miss
+computation, the same 16K/F16/8/16 settings and 128 forced outputs.
+All **27/27 complete output hashes and 27/27 first-token full-vocabulary
+probability comparisons match**. Median decode tok/s:
+
+| Model / workload | Upstream cache | Tandem cache | Change |
+|---|---:|---:|---:|
+| Coder / coding | 54.43 | 52.61 | -3.35% |
+| Coder / reasoning | 51.52 | 49.30 | -4.31% |
+| Coder / prose | 80.59 | 80.42 | -0.21% |
+| SC117 Qwen3.8 / coding | 24.03 | 23.17 | -3.57% |
+| SC117 Qwen3.8 / reasoning | 26.40 | 25.07 | -5.01% |
+| SC117 Qwen3.8 / prose | 23.21 | 22.86 | -1.53% |
+| GPT-OSS / coding | 14.10 | 13.64 | -3.29% |
+| GPT-OSS / reasoning | 10.73 | 10.34 | -3.59% |
+| GPT-OSS / prose | 13.08 | 13.07 | -0.06% |
+
+Small changes can be timing noise; this does not establish a useful
+end-to-end speed win. In particular, a 4 GiB GPU-only cache is not the
+fastest measured way to execute these models on this machine. It is a
+matched source-isolation control. Do not compare it to the automatic
+hybrid screen as if only one feature changed.
+
+The outcome is a compatible research backend on three families, a
+bounded preserving control, and real but unqualified hybrid speed leads.
+Further work should isolate the CPU/GPU precision/placement contract and
+each fusion before measuring a qualified faster bundle. Do not tune or
+promote the failed default arm or port this large patch wholesale.
+
+The raw and timing source hashes are separate: the later probe extension
+does not rewrite identities in the earlier Clover summaries.
+These are short, single-slot screens; arbitrary occupied context,
+chunk-boundary equivalence and cache-path rollback remain unqualified.
+
+For reproduction, supply a private JSON manifest with a `label` and
+`files` list of `{path, sha256}` for every shard, then use matching pinned
+server paths:
+
+```sh
+python3 tools/benchmark/vrambridge-tandem-screen.py \
+  --reference /path/to/unpatched/llama-server \
+  --candidate /path/to/tandem/llama-server \
+  --manifest /private/model-manifest.json \
+  --output /private/tandem-initial.json --repetitions 1 --tokens 128
+
+python3 tools/benchmark/vrambridge-tandem-screen.py \
+  --reference /path/to/unpatched/llama-server \
+  --candidate /path/to/tandem/llama-server \
+  --manifest /private/model-manifest.json --labels coder qwen38 gpt120 \
+  --arms reference-cache tandem-cache --cache-mib 4096 \
+  --output /private/tandem-matched-cache.json --repetitions 3 --tokens 128
+```
+
+Labels select report assets only; no execution behavior is keyed on model
+names. Raw reports/logs stay private. Do not multiply these upstream
+comparison gains by previous Synapse Classic/Hosted results: this screen
+does not freshly measure those installed engines.
+
+## Preserving component qualification
+
+The later
+[`moe-component-qualification-summary.json`](../../benchmarks/results/moe-component-qualification-summary.json)
+separates the CPU-miss path from packed input uploads, graph-shape/pool
+reuse and Q8 activation-cache reuse. Each preserving component and the
+launch-only combination passes 792/792 raw-logit positions on Coder,
+SC117 Qwen3.8 and GPT-OSS against the same upstream 4 GiB cache.
+The complete preserving combination also passes at 4 GiB.
+CPU-miss sharing still fails, including the first prefill: Coder/Qwen
+pass 0/264 positions and GPT 4/264 against the GPU-cache reference.
+Do not time that failed path as qualified.
+
+The
+[`llama-tandem-component-trace-experimental.patch`](../../third_party/patches/llama-tandem-component-trace-experimental.patch)
+adds default-off logging at actual packed-copy completion, graph-pool
+reuse, graph-shape key selection and Q8 cache hits. It layers on the
+pinned tandem patch and changes no tensor operation. The original
+candidate binaries are frozen before rebuilding the diagnostic overlay;
+activation cannot be inferred merely from environment variables.
+The timing harness rejects missing component markers or unexpected CPU
+expert computation in a GPU-cache-only arm.
+
+Increasing the cache to 8 GiB changes Qwen's reference: both the disabled
+control and the combined candidate initially pass only 132/264 positions
+against the old 4 GiB reference, with identical observed maximum error.
+This is not evidence of a component regression. Fresh unpatched 8 GiB
+references pass their own repeat, and the preserving combination passes
+792/792 positions with zero error against those matching references.
+Cache configuration belongs in the numerical contract; do not silently
+compare different execution configurations.
+
+Three alternating fresh-load pairs per family then use the same 8 GiB
+cache, one 16K slot, F16 KV, 8/16 threads, 64 excluded warmup tokens,
+256 forced outputs and held-out coding/reasoning/prose requests.
+All 27/27 output hashes and first-token probability comparisons match.
+Median decode tok/s:
+
+| Model / workload | Upstream cache | Preserving subset | Change |
+|---|---:|---:|---:|
+| Coder / coding | 118.50 | 121.40 | +2.45% |
+| Coder / reasoning | 134.51 | 139.75 | +3.90% |
+| Coder / prose | 159.77 | 165.56 | +3.62% |
+| SC117 Qwen3.8 / coding | 35.48 | 34.78 | -2.00% |
+| SC117 Qwen3.8 / reasoning | 36.05 | 35.02 | -2.88% |
+| SC117 Qwen3.8 / prose | 34.90 | 34.88 | -0.07% |
+| GPT-OSS / coding | 19.41 | 18.47 | -4.82% |
+| GPT-OSS / reasoning | 16.02 | 15.22 | -4.99% |
+| GPT-OSS / prose | 19.56 | 19.52 | -0.24% |
+
+These are modest Coder gains, below the application's 5% selection
+margin, and regressions elsewhere. There is no broad default-worthy
+speed win. The different cache size/output length also prevents treating
+this as a matched comparison with the earlier 4 GiB/128-output screen.
+No new engine pin, blanket feature bundle or model-name heuristic is
+promoted. The separate Clover attention follow-up is a different backend
+and cannot be combined with these rates as a multiplier.

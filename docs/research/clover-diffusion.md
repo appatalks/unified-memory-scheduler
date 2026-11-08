@@ -15,6 +15,117 @@ The [scheduling and family follow-up](#scheduling-and-family-follow-up)
 records later bounded workload successes, eight-client longer-stream
 failures and the remaining cross-family blockers.
 
+The later [attention-core follow-up](#attention-core-follow-up) resolves the
+tested GPU eight-sequence long-stream discrepancy and measures a bounded
+aggregate gain. It does not qualify CPU-only longer streams or a release.
+
+## Attention-core follow-up
+
+Reviewed evidence:
+[`moe-component-qualification-summary.json`](../../benchmarks/results/moe-component-qualification-summary.json).
+Source remains prototype `cb09d4355d8bf968bb907c5de03cf42d8aa073ce`.
+The probe's compile-time `VRAMBRIDGE_PROBE_STEPS=320` preserves the default
+32-step protocol and binds the step count in its reference header.
+
+The previous scalar-projection candidate matches every tested 2/4-sequence
+position over 320 steps, but eight sequences first diverge at step 246.
+It passes 1968/2560 positions at width eight; subsequent recurrent state
+drifts. This puts the failure beyond the earlier short screen and near
+the padded attention-cache transition. The attention-off control in the
+new build reproduces exactly the same failure.
+
+The default-off
+[`llama-moe-attention-sequences-experimental.patch`](../../third_party/patches/llama-moe-attention-sequences-experimental.patch)
+isolates the Flash-Attention core per independent causal stream, not just
+its Q/K/V/output projections. It views existing Q/K/V/mask tensors,
+preserves F32 accumulation, sinks and soft caps, and concatenates the
+results. It does not crop context, alter KV precision, weights or routing.
+Coupled sequence rows and incompatible layouts are rejected.
+`EXPERIMENT_ATTN_SEQUENCE` confirms actual graph activation.
+The measured graph layers the FFN/GDN splits and generic role-diagnostic
+scalar projection alternative; its disabled GPU arm agrees with the
+previous scalar candidate's long results.
+
+With `VRAMBRIDGE_EXPERIMENT_ATTN_SEQUENCE=1`, the new library
+`5209a4aa3f983f1633c11708570d520d5c733d411d7d96c259c3f893543ea8f2`
+passes **4480/4480 decode positions** over widths 2/4/8 with zero error.
+Use the original prototype GGML/CUDA libraries, not a newly rebuilt mix:
+the experiment's frozen libllama-only overlay deliberately retains those
+same dependencies. Earlier passing overlays remain untouched.
+
+Real direct-server tests pair it with the prior physical-KV scheduler:
+eight 256-token outputs match all serial controls at 2/4/8 clients;
+mixed inputs of 4174/2129/72/69 tokens, cancellation/recovery,
+arithmetic, AST-only coding and forced tool formatting pass.
+Full snapshots of all active sequences at teacher-forced step 280,
+three rejected steps and restoration pass 42/42 reference/repeatability
+comparisons. This remains a bounded whole-state test, not arbitrary
+partial-suffix removal.
+
+Three fresh loads per client level, eight 16K slots, F16 KV, 8/16 threads,
+64 excluded warmup tokens and eight 256-output requests give:
+
+| Active clients | Aggregate HTTP tok/s | Serial-matching outputs | Median agent TTFT | Median completion |
+|---|---:|---:|---:|---:|
+| 1 | 38.98 | 24/24 | 23.60s | 29.37s |
+| 2 | 39.40 | 24/24 | 20.50s | 32.32s |
+| 4 | 42.09 | 24/24 | 13.85s | 36.06s |
+| 8 | 43.97 | 24/24 | 3.48s | 45.82s |
+
+The eight-client aggregate gain is about **12.8%**, with worse individual
+completion latency but earlier first output in the same eight-request
+burst. It is lower than the old numerically failed eight-client screen;
+correctness, not the fastest invalid rate, determines qualification.
+These are autoregressive GPU-backbone/CPU-expert results, not diffusion
+rates, GPU-hot expert caching or Synapse production concurrency.
+
+The CPU-only 256-output follow-up matches only 4/8 and 3/8 controls at
+2/4 clients and is stopped after the negative gate. Its incomplete
+report/log are retained. This does not isolate a CPU regression to the
+attention patch without a matched CPU off/on control. GPU qualification
+must not be generalized to CPU-only operation.
+Actual near-capacity input, other platforms, broader family/placement
+qualification and production integration remain open. No installed
+backend, user settings, profile defaults or Synapse engine pin changes.
+
+## Inverse CPU-backbone / GPU-expert feasibility
+
+The [reviewed inverse-placement screen](../../benchmarks/results/clover-inverse-placement-summary.json)
+tests the user's alternative partition without changing engine code or
+weights. The unmodified prototype keeps nominal layer devices CUDA so
+the native expert cache can target them, but tensor overrides move
+non-shared model weights to CPU. Routed weights remain CPU-resident
+backing for a 12 GiB GPU cache; shared expert weights are explicitly
+CUDA-resident. `--no-kv-offload` places attention and recurrent state on
+CPU, and `--no-op-offload` prevents opportunistic host-operation offload.
+Some boundary operations can still inherit GPU placement.
+
+The separate placement diagnostic inspects the last live decode graph,
+not initialization/reserve graphs. It confirms 120 routed expert matmuls
+on CUDA, 341 non-expert/dense matmuls on CPU, 320 MiB CPU KV and 62.81 MiB
+CPU recurrent state, 127.5 MiB GPU shared weights and 12285.30 MiB GPU
+expert cache. The first two diagnostics were invalid: one used insufficient
+debug verbosity and another included reserve graphs. They are retained
+privately and are not performance evidence.
+
+With debug logging disabled, one fresh load per arm, a 16K/F16 single
+slot, 8/16 threads, 32 excluded warmup tokens and three held-out
+128-output requests give:
+
+| Placement | Coding decode | Reasoning decode | Prose decode |
+|---|---:|---:|---:|
+| Native automatic fit | 63.57 | 63.25 | 63.32 |
+| GPU backbone / CPU routed experts | 44.17 | 44.15 | 43.71 |
+| CPU backbone/state / GPU expert cache | 12.65 | 12.71 | 12.94 |
+
+All requests complete, but the inverse is about 80% slower than native
+fitting in this short screen. CPU dense/recurrent work and additional
+device handoffs are plausible costs; phase profiling is needed to
+attribute them. This result does not generalize to other architectures,
+CPU/GPU combinations or larger concurrent batches, and no numerical or
+broad quality contract is established for the inverse placement.
+Do not treat it as a qualified model profile or promote it.
+
 ## Scheduling and family follow-up
 
 Reviewed evidence:

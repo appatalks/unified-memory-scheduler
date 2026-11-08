@@ -42,7 +42,11 @@ struct Reference {
     std::vector<std::vector<float>> decode;
 };
 
-constexpr int kSteps = 32;
+#ifndef VRAMBRIDGE_PROBE_STEPS
+#define VRAMBRIDGE_PROBE_STEPS 32
+#endif
+constexpr int kSteps = VRAMBRIDGE_PROBE_STEPS;
+static_assert(kSteps >= 1 && kSteps <= 512, "Decode probe steps must be bounded");
 
 void add(llama_batch & batch, llama_token token, int position, int sequence, bool output) {
     const int i = batch.n_tokens++;
@@ -183,6 +187,10 @@ int main(int argc, char ** argv) {
         require(std::strcmp(argv[2], "write") == 0 || std::strcmp(argv[2], "read") == 0, "invalid reference mode");
         const bool gpu = argc == 5 && std::strcmp(argv[4], "gpu-cpu-experts") == 0;
         require(argc == 4 || gpu, "invalid placement mode");
+        const char * scalar_env = std::getenv("VRAMBRIDGE_PROBE_SERIAL_ONLY");
+        require(!scalar_env || std::strcmp(scalar_env, "0") == 0 || std::strcmp(scalar_env, "1") == 0,
+                "VRAMBRIDGE_PROBE_SERIAL_ONLY must be 0 or 1");
+        const bool scalar_only = scalar_env && std::strcmp(scalar_env, "1") == 0;
         llama_backend_init();
         ggml_backend_dev_t cpu_devices[] = {nullptr};
         ggml_backend_dev_t gpu_devices[] = {nullptr, nullptr};
@@ -207,8 +215,8 @@ int main(int argc, char ** argv) {
             llama_model_load_from_file(argv[1], model_params), llama_model_free);
         require(model != nullptr, "model load failed");
         auto params = llama_context_default_params();
-        params.n_ctx = 131072;
-        params.n_seq_max = 8;
+        params.n_ctx = scalar_only ? 16384 : 131072;
+        params.n_seq_max = scalar_only ? 1 : 8;
         params.n_batch = 2048;
         params.n_ubatch = 512;
         params.n_threads = 8;
@@ -218,6 +226,13 @@ int main(int argc, char ** argv) {
         params.offload_kqv = gpu;
         params.op_offload = gpu;
         params.kv_unified = false;
+        if (const char * cache_env = std::getenv("VRAMBRIDGE_PROBE_MOE_CACHE_MIB")) {
+            char * end = nullptr;
+            const auto cache_mib = std::strtoull(cache_env, &end, 10);
+            require(scalar_only && gpu && end != cache_env && *end == '\0' && cache_mib <= 8192,
+                    "MoE cache probe requires scalar GPU placement and a bounded cache size");
+            params.moe_cache_size = cache_mib * 1024 * 1024;
+        }
         std::unique_ptr<llama_context, decltype(&llama_free)> context(
             llama_init_from_model(model.get(), params), llama_free);
         require(context != nullptr && llama_n_ctx_seq(context.get()) == 16384, "unexpected sequence context");
@@ -262,6 +277,21 @@ int main(int argc, char ** argv) {
         std::printf("{\"prompts\":%zu,\"steps\":%d,\"vocabulary\":%d,\"context_per_sequence\":%u,\"placement\":\"%s\"}\n",
                     refs.size(), kSteps, n_vocab, llama_n_ctx_seq(context.get()), gpu ? "gpu-cpu-experts" : "cpu");
         bool passed = true;
+        if (scalar_only) {
+            for (size_t seq = 0; seq < refs.size(); ++seq) {
+                llama_memory_clear(llama_get_memory(context.get()), true);
+                const auto actual = prefill(context.get(), refs[seq].prompt, 0, n_vocab);
+                passed = compare("scalar_prefill", 1, seq, -1, refs[seq].prefill, actual) && passed;
+                for (int step = 0; step < kSteps; ++step) {
+                    const auto output = decode_single(context.get(), refs[seq], step, n_vocab);
+                    passed = compare("scalar_decode", 1, seq, step, refs[seq].decode[step], output) && passed;
+                }
+            }
+            context.reset();
+            model.reset();
+            llama_backend_free();
+            return passed ? 0 : 2;
+        }
         const char * all_widths = std::getenv("VRAMBRIDGE_PROBE_ALL_WIDTHS");
         require(!all_widths || std::strcmp(all_widths, "0") == 0 || std::strcmp(all_widths, "1") == 0,
                 "VRAMBRIDGE_PROBE_ALL_WIDTHS must be 0 or 1");

@@ -1,0 +1,666 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-08",
+  "status": "native_cache_autotune_implemented_bounded_pinned_backend_validation",
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "source_artifacts_sha256": {
+    "native-cache-pinned-qualification-private.json": "97e70cdd7c3e8dc65d26941de7dc214fc68b32a6867415b04ed488f70d33e7a7",
+    "native-cache-pinned-qualification-logged-private.json": "6845c60436f0472844ef7d5c65ccc15c2609708643da3c207f0ac731aa92c3bd",
+    "native-cache-autotune-e2e-private.json": "2190b3aa7d6158405130452100a8a81879b9d049c66d45b35da5228c00c5c701",
+    "native-cache-autotune-gpt-low-private.json": "e761e8216dee20fa27427fb0d9aeca5630f379d797a40fe3ff60a1da518410d3",
+    "native-cache-autotune-coder-qwen-low-private.json": "c2199d6f0be8ee5b7ee47320d75a008bf02d1b7b8e9afa6ac239ad852e309da2",
+    "native-cache-autotune-coder-16k-private.json": "5c183dc28f268b3af94815ea28fa10a754c2f8f2813a9ee8e71a8e9c5084ce71"
+  },
+  "compatibility_screen": [
+    {
+      "family": "coder",
+      "model_sha256": [
+        "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+      ],
+      "runs": [
+        {
+          "cache_mib": 0,
+          "actual_cache_mib": 0,
+          "workloads": [
+            {
+              "category": "coding",
+              "wall_decode_tok_s": 68.52680391663611,
+              "end_to_end_tok_s": 59.841707183609124
+            },
+            {
+              "category": "reasoning",
+              "wall_decode_tok_s": 68.82911475526512,
+              "end_to_end_tok_s": 59.29463281745497
+            },
+            {
+              "category": "prose",
+              "wall_decode_tok_s": 70.37984078768945,
+              "end_to_end_tok_s": 61.44449299831408
+            }
+          ],
+          "answer_checks": [
+            {
+              "workload": "arithmetic",
+              "passed": true
+            },
+            {
+              "workload": "coding",
+              "passed": false
+            }
+          ],
+          "all_bounded_checks_passed": false
+        },
+        {
+          "cache_mib": 4096,
+          "actual_cache_mib": 4092.36,
+          "workloads": [
+            {
+              "category": "coding",
+              "wall_decode_tok_s": 50.334688123173365,
+              "end_to_end_tok_s": 42.73865430258487
+            },
+            {
+              "category": "reasoning",
+              "wall_decode_tok_s": 48.18078535398032,
+              "end_to_end_tok_s": 39.09514817109277
+            },
+            {
+              "category": "prose",
+              "wall_decode_tok_s": 74.02886961531382,
+              "end_to_end_tok_s": 57.50663978174619
+            }
+          ],
+          "answer_checks": [
+            {
+              "workload": "arithmetic",
+              "passed": true
+            },
+            {
+              "workload": "coding",
+              "passed": false
+            }
+          ],
+          "all_bounded_checks_passed": false
+        },
+        {
+          "cache_mib": 8192,
+          "actual_cache_mib": 8190.18,
+          "workloads": [
+            {
+              "category": "coding",
+              "wall_decode_tok_s": 119.45007016161986,
+              "end_to_end_tok_s": 98.79769854302415
+            },
+            {
+              "category": "reasoning",
+              "wall_decode_tok_s": 111.76530935283574,
+              "end_to_end_tok_s": 80.65285186899189
+            },
+            {
+              "category": "prose",
+              "wall_decode_tok_s": 140.3020737005528,
+              "end_to_end_tok_s": 104.38738916250142
+            }
+          ],
+          "answer_checks": [
+            {
+              "workload": "arithmetic",
+              "passed": true
+            },
+            {
+              "workload": "coding",
+              "passed": false
+            }
+          ],
+          "all_bounded_checks_passed": false
+        }
+      ]
+    },
+    {
+      "family": "qwen38",
+      "model_sha256": [
+        "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+        "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+      ],
+      "runs": [
+        {
+          "cache_mib": 0,
+          "actual_cache_mib": 0,
+          "workloads": [
+            {
+              "category": "coding",
+              "wall_decode_tok_s": 27.641461443968716,
+              "end_to_end_tok_s": 20.65061962879209
+            },
+            {
+              "category": "reasoning",
+              "wall_decode_tok_s": 27.482720269381623,
+              "end_to_end_tok_s": 20.24528588933043
+            },
+            {
+              "category": "prose",
+              "wall_decode_tok_s": 27.777334962579612,
+              "end_to_end_tok_s": 20.743166445181043
+            }
+          ],
+          "answer_checks": [
+            {
+              "workload": "arithmetic",
+              "passed": true
+            },
+            {
+              "workload": "coding",
+              "passed": true
+            }
+          ],
+          "all_bounded_checks_passed": true
+        },
+        {
+          "cache_mib": 4096,
+          "actual_cache_mib": 4088.58,
+          "workloads": [
+            {
+              "category": "coding",
+              "wall_decode_tok_s": 21.931176476497463,
+              "end_to_end_tok_s": 16.33863034750161
+            },
+            {
+              "category": "reasoning",
+              "wall_decode_tok_s": 23.558206457417192,
+              "end_to_end_tok_s": 17.01793919908082
+            },
+            {
+              "category": "prose",
+              "wall_decode_tok_s": 21.345264074284806,
+              "end_to_end_tok_s": 15.775604731910967
+            }
+          ],
+          "answer_checks": [
+            {
+              "workload": "arithmetic",
+              "passed": true
+            },
+            {
+              "workload": "coding",
+              "passed": true
+            }
+          ],
+          "all_bounded_checks_passed": true
+        },
+        {
+          "cache_mib": 8192,
+          "actual_cache_mib": 8187.01,
+          "workloads": [
+            {
+              "category": "coding",
+              "wall_decode_tok_s": 31.8836071957926,
+              "end_to_end_tok_s": 22.180456219055554
+            },
+            {
+              "category": "reasoning",
+              "wall_decode_tok_s": 33.324814653525465,
+              "end_to_end_tok_s": 22.629046377256696
+            },
+            {
+              "category": "prose",
+              "wall_decode_tok_s": 30.8362023388565,
+              "end_to_end_tok_s": 21.06510539890613
+            }
+          ],
+          "answer_checks": [
+            {
+              "workload": "arithmetic",
+              "passed": true
+            },
+            {
+              "workload": "coding",
+              "passed": true
+            }
+          ],
+          "all_bounded_checks_passed": true
+        }
+      ]
+    },
+    {
+      "family": "gpt120",
+      "model_sha256": [
+        "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+        "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+      ],
+      "runs": [
+        {
+          "cache_mib": 0,
+          "actual_cache_mib": 0,
+          "workloads": [
+            {
+              "category": "coding",
+              "wall_decode_tok_s": 23.271700790628817,
+              "end_to_end_tok_s": 14.489459449834749
+            },
+            {
+              "category": "reasoning",
+              "wall_decode_tok_s": 23.701566909227903,
+              "end_to_end_tok_s": 14.40334503987439
+            },
+            {
+              "category": "prose",
+              "wall_decode_tok_s": 23.421978419443583,
+              "end_to_end_tok_s": 14.73617654076007
+            }
+          ],
+          "answer_checks": [
+            {
+              "workload": "arithmetic",
+              "passed": true
+            },
+            {
+              "workload": "coding",
+              "passed": true
+            }
+          ],
+          "all_bounded_checks_passed": true
+        },
+        {
+          "cache_mib": 4096,
+          "actual_cache_mib": 4084.61,
+          "workloads": [
+            {
+              "category": "coding",
+              "wall_decode_tok_s": 13.34330082948343,
+              "end_to_end_tok_s": 9.27825149307035
+            },
+            {
+              "category": "reasoning",
+              "wall_decode_tok_s": 10.10115179993167,
+              "end_to_end_tok_s": 7.565020035441673
+            },
+            {
+              "category": "prose",
+              "wall_decode_tok_s": 13.005771107343142,
+              "end_to_end_tok_s": 9.230121463064062
+            }
+          ],
+          "answer_checks": [
+            {
+              "workload": "arithmetic",
+              "passed": true
+            },
+            {
+              "workload": "coding",
+              "passed": true
+            }
+          ],
+          "all_bounded_checks_passed": true
+        },
+        {
+          "cache_mib": 8192,
+          "actual_cache_mib": 8181.82,
+          "workloads": [
+            {
+              "category": "coding",
+              "wall_decode_tok_s": 20.24825969666552,
+              "end_to_end_tok_s": 12.533686765435444
+            },
+            {
+              "category": "reasoning",
+              "wall_decode_tok_s": 15.646624537956502,
+              "end_to_end_tok_s": 10.594103559418958
+            },
+            {
+              "category": "prose",
+              "wall_decode_tok_s": 19.10011619322574,
+              "end_to_end_tok_s": 12.151421279455594
+            }
+          ],
+          "answer_checks": [
+            {
+              "workload": "arithmetic",
+              "passed": true
+            },
+            {
+              "workload": "coding",
+              "passed": true
+            }
+          ],
+          "all_bounded_checks_passed": true
+        }
+      ]
+    }
+  ],
+  "application_e2e": [
+    {
+      "family": "gpt120",
+      "maximum_context": 1024,
+      "profile_id": "standard-auto",
+      "profile_revision": "623b3beecd2c4af63760ddee9fb14c815d5e52d10dde67cc526f80935880673d",
+      "settings": {
+        "execution_mode": "standard",
+        "hybrid_variant": "classic",
+        "context": 1024,
+        "placement": "auto",
+        "cpu_threads": 8,
+        "batch_threads": 16,
+        "expert_cache_mib": 0,
+        "kv_cache_type": "f16"
+      },
+      "decode_tokens_per_second": 25.13871324230216,
+      "standard_decode_tokens_per_second": 25.13871324230216,
+      "automatic_reload_cache_mib": 0,
+      "native_cache_verified": false,
+      "runtime_sha256": "893f5c051d4d73fb4362da807d4f3c49fc3f83df014160f2e22ead4cd42beedd",
+      "tuner_sha256": "218024e46c2b674e5de690389b1252fb32135b989acaecf2e03f111f83cd861f",
+      "trial_results": [
+        {
+          "context": 1024,
+          "cache_mib": 0,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 949,
+          "decode_tokens_per_second": 25.13871324230216
+        },
+        {
+          "context": 1024,
+          "cache_mib": 12288,
+          "capacity_passed": false,
+          "error_present": true,
+          "prompt_tokens": null,
+          "decode_tokens_per_second": null
+        },
+        {
+          "context": 1024,
+          "cache_mib": 8192,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 949,
+          "decode_tokens_per_second": 15.14114467769093
+        },
+        {
+          "context": 1024,
+          "cache_mib": 4096,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 949,
+          "decode_tokens_per_second": 10.372738222388731
+        },
+        {
+          "context": 1024,
+          "cache_mib": 2048,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 949,
+          "decode_tokens_per_second": 8.979849500550669
+        },
+        {
+          "context": 1024,
+          "cache_mib": 1024,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 949,
+          "decode_tokens_per_second": 6.92578934911759
+        }
+      ]
+    },
+    {
+      "family": "coder",
+      "maximum_context": 1024,
+      "profile_id": "standard-native-cache",
+      "profile_revision": "22e26969888191802b6a278fd0139da037fc3ba708ad99f2fd6945fb9f2c0ffe",
+      "settings": {
+        "execution_mode": "standard",
+        "hybrid_variant": "classic",
+        "context": 1024,
+        "placement": "auto",
+        "cpu_threads": 8,
+        "batch_threads": 16,
+        "expert_cache_mib": 12288,
+        "kv_cache_type": "f16"
+      },
+      "decode_tokens_per_second": 201.96237456864336,
+      "standard_decode_tokens_per_second": 85.74748513428933,
+      "automatic_reload_cache_mib": 12288,
+      "native_cache_verified": true,
+      "runtime_sha256": "c76c8670433a70c2208769a48cea2edc29f14f87166b38eb0eaebb9b0efefcc1",
+      "tuner_sha256": "dab7628da0799201f38d6aada2b1931048e20e99f5ae128db7ff1c9a5e34c584",
+      "trial_results": [
+        {
+          "context": 1024,
+          "cache_mib": 0,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 890,
+          "decode_tokens_per_second": 85.74748513428933
+        },
+        {
+          "context": 1024,
+          "cache_mib": 12288,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 890,
+          "decode_tokens_per_second": 201.96237456864336
+        },
+        {
+          "context": 1024,
+          "cache_mib": 8192,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 890,
+          "decode_tokens_per_second": 141.39877907164464
+        },
+        {
+          "context": 1024,
+          "cache_mib": 4096,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 890,
+          "decode_tokens_per_second": 54.77136190932105
+        },
+        {
+          "context": 1024,
+          "cache_mib": 2048,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 890,
+          "decode_tokens_per_second": 25.127820474187697
+        },
+        {
+          "context": 1024,
+          "cache_mib": 1024,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 890,
+          "decode_tokens_per_second": 13.251111058709515
+        }
+      ]
+    },
+    {
+      "family": "qwen38",
+      "maximum_context": 1024,
+      "profile_id": "standard-native-cache",
+      "profile_revision": "22e26969888191802b6a278fd0139da037fc3ba708ad99f2fd6945fb9f2c0ffe",
+      "settings": {
+        "execution_mode": "standard",
+        "hybrid_variant": "classic",
+        "context": 1024,
+        "placement": "auto",
+        "cpu_threads": 8,
+        "batch_threads": 16,
+        "expert_cache_mib": 8192,
+        "kv_cache_type": "f16"
+      },
+      "decode_tokens_per_second": 37.297652891008624,
+      "standard_decode_tokens_per_second": 29.948126072649906,
+      "automatic_reload_cache_mib": 8192,
+      "native_cache_verified": true,
+      "runtime_sha256": "c76c8670433a70c2208769a48cea2edc29f14f87166b38eb0eaebb9b0efefcc1",
+      "tuner_sha256": "dab7628da0799201f38d6aada2b1931048e20e99f5ae128db7ff1c9a5e34c584",
+      "trial_results": [
+        {
+          "context": 1024,
+          "cache_mib": 0,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 893,
+          "decode_tokens_per_second": 29.948126072649906
+        },
+        {
+          "context": 1024,
+          "cache_mib": 12288,
+          "capacity_passed": false,
+          "error_present": true,
+          "prompt_tokens": null,
+          "decode_tokens_per_second": null
+        },
+        {
+          "context": 1024,
+          "cache_mib": 8192,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 893,
+          "decode_tokens_per_second": 37.297652891008624
+        },
+        {
+          "context": 1024,
+          "cache_mib": 4096,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 893,
+          "decode_tokens_per_second": 26.769924095671914
+        },
+        {
+          "context": 1024,
+          "cache_mib": 2048,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 893,
+          "decode_tokens_per_second": 21.494438948600365
+        },
+        {
+          "context": 1024,
+          "cache_mib": 1024,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 893,
+          "decode_tokens_per_second": 18.60526986211444
+        }
+      ]
+    },
+    {
+      "family": "coder",
+      "maximum_context": 16384,
+      "profile_id": "standard-native-cache",
+      "profile_revision": "22e26969888191802b6a278fd0139da037fc3ba708ad99f2fd6945fb9f2c0ffe",
+      "settings": {
+        "execution_mode": "standard",
+        "hybrid_variant": "classic",
+        "context": 16384,
+        "placement": "auto",
+        "cpu_threads": 8,
+        "batch_threads": 16,
+        "expert_cache_mib": 8192,
+        "kv_cache_type": "f16"
+      },
+      "decode_tokens_per_second": 141.56758793353683,
+      "standard_decode_tokens_per_second": 75.27491644187917,
+      "automatic_reload_cache_mib": 8192,
+      "native_cache_verified": true,
+      "runtime_sha256": "c76c8670433a70c2208769a48cea2edc29f14f87166b38eb0eaebb9b0efefcc1",
+      "tuner_sha256": "dab7628da0799201f38d6aada2b1931048e20e99f5ae128db7ff1c9a5e34c584",
+      "trial_results": [
+        {
+          "context": 8192,
+          "cache_mib": 0,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 7162,
+          "decode_tokens_per_second": 80.55431517414955
+        },
+        {
+          "context": 16384,
+          "cache_mib": 0,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 14330,
+          "decode_tokens_per_second": 75.27491644187917
+        },
+        {
+          "context": 16384,
+          "cache_mib": 12288,
+          "capacity_passed": false,
+          "error_present": true,
+          "prompt_tokens": null,
+          "decode_tokens_per_second": null
+        },
+        {
+          "context": 16384,
+          "cache_mib": 8192,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 14330,
+          "decode_tokens_per_second": 141.56758793353683
+        },
+        {
+          "context": 16384,
+          "cache_mib": 4096,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 14330,
+          "decode_tokens_per_second": 55.18624706578636
+        },
+        {
+          "context": 16384,
+          "cache_mib": 2048,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 14330,
+          "decode_tokens_per_second": 25.18520046229716
+        },
+        {
+          "context": 16384,
+          "cache_mib": 1024,
+          "capacity_passed": true,
+          "error_present": false,
+          "prompt_tokens": 14330,
+          "decode_tokens_per_second": 13.408465788563486
+        }
+      ]
+    }
+  ],
+  "retained_failed_screens": [
+    "The first cache checks lacked reliable activation logging and are not performance evidence.",
+    "The first GPT-OSS capacity check failed before native-cache trials because the short JSON probe omitted reasoning_effort.",
+    "Explicit low reasoning fixes that probe without model-name dispatch or changing user chat preferences."
+  ],
+  "remaining_sprints": [
+    {
+      "component": "CPU/GPU cold-expert overlap",
+      "status": "blocked_numerical_contract"
+    },
+    {
+      "component": "MTP/native diffusion",
+      "status": "blocked_target_verification_and_model_backend_qualification"
+    },
+    {
+      "component": "Clover installer integration",
+      "status": "not_promoted"
+    }
+  ],
+  "limitations": [
+    "Hardware screens are one load per configuration; Auto Tune decode figures are short raw decode probes, not chat guarantees.",
+    "Coder's strict coding predicate fails for baseline and both cache budgets; no broad quality improvement is asserted.",
+    "Near-capacity Auto Tune and reload at 16K are tested on Coder; the three-family application flow uses a bounded 1K maximum.",
+    "Larger contexts, other platforms and arbitrary MoE tensor layouts need their own runtime/local qualification.",
+    "Native-cache trials use unchanged model weights, full routing, F16 KV, no CPU-sharing/draft shortcuts and actual GPU-cache verification.",
+    "No installed backend, user profile or saved user state is changed."
+  ],
+  "compatibility_protocol": {
+    "context": 16384,
+    "slots": 1,
+    "kv_cache": "f16",
+    "threads": 8,
+    "batch_threads": 16,
+    "output_tokens": 128,
+    "backend_sha256": "3ac6495070ae9627825dbe706de3b580fdbedd2fbe079197b2c6c81982dbd0f9",
+    "runtime_sha256": "cad7c040f8d65a3494747525d3e29ddbd270efecab79ed92077ba097cb58863b",
+    "runner_sha256": "47170496595d9f578c5f9f9d973e0889de9ee33e0470f815f18f6f3ca6d1c6b5"
+  }
+}

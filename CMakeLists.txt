@@ -14,6 +14,7 @@ option(VRAMBRIDGE_CPU_PROFILE_NVTX "Annotate research CPU graph calls for CUDA t
 option(VRAMBRIDGE_TEST_ATTENTION_WINDOW "Build the default-off native Flash Attention query-window research interposer" OFF)
 option(VRAMBRIDGE_TEST_EXACT_PACKED_CPU "Build the AVX512 native-contract packed MXFP4 CPU research tests" OFF)
 option(VRAMBRIDGE_TEST_KV_COLD_TIER "Build the default-off managed KV cold-page staging experiment" OFF)
+option(VRAMBRIDGE_TEST_STRATA_CAPTURE "Build the diagnostic-only Strata CUDA transfer observer" OFF)
 set(VRAMBRIDGE_CPU_REFERENCE_LIBRARY "" CACHE FILEPATH "Exact installed CPU plugin for packed-kernel reference tests")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -40,6 +41,14 @@ find_package(Threads REQUIRED)
 target_link_libraries(vrambridge_core PRIVATE Threads::Threads)
 target_include_directories(vrambridge_core PUBLIC include)
 target_compile_features(vrambridge_core PUBLIC cxx_std_20)
+
+if(VRAMBRIDGE_TEST_STRATA_CAPTURE)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(FATAL_ERROR "The Strata transfer observer requires Linux.")
+    endif()
+    add_library(vrambridge-strata-logits-capture SHARED tools/trace/strata-logits-capture.cpp)
+    target_link_libraries(vrambridge-strata-logits-capture PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
+endif()
 
 if(VRAMBRIDGE_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
     set_target_properties(vrambridge_core PROPERTIES
@@ -345,6 +354,8 @@ if(BUILD_TESTING)
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_architecture_study.py)
     add_test(NAME vrambridge-engine-comparison
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_engine_comparison.py)
+    add_test(NAME vrambridge-strata-compatibility
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_strata_compatibility.py)
     if(TARGET vrambridge-render-corpus)
         add_test(NAME vrambridge-render-corpus-help COMMAND vrambridge-render-corpus --help)
         add_test(NAME vrambridge-render-corpus-inputs
@@ -400,6 +411,9 @@ if(BUILD_TESTING)
     )
     add_test(NAME vrambridge-agent-numerics
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_agent_numerics.py
+    )
+    add_test(NAME vrambridge-tandem-screen
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_tandem_screen.py
     )
     add_test(NAME vrambridge-synapse-critical-path
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_synapse_critical_path.py

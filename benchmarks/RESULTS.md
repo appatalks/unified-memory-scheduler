@@ -24,7 +24,133 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## Synapse Native Expert-Cache Auto Tune
+
+The [reviewed application evidence](results/synapse-native-cache-autotune-summary.json)
+uses the installed b11669 backend, not the default ledger build above.
+One-load 16K/F16 screens show cache-dependent improvements for Coder and
+SC117 Qwen3.8, but a regression for GPT-OSS. Coder's narrow coding
+predicate fails with and without caching; these are not intelligence
+or placement-independent numerical qualification results.
+
+Real isolated Auto Tune selects and reloads verified winners: Coder
+12 GiB at bounded 1K (201.96 vs 85.75 decode-probe tok/s), Qwen 8 GiB
+at 1K (37.30 vs 29.95), and uncached GPT (25.14). A Coder 16K run tests
+14,330 actual input tokens and selects 8 GiB (141.57 vs 75.27);
+oversized 12 GiB allocation fails and smaller-budget recovery works.
+These raw tuning probes are not universal chat-speed guarantees.
+See the [adaptation study](../docs/research/native-cache-autotune.md) for
+capability guards, activation verification and remaining overlap/draft gates.
+
+## Strata Upstream-Reuse Compatibility
+
+The [provider/cache integration record](results/synapse-strata-cache-integration-summary.json)
+supersedes the adapter-only exit below, not the earlier numerical failures.
+Native cache sizing now uses the detected VRAM budget and probes the
+fit/OOM gap: 9 GiB passes at 39.69 versus uncached 31.32 decode-probe
+tok/s on the original Qwen target. The fuller Strata ranking uses 3,991
+slots/7,786 MiB rather than the matched study's 3,067 slots, and its
+scalar/MTP comparison is again exact at all 96 positions.
+
+The bounded 1K Auto Tune comparison chooses Strata at 57.26 tok/s and
+verifies remembered Automatic reload against the user-approved installed
+component. The whole-provider gain is not cache alone. A separate 16K
+trial passes 14,333 actual input tokens and measures 55.85 decode tok/s.
+An independent 128-output counter-transport check retains native
+75.47% cumulative small-batch hit rate and 31,206.2 MiB uploaded;
+those counters are not a fresh speed cohort or per-token cache statistic.
+Native files/default profiles are not replaced. After separate user
+approval, the app archive is backed up, updated atomically and restarted;
+its listener, frontend and optional-provider detection pass.
+
+The [reviewed follow-up](results/strata-upstream-compatibility-summary.json)
+reuses published Strata operation/performance evidence and the earlier
+local three-pair full-routing MTP study instead of repeating their cohorts.
+Only compatibility gaps are tested with the official isolated 0.1.58
+CUDA engine. The existing original Qwen native pack and fixed 3,067-expert
+profile are preserved; this is not the modified SC117 first shard.
+
+Three held-out 32-position continuations pass all 96/96 full-vocabulary
+scalar/MTP comparisons with zero absolute/relative error. Every captured
+head reproduces the upstream FP32 scoring, position and fixed target.
+One unscored final-window suffix row is excluded, not a failed valid row.
+The last request accepts 14 of 17 proposals, exercising rejected windows
+as well as successful ones. Tail skipping and routing bias are off.
+Both arms use the same cache, native IQ arithmetic and F16 KV.
+
+The research-only CLI/OpenAI adapter additionally passes real Synapse
+load verification, non-streamed/SSE chats, slots and unload at 4K.
+All owned engines exit. No new speed, stochastic-distribution or broad
+quality claim is made. Original failed adapter/accounting records remain
+private and hashed; corrected scoring alignment reuses captured data
+without another hardware run.
+See [scope and production work](../docs/research/strata-upstream-reuse.md).
+
 ## Clover: Initial Autoregressive And Self-Speculative Screens
+
+The [inverse-placement feasibility screen](results/clover-inverse-placement-summary.json)
+keeps Clover model bytes unchanged and explicitly verifies the last live
+decode graph: 120 routed-expert matmuls on CUDA and 341 non-expert/dense
+matmuls on CPU, CPU KV/recurrent buffers, GPU shared-expert weights and
+a 12 GiB routed-expert cache. Some boundary operations can still follow
+their producing device; this is not proof every non-expert operation
+runs on CPU. Cache misses are uploaded, not skipped.
+One fresh load per arm, one 16K/F16 slot, 8/16 threads, 32 excluded warmup
+tokens and three held-out 128-output workloads give 63.25-63.57 decode
+tok/s for automatic fitting, 43.71-44.17 for GPU-backbone/CPU experts,
+and 12.65-12.94 for the inverse. It is not numerically qualified or a
+repeated performance result. Initial diagnostic attempts lacked debug
+logging or included reserve graphs and are excluded from timing claims.
+
+The [component/attention checkpoint](results/moe-component-qualification-summary.json)
+supersedes the bounded GPU long-stream blocker for its exact new candidate,
+not the earlier failed builds. The default-off attention-core sequence
+isolation preserves all selected experts and F16 KV. At 320 teacher-forced
+steps it passes 640/640, 1280/1280 and 2560/2560 decode positions at widths
+2/4/8, with zero error. The matched disabled arm first diverges at step
+246 for eight sequences. Full-state restoration at step 280 passes 42/42
+checks, including reference and repeatability comparisons.
+
+Eight 256-output requests match all serialized controls at 2/4/8 active
+clients; mixed 4K/2K inputs, cancellation/recovery, arithmetic, AST-only
+code and a forced tool call pass. Three fresh HTTP runs per client level
+give 38.98/39.40/42.09/43.97 aggregate tok/s for 1/2/4/8 clients, with
+24/24 matching outputs at each level. Eight-client throughput is about
+12.8% higher than serial, but median agent completion is 45.82s versus
+29.37s for the same eight-request arrival burst. This is not single-user
+speed or a diffusion measurement. A CPU-only longer-stream screen fails
+4/8 and 3/8 output comparisons at 2/4 clients and is stopped; broader
+CPU/context/platform qualification remains open.
+
+Packed input uploads, graph-shape/pool reuse and Q8 activation-cache reuse
+each pass 792/792 same-cache raw-logit checks on Coder, SC117 Qwen3.8 and
+GPT-OSS. Their preserving combination also passes at 4 GiB and at 8 GiB
+against separately generated, matching upstream references. The retained
+Qwen 4/8-GiB difference also occurs with the features disabled and must
+not be mislabeled a component regression.
+Three-run 8-GiB/256-output comparisons match all 27 complete outputs and
+probability checks. Coder decode improves 2.45-3.90%, while Qwen3.8 changes
+-2.88% to -0.07% and GPT -4.99% to -0.24%. No broad 5% speed win is
+established. CPU-miss sharing still fails numerical gates.
+
+The later [tandem local qualification](results/tandem-qualification-summary.json)
+loads Coder, SC117 Qwen3.8 and GPT-OSS successfully, but both pinned builds
+reject Clover's `clover_moe` architecture. Single-load 128-output screens
+show faster hybrid/default decode: Coder defaults give 112.48-167.66
+versus 79.61-81.18 tok/s, Qwen3.8 33.24-46.38 versus 31.02-31.13,
+and GPT 25.32-42.63 versus 24.51-25.44. These are ranges across three
+workloads, not repeated-load confidence intervals; GPT reasoning slightly
+regresses. All 18 candidate first-token log-probability diagnostics fail.
+
+The matched, defaults-off, GPU-only cache path passes 792/792 scalar
+raw-logit checks against upstream's identical 4 GiB cache, plus 27/27
+full output and first-token probability comparisons in three alternating
+fresh-load speed runs per family. It does not improve decode: median
+paired changes range from -0.06% to -5.01%. Changing from CPU expert
+execution to GPU caching also changes arithmetic in unpatched upstream;
+those placement differences alone do not establish a tandem regression
+or bad answers. The faster hybrid bundle remains unqualified and no
+Synapse engine is changed.
 
 The independent [tandem.cpp source/build screen](results/tandem-source-build-summary.json)
 and [study protocol](../docs/research/tandem-cpp-study.md) pin the full patch

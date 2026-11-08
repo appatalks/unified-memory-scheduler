@@ -1,0 +1,69 @@
+--- a/src/llama-graph.cpp
++++ b/src/llama-graph.cpp
+@@ -3087,14 +3087,59 @@
+             v = ggml_cast(ctx0, v, GGML_TYPE_F16);
+         }
+ 
+-        cur = ggml_flash_attn_ext(ctx0, q, k, v, kq_mask, kq_scale, hparams.f_max_alibi_bias,
+-                                  hparams.attn_soft_cap ? hparams.f_attn_logit_softcapping : 0.0f);
+-        res->add_fused_node({LLM_FUSED_OP_FLASH_ATTN, cur, il});
+-
+-        ggml_flash_attn_ext_add_sinks(cur, sinks);
++        const char * split_env = std::getenv("VRAMBRIDGE_EXPERIMENT_ATTN_SEQUENCE");
++        if (split_env && std::strcmp(split_env, "0") != 0 && std::strcmp(split_env, "1") != 0) {
++            throw std::runtime_error("VRAMBRIDGE_EXPERIMENT_ATTN_SEQUENCE must be 0 or 1");
++        }
++        const bool split = split_env && std::strcmp(split_env, "1") == 0 && cparams.causal_attn &&
++            n_stream > 1 && q->ne[1] == 1 && ubatch.n_tokens == ubatch.n_seqs_unq;
+         GGML_ASSERT(n_kv_max >= 0 && n_kv_max <= INT32_MAX);
+-        ggml_flash_attn_ext_set_n_kv_max(cur, static_cast<int32_t>(n_kv_max));
+-        ggml_prec_set_acc(cur, GGML_PREC_F32);
++        if (split) {
++            if (v_mla || q->ne[3] != n_stream || v->ne[3] != n_stream ||
++                !kq_mask || kq_mask->ne[3] != n_stream ||
++                ubatch.n_tokens != n_stream || !ubatch.n_seq_id || !ubatch.seq_id ||
++                (sinks && ggml_nrows(sinks) != 1)) {
++                throw std::runtime_error("Experimental attention sequence splitting requires independent causal streams");
++            }
++            for (uint32_t row = 0; row < ubatch.n_tokens; ++row) {
++                if (ubatch.n_seq_id[row] != 1 || !ubatch.seq_id[row]) {
++                    throw std::runtime_error("Experimental attention splitting rejects coupled sequence rows");
++                }
++                for (uint32_t previous = 0; previous < row; ++previous) {
++                    if (ubatch.seq_id[row][0] == ubatch.seq_id[previous][0]) {
++                        throw std::runtime_error("Experimental attention splitting requires one token per sequence");
++                    }
++                }
++            }
++            auto slice = [&](ggml_tensor * tensor, int64_t stream) {
++                return ggml_view_4d(ctx0, tensor, tensor->ne[0], tensor->ne[1], tensor->ne[2], 1,
++                                    tensor->nb[1], tensor->nb[2], tensor->nb[3], stream*tensor->nb[3]);
++            };
++            cur = nullptr;
++            for (int64_t stream = 0; stream < n_stream; ++stream) {
++                auto * part = ggml_flash_attn_ext(ctx0, slice(q, stream), slice(k, stream), slice(v, stream),
++                                                slice(kq_mask, stream), kq_scale, hparams.f_max_alibi_bias,
++                                                hparams.attn_soft_cap ? hparams.f_attn_logit_softcapping : 0.0f);
++                res->add_fused_node({LLM_FUSED_OP_FLASH_ATTN, part, il});
++                ggml_flash_attn_ext_add_sinks(part, sinks);
++                ggml_flash_attn_ext_set_n_kv_max(part, static_cast<int32_t>(n_kv_max));
++                ggml_prec_set_acc(part, GGML_PREC_F32);
++                cur = cur ? ggml_concat(ctx0, cur, part, 3) : part;
++            }
++            static thread_local bool traced = false;
++            if (!traced) {
++                LLAMA_LOG_INFO("EXPERIMENT_ATTN_SEQUENCE streams=%lld kv_rows=%lld\n",
++                               static_cast<long long>(n_stream), static_cast<long long>(k->ne[1]));
++                traced = true;
++            }
++        } else {
++            cur = ggml_flash_attn_ext(ctx0, q, k, v, kq_mask, kq_scale, hparams.f_max_alibi_bias,
++                                      hparams.attn_soft_cap ? hparams.f_attn_logit_softcapping : 0.0f);
++            res->add_fused_node({LLM_FUSED_OP_FLASH_ATTN, cur, il});
++            ggml_flash_attn_ext_add_sinks(cur, sinks);
++            ggml_flash_attn_ext_set_n_kv_max(cur, static_cast<int32_t>(n_kv_max));
++            ggml_prec_set_acc(cur, GGML_PREC_F32);
++        }
+ 
+         if (v_mla) {
+ #if 0
