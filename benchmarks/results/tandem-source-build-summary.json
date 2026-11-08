@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "date_utc": "2026-11-08",
+  "status": "source_and_build_screen_only_not_inference_qualified",
+  "repository": "ewhacc/tandem.cpp",
+  "research_commit": "e1acb8877bfcf92b4ae7c9f0e0f1d896dbf6c683",
+  "llama_base_commit": "f5222f25c18da062ab2b8a2dbbfbf4feae398566",
+  "patch_sha256": "8a2e5898d4b750127f9fc474a28b7781615724ea1dbac4ac1c35633df1c1fb5d",
+  "license": "MIT; retain project and ggml author notices for any later source port",
+  "patch_application": {
+    "exact_base_check": "pass",
+    "changed_paths": 35,
+    "existing_source_files": 31,
+    "new_files": 4
+  },
+  "build": {
+    "compiler": "GNU 14.2.0",
+    "platform": "Linux x86_64",
+    "target": "llama-server",
+    "workers": 4,
+    "cmake_options": {
+      "GGML_CUDA": "ON",
+      "CMAKE_CUDA_ARCHITECTURES": "120",
+      "CMAKE_BUILD_TYPE": "Release",
+      "LLAMA_BUILD_TESTS": "OFF",
+      "LLAMA_BUILD_EXAMPLES": "OFF",
+      "LLAMA_CURL": "OFF"
+    },
+    "reference": {
+      "status": "built_version_command_passed",
+      "llama_server_sha256": "a1033d7eed3fac40dcda6f8e0023c6d1629bfefef76e69e9687b87217111615f",
+      "libllama_sha256": "b7b28ca136228e9b43fa7a28bd9c4e773f7441f6cdc3ca9813d23436c0323c9a",
+      "libggml_cuda_sha256": "7f9439557f5e7a23a9ccc04c8cf47d17610cc3711b88eb636b7d6cc5f0334c8c"
+    },
+    "candidate": {
+      "status": "built_version_and_cache_help_commands_passed",
+      "llama_server_sha256": "514e5845908742e3bbb4b00ca87443e8891a8ad6031979b3fa24c7a0e56c5512",
+      "libllama_sha256": "895f7cdd908ac5a2f2a866ef378a2023b146c63216fdd427ce13aa1c44312e7a",
+      "libggml_cuda_sha256": "d8535449172e6ca64fe13424b4cc09c7d590f1cbadfb097b8750176fe8355112"
+    }
+  },
+  "probe_screen": {
+    "source": "tools/trace/sequence-decode-probe.cpp",
+    "compiled_against_candidate": true,
+    "synthetic_equal_logits": "accepted",
+    "synthetic_changed_logits": "rejected",
+    "model_loaded": false
+  },
+  "qualification": {
+    "local_model_loader": "not_run",
+    "raw_logits": "not_run",
+    "state_rollback": "not_run",
+    "local_speed": "not_measured",
+    "cross_family": "not_run",
+    "production_promotion": "blocked"
+  },
+  "constraints": [
+    "These binaries report the base commit, so version output alone does not identify the applied patch.",
+    "No upstream performance or accuracy claim is counted as a local measurement.",
+    "Use a clean explicit environment, drafts absent and tail skip zero for preserving controls.",
+    "No project build script, installed-backend replacement, model modification or saved-state change."
+  ]
+}

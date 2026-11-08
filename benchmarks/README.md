@@ -21,6 +21,14 @@ cross-family numerical checks. The latest expert-dispatch variant passes
 bounded Qwen3.8 checks, but Coder, GPT-OSS and eight-client longer streams
 still block promotion.
 
+The [tandem.cpp study](../docs/research/tandem-cpp-study.md) pins a separate
+llama.cpp patch bundle for expert-cache CPU/GPU overlap, prefill sharing
+and graph/kernel reuse. Source and full patch application have been
+checked and matched isolated CUDA binaries built. The
+[source/build summary](results/tandem-source-build-summary.json) identifies
+both binaries; published speed claims remain author measurements, with no
+model-level numerical/performance qualification or production promotion.
+
 [RESULTS.md](RESULTS.md) is the reviewed benchmark ledger. It links each committed evidence artifact, distinguishes valid measurements from retained failed commands, and records the fixed comparison conditions. New generated JSON remains ignored until it has been reviewed and added to that ledger.
 
 Raw files under `results/`, including nested output and logs, are ignored unless explicitly allowlisted in [`.gitignore`](../.gitignore). Before allowlisting evidence, review hostnames, model paths, command arguments, stdout, and stderr for credentials and private machine or user identifiers. Use neutral placeholders for identifying details without changing measurements. Only sanitized environment examples should be committed; local environment files, model weights, and user-specific CMake presets are ignored.

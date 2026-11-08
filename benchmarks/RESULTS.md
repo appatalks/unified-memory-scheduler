@@ -26,6 +26,16 @@ fit context.
 
 ## Clover: Initial Autoregressive And Self-Speculative Screens
 
+The independent [tandem.cpp source/build screen](results/tandem-source-build-summary.json)
+and [study protocol](../docs/research/tandem-cpp-study.md) pin the full patch
+at `e1acb8877bfcf92b4ae7c9f0e0f1d896dbf6c683` against llama.cpp
+`f5222f25c18da062ab2b8a2dbbfbf4feae398566`. The patch applies cleanly;
+matched unpatched/patched CUDA sm_120 builds complete and the existing
+numerical probe compiles and passes its synthetic rejection self-test.
+No model was loaded and no local speed or accuracy result is established.
+This targets expert offload/orchestration, not a demonstrated fix for
+Clover's multi-agent failures.
+
 The [scheduling/family checkpoint](results/clover-scheduling-family-summary.json)
 retains both successes and release blockers. Isolated prefill and logical-KV
 decode buckets match all 64-token short CPU/GPU streams, mixed 4K/2K inputs,

@@ -87,6 +87,11 @@ weights and KV precision. Arbitrary chunk-boundary equivalence and broader
 occupied-context qualification remain open. No Synapse pin or default
 change follows from this checkpoint.
 
+The separate [tandem.cpp study](tandem-cpp-study.md) investigates single-user
+expert offload and orchestration alongside this multi-agent work. It has
+its own pinned base and accuracy gates; its reported gains are not a fix
+for this checkpoint's failed streams.
+
 ## What is being studied
 
 [Clover-35B-A3B-Preview](https://huggingface.co/blog/Diffuspace/clover-35b-a3b-preview)
