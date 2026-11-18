@@ -95,6 +95,72 @@ allocated capacity.
 
 ## Routing Collection And Cache Replay
 
+The [commit-late staging screen](results/commit-late-staging-summary.json)
+reconstructs actual Classic Hybrid admission decisions from private CPU/NVTX
+profiles, verifies matching CUDA projection-copy launches per dispatcher and
+evaluates causal predictions. Its [research record](../docs/research/commit-late-staging.md)
+explains the same-dispatch admission behavior, finite-scratch simulation and
+why the tested GPT-OSS predictors did not justify a live prototype. Individual
+routes, CPU traces and Nsight databases remain private.
+
+The [Bevy-inspired route screen](results/bevy-routing-screen-summary.json)
+aligns independent held-out traces by token and layer, then counts frames
+containing both fully resident and partly CPU-resident requests. The
+[study](../docs/research/bevy-runahead-screen.md) explains why this is neither
+a concurrent execution nor a performance simulation. For a verified trace:
+
+```bash
+python3 tools/benchmark/vrambridge-bevy-screen.py \
+  benchmarks/results/routing/run.jsonl --cache-mib 12000 \
+  --output benchmarks/results/routing/bevy-screen.json
+```
+
+Optionally add `--seed-plan` with a byte-budgeted, layer/expert plan for the
+same model. The program validates plan keys and hashes the plan, but cannot
+verify model identity from traces that contain no model hash. Private traces
+and raw outputs remain local.
+
+For live controls, `vrambridge-agent-numerics.py --placement hybrid` requires
+explicit CPU/CUDA plugins and verifies their mappings, hybrid coverage and
+both CPU and GPU expert dispatch. `--ubatch-size 1` is an explicit sensitivity
+control, not a concurrency correctness guarantee. The opt-in parallel-cache
+mode of `sequence-decode-probe.cpp` additionally compares raw logits after
+serial, alternating-prefill and batched decode; use private reference files.
+`vrambridge-bevy-scalar-speed.py` times only the serialized-token baseline,
+not Bevy runahead. It checks matching complete token sequences, per-slot
+warmup, GPU ownership, memory headroom and the absence of sampled process swap.
+The [study](../docs/research/bevy-runahead-screen.md) records the qualification
+limits and the independent numerical gates.
+
+The [Least-Stale replay study](results/least-stale-replay-summary.json) compares
+a causal global-cache adaptation against generic LRU, LFU and a training-static
+hotset on verified GPT-OSS and Qwen3.8 decode traces. It is not a replay of the
+backend's grouped admission policy and does not model prefetch, prefill or actual
+execution time. Run it on a verified private trace without overwriting outputs:
+
+```bash
+python3 tools/benchmark/vrambridge-least-stale.py \
+  benchmarks/results/routing/run.jsonl --cache-mib 4096 --cache-mib 12000 \
+  --admit-after 2 --output benchmarks/results/routing/least-stale-report.json
+```
+
+The policy uses stale/current forward-pass queues, with layer index and
+queue-entry order as explicit tie choices; the paper does not fully specify
+all tie details. Selected misses execute on CPU and can be admitted after the
+layer. Results count every admission upload, including warm-up separately.
+Train requests warm the simulated dynamic cache, held-out requests follow in
+trace order without replaying intervening prefill, and static placement uses
+only training frequencies. The byte budget omits real bank allocation overhead.
+The verified traces and resulting routing reports remain private.
+
+For exact repeated-request state reuse rather than expert-cache replay, see
+the [prompt checkpoint experiment](../docs/research/prompt-reuse-checkpoints.md)
+and [owned replay runner](../tools/benchmark/vrambridge-prompt-reuse.py).
+Periodic checkpoints reduce the tested middle-edit prefill by about 48%,
+but full-vocabulary log-probability diagnostics fail in both candidate and
+unchanged controls. The patch remains separate, default-off and unpromoted.
+Raw diagnostic logs can contain tokens/text and must remain private.
+
 The optional `vrambridge-trace` collector uses the official evaluation callback
 to copy actual `ffn_moe_topk` I32 expert IDs after evaluation. It inspects the
 loaded model's original expert tensors, including biases, to record sizes and
@@ -917,10 +983,14 @@ expert-workload-aware prefill scheduler.
 
 ## Explicit SSD Model Staging
 
-The Linux research helper uses the existing root-drive SSD, not the Samsung
-NTFS volume. Its user-selected staging directory is owned by the user with
-mode 0700.
-Its marker records the user-selected **16 GiB minimum free-space reserve**.
+Set `VRAMBRIDGE_MODEL_MOUNT` to the Linux mount point and
+`VRAMBRIDGE_MODEL_UUID` to its filesystem UUID to use a verified model volume.
+Set `VRAMBRIDGE_MODEL_LIBRARY` if the library is not the mount root. The
+library must contain `models/`; the default staging directory is its
+`model-staging/`. The helper checks the mount before initialization and during
+copies. A missing, wrong, or unconfigured default mount is an error, not a
+fallback to the root filesystem. Its user-owned staging directory has mode
+0700, and its marker records the **16 GiB minimum free-space reserve**.
 This is a working-copy cache, not a backup or a downstream Synapse feature.
 
 ```bash
@@ -938,13 +1008,35 @@ directory; unmarked nonempty directories are never adopted. The helper checks
 the first GGUF metadata's split count and requires complete standard shard
 names. It is not a checkpoint semantic validator. Sources already on the
 staging filesystem are returned for direct reuse with zero copied bytes;
-GPT-OSS-120B therefore stays at its existing SSD path.
+models already on the selected NVMe therefore remain at their existing paths.
+A previous cache remains available through its explicit `--root`; it is not
+automatically moved or evicted.
+
+The [local inventory tool](../tools/benchmark/vrambridge-model-inventory.py)
+uses the same verified volume for `available_local_models.json`. It scans
+`models/` and `model-staging/` by default. To include other locations, pass
+`--sources /path/to/local-sources.json` with a JSON array, for example
+`[{"id":"archive","path":"/mnt/archive/models","mode":"gguf","mount":"/mnt/archive","uuid":"ABCD-1234"}]`.
+Use the real filesystem UUID; omit both `mount` and `uuid` for a directory
+that does not need a mount check. Supported modes are `gguf`, `colibri`,
+`media`, `hf`, and `strata`. Optional `priority` controls preferred locations
+(lower wins) and `ephemeral: true` identifies working copies. Use `--dry-run`
+to check the inventory first. Source configurations and inventories with
+local paths are not benchmark artifacts to publish.
+
+A [read-only direct-I/O screen](results/model-nvme-read-comparison-summary.json)
+of the same verified SC117 shard measured median sequential 1 GiB reads of
+526 MiB/s on the root SATA SSD and 5,476 MiB/s on the selected NVMe. This
+does not measure model loading, cached reads or generation speed.
 
 Cross-filesystem copies are written to a private partial directory, checked for
 source changes, fsynced and SHA256-readback-verified before publication. The
 space reserve plus a 16 MiB metadata allowance is checked before and during copying; other processes can still
 consume disk space independently, so this is not a system-wide reservation.
-Staging operations serialize with a nonblocking lock. Completed manifests
+Staging operations serialize with a nonblocking lock and publish using an
+atomic no-overwrite rename. If the selected mount disappears, the helper
+leaves the owned partial in place rather than deleting through a shadow path.
+Completed manifests
 record source paths, file sizes and checksums. Interrupted unrecognized entries
 are listed explicitly, never automatically deleted.
 
@@ -961,8 +1053,32 @@ The [root-drive setup record](results/root-drive-model-staging-summary.json)
 includes a small cross-filesystem fixture test, real open-file eviction
 rejection, cleanup, the preserved 16 GiB policy and zero-copy GPT reuse.
 An initial `fuser --` incompatibility failed safely; the supported inode-check
-form is now covered by a real process test. No full model was duplicated and
-no cold-load or generation improvement is claimed from setup alone.
+form is now covered by a real process test. That historical setup did not
+duplicate a full model or establish a cold-load or generation improvement.
+
+## Local Model Inventory
+
+Refresh the user-selected NVMe catalog without moving weights:
+
+```bash
+python3 tools/benchmark/vrambridge-model-inventory.py --dry-run
+python3 tools/benchmark/vrambridge-model-inventory.py
+```
+
+The generated `AI-MODELS/available_local_models.json` records known GGUF,
+Colibri, diffusion, audio-cache and auxiliary assets with source locations,
+shard presence, available header/config metadata and quantization hints.
+It checks mounted volume UUIDs and the 16 GiB reserve, refuses to overwrite an
+unmanaged file, and retains previously observed offline/missing locations.
+Locations removed from the configured scan are retained as untracked rather
+than silently deleted.
+It also identifies observed hard links, whose shared contents must not be
+modified in place through either path.
+It preserves optional `notes` and `user_metadata` fields at the top level and
+per model on refresh. Same-named copies are grouped by filename and size;
+this is not proof of byte identity. Previously verified copy hashes are
+identified as historical and are not recalculated during a refresh. Presence
+does not establish model completeness, engine compatibility or output quality.
 
 ## Storage I/O And RAM-disk Hypothesis
 
@@ -1122,7 +1238,9 @@ requires `--native-draft`. A restorable native draft can be produced with the
 [MTP derivative tool](../tools/benchmark/vrambridge-restore-mtp.py) from the
 verified existing raw tensors. It preserves target embedding/head bytes, reuses
 pinned tensor transforms, retains F32 routers, writes only to approved model
-storage and produces an ownership manifest. Structural loadability is not
+storage and produces an ownership manifest. The configured model library
+is approved after mount verification; elsewhere pass an explicit existing
+`--output-root`. Structural loadability is not
 quality qualification. No installed Strata/native files are rewritten.
 
 Native streamed raw IDs can omit a UTF-8-buffered token. The adapter retains

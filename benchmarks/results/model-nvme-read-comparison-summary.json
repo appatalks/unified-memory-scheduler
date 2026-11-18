@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "study": "same_model_read_only_sequential_drive_comparison",
+  "date": "2026-11-14",
+  "model": "SC117 Qwen3.8 Flash Next GSQ-RCO abliterated IQ3_S first shard",
+  "shard_sha256": "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+  "tool": "fio 3.39",
+  "read_only": true,
+  "direct_io": true,
+  "io_engine": "sync",
+  "access": "sequential read",
+  "block_bytes": 4194304,
+  "read_bytes_per_run": 1073741824,
+  "warmup_runs_per_drive_excluded": 1,
+  "measured_runs_per_drive": 3,
+  "pair_order": ["sata,nvme", "nvme,sata", "sata,nvme"],
+  "drives": {
+    "sata_root": {
+      "device": "Samsung SSD 870 EVO 1TB",
+      "filesystem": "ext4",
+      "bytes_per_second": [550919355, 551768665, 556631324],
+      "median_bytes_per_second": 551768665
+    },
+    "nvme_models": {
+      "device": "Samsung SSD 990 PRO 2TB",
+      "filesystem": "ntfs3",
+      "bytes_per_second": [5592405333, 5804009859, 5741934887],
+      "median_bytes_per_second": 5741934887
+    }
+  },
+  "median_throughput_ratio_nvme_to_sata": 10.406,
+  "separate_device_counter_check": {
+    "bytes_read_per_drive": 1073741824,
+    "method": "Linux block-device sector counters around separate direct-read trials"
+  },
+  "limitations": [
+    "Single-stream sequential first-GiB read of one identical shard on one machine; not a full model-load benchmark.",
+    "Warm model inference may be served from the operating-system page cache.",
+    "This does not measure prompt or generation speed, or random-read behavior."
+  ]
+}

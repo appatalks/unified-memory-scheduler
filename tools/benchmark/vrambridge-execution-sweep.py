@@ -74,7 +74,9 @@ def load_profile(base: str, settings: dict) -> dict:
 
 def validate_sample(timings: dict, usage: dict, tokens: int, elapsed: float, done: bool) -> dict:
     if not done or usage.get("completion_tokens") != tokens or timings.get("predicted_n") != tokens:
-        raise ValueError("Incomplete generation or output token counts do not match the requested length.")
+        raise ValueError(f"Incomplete generation or output token counts do not match the requested length: "
+                         f"done={done}, completion_tokens={usage.get('completion_tokens')!r}, "
+                         f"predicted_n={timings.get('predicted_n')!r}, requested={tokens}.")
     for name in ("prompt_ms", "predicted_ms", "predicted_per_second"):
         value = timings.get(name)
         if type(value) not in (int, float) or not math.isfinite(value) or value < 0:

@@ -1,0 +1,487 @@
+{
+  "schema_version": 1,
+  "kind": "independent_expert_engine_research",
+  "date": "2026-11-14",
+  "status": "research_only_not_a_complete_engine",
+  "hardware": {
+    "cpu": "AMD Ryzen 9 9950X",
+    "gpu": "NVIDIA GeForce RTX 5070 Ti",
+    "cuda": "13.1.115",
+    "driver": "595.58.03"
+  },
+  "provenance": {
+    "vrambridge-actual-expert-probe": "1d5ff167443d4a78fd57baf0702d14f526488cfecbc86eda42d66961f626dddc",
+    "actual_expert_probe.cpp": "67967efb8c7cb6066658246d47ca86f3a076b1a3d75311f3f831ef99847fd336",
+    "native_cpu.cpp": "e8d94f616e11e29573c37790615894d5545bc0ca9ef6a927b42ca829ce08a32f",
+    "quantized_cuda.cu": "d92a53889d9744adfcd8d0bf826d6fbd9ef44a4c39529642b38ae91d4a18a967",
+    "expert_dispatch.cpp": "928ded8f8ad663d1c0e62cc3bdfa812889abb9885e3bc551ee83e5671ce5048e",
+    "gguf_experts.cpp": "fbc4b16c6a1844f578b2df6c9ead663399d8a7c4a365e4755eb37717d68c1fec",
+    "libggml-cpu-zen4.so": "155a87103fdc442b309b656862bb2ea9b9f77be88f3434f9c044b71a572279e4",
+    "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e"
+  },
+  "model_weights": {
+    "SC117": {
+      "sha256": [
+        "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+        "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+      ],
+      "verification": "previously verified copy; size and mtime match inventory, not rehashed for this screen"
+    },
+    "Qwen3-Coder": {
+      "sha256": ["fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"],
+      "verification": "previously verified copy; size and mtime match inventory, not rehashed for this screen"
+    },
+    "GPT-OSS": {
+      "sha256": [
+        "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3",
+        "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+      ],
+      "verification": "rehashed after the screen; size and mtime matched the preceding inventory snapshot"
+    }
+  },
+  "scope": {
+    "reference": "modified pinned llama.cpp b11669; four GPU layers; context 512; eight CPU threads; default fusion and CPU tiling",
+    "prompt": "synthetic coding, reasoning and prose",
+    "intervention": "one CPU-resident layer per run; native original graph executes first; replace only each decode token output after verifying CPU/GPU expert outputs bitwise",
+    "positions": "prompt plus four teacher-forced continuation positions; decode-only replacement at four positions",
+    "limitations": [
+      "not a standalone inference engine or production backend",
+      "no simultaneous replacement of multiple layers or full model throughput measurement",
+      "GPU path uses CPU gate/up, native activation and activation packing; packed GPU down weights are warm",
+      "CPU-only timing uses two CPU workers, not the existing optimized production hybrid backend",
+      "user prompts, activations, selected IDs and logits are not included"
+    ]
+  },
+  "decode_correctness": {
+    "SC117": {
+      "passed": [
+        {
+          "layer": 0,
+          "case": "coding",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 0,
+          "case": "reasoning",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 0,
+          "case": "prose",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 17,
+          "case": "coding",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 17,
+          "case": "reasoning",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 17,
+          "case": "prose",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 35,
+          "case": "coding",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 35,
+          "case": "reasoning",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 35,
+          "case": "prose",
+          "logit_max_abs": 0
+        }
+      ],
+      "rejected": []
+    },
+    "Qwen3-Coder": {
+      "passed": [
+        {
+          "layer": 0,
+          "case": "coding",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 0,
+          "case": "reasoning",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 0,
+          "case": "prose",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 17,
+          "case": "coding",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 17,
+          "case": "reasoning",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 17,
+          "case": "prose",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 35,
+          "case": "coding",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 35,
+          "case": "reasoning",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 35,
+          "case": "prose",
+          "logit_max_abs": 0
+        }
+      ],
+      "rejected": []
+    },
+    "GPT-OSS": {
+      "passed": [
+        {
+          "layer": 0,
+          "case": "coding",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 0,
+          "case": "reasoning",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 0,
+          "case": "prose",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 17,
+          "case": "coding",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 17,
+          "case": "reasoning",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 17,
+          "case": "prose",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 31,
+          "case": "coding",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 31,
+          "case": "reasoning",
+          "logit_max_abs": 0
+        },
+        {
+          "layer": 31,
+          "case": "prose",
+          "logit_max_abs": 0
+        }
+      ],
+      "rejected": [
+        {
+          "layer": 32,
+          "case": "coding",
+          "reason": "actual expert probe: exact quantized injection requires a CPU-resident native layer output"
+        },
+        {
+          "layer": 32,
+          "case": "reasoning",
+          "reason": "actual expert probe: exact quantized injection requires a CPU-resident native layer output"
+        },
+        {
+          "layer": 32,
+          "case": "prose",
+          "reason": "actual expert probe: exact quantized injection requires a CPU-resident native layer output"
+        }
+      ]
+    }
+  },
+  "coder_prefill_q6_controls": {
+    "default": {
+      "passed": 4,
+      "total": 9,
+      "rejected": [
+        {
+          "layer": 17,
+          "case": "reasoning",
+          "reason": "actual expert probe: quantized layer bits differ: changed=1001 max_abs=1.49011612e-08 relative_l2=8.9969119e-08"
+        },
+        {
+          "layer": 17,
+          "case": "prose",
+          "reason": "actual expert probe: quantized layer bits differ: changed=941 max_abs=1.49011612e-08 relative_l2=7.49337157e-08"
+        },
+        {
+          "layer": 35,
+          "case": "coding",
+          "reason": "actual expert probe: quantized layer bits differ: changed=1455 max_abs=5.96046448e-08 relative_l2=1.60066605e-07"
+        },
+        {
+          "layer": 35,
+          "case": "reasoning",
+          "reason": "actual expert probe: quantized layer bits differ: changed=1105 max_abs=2.98023224e-08 relative_l2=5.81306832e-08"
+        },
+        {
+          "layer": 35,
+          "case": "prose",
+          "reason": "actual expert probe: quantized layer bits differ: changed=919 max_abs=2.98023224e-08 relative_l2=7.55533749e-08"
+        }
+      ]
+    },
+    "disabled": {
+      "passed": 9,
+      "total": 9,
+      "rejected": []
+    }
+  },
+  "gpt_prefill_observer_controls": {
+    "gpu_layers": 4,
+    "default": {
+      "passed": 3,
+      "failed": 6,
+      "largest_max_abs": 0.551677823,
+      "largest_relative_l2": 0.0288083066,
+      "limitation": "initial observer screen did not include an unobserved-repeat control; later coding checks at layers 0 and 17 repeated exactly"
+    },
+    "cuda_fusion_disabled": {
+      "layer": 0,
+      "case": "coding",
+      "runs": 1,
+      "baseline_repeat_max_abs": 0,
+      "observer_max_abs": 0,
+      "limitation": "diagnostic control only; not a qualified production setting"
+    }
+  },
+  "decode_microbenchmark": {
+    "warmups_per_path": 1,
+    "timed_iterations_per_process": 4,
+    "fresh_processes_per_model": 3,
+    "layer": 17,
+    "case": "reasoning",
+    "comparison": {
+      "SC117": {
+        "cpu2_median_ms": 1.4990855,
+        "gpu_median_ms": 1.3343975,
+        "ratio_of_medians_change_percent": 10.985897735652847,
+        "paired_process_changes_percent": [
+          5.645675313382727,
+          6.438301431681031,
+          11.913950911607163
+        ],
+        "runs": [
+          {
+            "run": 0,
+            "cpu2_samples_ms": [
+              1.625106,
+              1.409223,
+              1.575533,
+              1.422638
+            ],
+            "gpu_samples_ms": [
+              1.496726,
+              1.369799,
+              1.459105,
+              1.312582
+            ],
+            "cpu2_median_ms": 1.4990855,
+            "gpu_median_ms": 1.414452
+          },
+          {
+            "run": 1,
+            "cpu2_samples_ms": [
+              1.4347,
+              1.403502,
+              1.378114,
+              1.512646
+            ],
+            "gpu_samples_ms": [
+              1.448826,
+              1.3328,
+              1.32267,
+              1.32252
+            ],
+            "cpu2_median_ms": 1.419101,
+            "gpu_median_ms": 1.327735
+          },
+          {
+            "run": 2,
+            "cpu2_samples_ms": [
+              1.529116,
+              1.369137,
+              1.610368,
+              1.500643
+            ],
+            "gpu_samples_ms": [
+              1.328612,
+              1.319816,
+              1.346054,
+              1.340183
+            ],
+            "cpu2_median_ms": 1.5148795,
+            "gpu_median_ms": 1.3343975
+          }
+        ]
+      },
+      "Qwen3-Coder": {
+        "cpu2_median_ms": 0.3925735,
+        "gpu_median_ms": 0.33752,
+        "ratio_of_medians_change_percent": 14.023743324498477,
+        "paired_process_changes_percent": [
+          15.737435155454973,
+          27.319396711370672,
+          2.6823747214819305
+        ],
+        "runs": [
+          {
+            "run": 0,
+            "cpu2_samples_ms": [
+              0.483523,
+              0.363289,
+              0.362177,
+              0.421858
+            ],
+            "gpu_samples_ms": [
+              0.339825,
+              0.32641,
+              0.328984,
+              0.332601
+            ],
+            "cpu2_median_ms": 0.3925735,
+            "gpu_median_ms": 0.3307925
+          },
+          {
+            "run": 1,
+            "cpu2_samples_ms": [
+              0.469688,
+              0.517988,
+              0.361446,
+              0.459088
+            ],
+            "gpu_samples_ms": [
+              0.335226,
+              0.339814,
+              0.33196,
+              0.361215
+            ],
+            "cpu2_median_ms": 0.464388,
+            "gpu_median_ms": 0.33752
+          },
+          {
+            "run": 2,
+            "cpu2_samples_ms": [
+              0.364871,
+              0.443018,
+              0.367577,
+              0.356937
+            ],
+            "gpu_samples_ms": [
+              0.392614,
+              0.324386,
+              0.341618,
+              0.371183
+            ],
+            "cpu2_median_ms": 0.366224,
+            "gpu_median_ms": 0.3564005
+          }
+        ]
+      },
+      "GPT-OSS": {
+        "cpu2_median_ms": 1.484097,
+        "gpu_median_ms": 1.3175015,
+        "ratio_of_medians_change_percent": 11.22537812555378,
+        "paired_process_changes_percent": [
+          8.592027429992314,
+          7.627613799301352,
+          11.533579004606839
+        ],
+        "runs": [
+          {
+            "run": 0,
+            "cpu2_samples_ms": [
+              1.457312,
+              1.311339,
+              1.543292,
+              1.425372
+            ],
+            "gpu_samples_ms": [
+              1.307803,
+              1.291312,
+              1.369868,
+              1.3272
+            ],
+            "cpu2_median_ms": 1.441342,
+            "gpu_median_ms": 1.3175015
+          },
+          {
+            "run": 1,
+            "cpu2_samples_ms": [
+              1.931117,
+              1.510492,
+              1.542822,
+              1.491266
+            ],
+            "gpu_samples_ms": [
+              1.527674,
+              1.442625,
+              1.377794,
+              1.371863
+            ],
+            "cpu2_median_ms": 1.526657,
+            "gpu_median_ms": 1.4102095
+          },
+          {
+            "run": 2,
+            "cpu2_samples_ms": [
+              1.549896,
+              1.351835,
+              1.468393,
+              1.499801
+            ],
+            "gpu_samples_ms": [
+              1.292234,
+              1.275593,
+              1.333621,
+              1.543664
+            ],
+            "cpu2_median_ms": 1.484097,
+            "gpu_median_ms": 1.3129275
+          }
+        ]
+      }
+    }
+  },
+  "source_session_artifact_sha256": {
+    "independent-exact-decode-bench-20261114.jsonl": "af9e9540383281504a657e8bf0d1907cd7f6d86fc151cc13e16dd39e5ad30fe1",
+    "independent-expert-replay-20261114.jsonl": "754863b9342e9214f6fe0052ca0871f43dcca12cfddea90860f7e453f42e5be2",
+    "independent-iq4-decode-final-20261114.jsonl": "f7657150fafc6895502716741e55bb006212cdcd27dc00e9ffdcf7a6299dac9c",
+    "independent-mxfp4-decode-layer31-20261114.jsonl": "2d668ffadfb71f1031c98e87792df807392fc2a93c69f8e646c60a4f3d4f617c",
+    "independent-mxfp4-decode-only-20261114.jsonl": "d7f0f7ce27fc65321b0f5e40984377daac687e5750674e0950b96ab4c0ce6b7d",
+    "independent-mxfp4-five-position-20261114.jsonl": "13044e4a6bf6708f5a30a14d6276d800cc9fe5727a5cfd2dae5b2a58e524f7cb",
+    "independent-q6-decode-only-20261114.jsonl": "68c22f9949f2518609a92c76dbfea3b4914158b3f526a694e1f1b4cd6b11b967",
+    "independent-q6-five-position-20261114.jsonl": "6a15a05f14d5ecc6d4897855fb1488f62c9fb395aa6e6add3903996c19df1497"
+  }
+}

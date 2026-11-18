@@ -84,6 +84,35 @@ def trial_order(variants: list[str], repetition: int) -> list[str]:
     return list(reversed(variants)) if repetition % 2 else list(variants)
 
 
+def physical_read_bytes(pid: int, proc_root: Path = Path('/proc')) -> int:
+    if type(pid) is not int or pid <= 0:
+        raise ValueError('A live backend PID is required for physical-read auditing.')
+    try:
+        lines = (proc_root / str(pid) / 'io').read_text().splitlines()
+        values = [line.split(':', 1)[1].strip() for line in lines if line.startswith('read_bytes:')]
+        if len(values) != 1 or not values[0].isdigit():
+            raise ValueError('Missing or invalid read_bytes counter')
+        return int(values[0])
+    except (OSError, ValueError) as exc:
+        raise RuntimeError('Cannot audit the owned backend physical-read counter.') from exc
+
+
+def sample_with_read_audit(sweep, base: str, runtime, tokens: int, prompt: str, enabled: bool) -> dict:
+    process = runtime.process if enabled else None
+    if enabled and process is None:
+        raise RuntimeError('Cannot audit physical reads without an owned backend.')
+    before = physical_read_bytes(process.pid) if enabled else None
+    sample = sweep.sample(base, tokens, prompt=prompt)
+    if enabled:
+        if runtime.process is not process:
+            raise RuntimeError('The backend changed during physical-read auditing.')
+        after = physical_read_bytes(process.pid)
+        if after < before:
+            raise RuntimeError('The backend physical-read counter decreased.')
+        sample['physical_read_bytes'] = after - before
+    return sample
+
+
 def track_runtime_marker(runtime, marker: str):
     observed = threading.Event()
     original = runtime._read_logs
@@ -238,6 +267,7 @@ def execute(args) -> int:
         "started_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "model": model.name, "metadata": metadata, "output_tokens": args.tokens,
         "repetitions": args.repetitions, "split": args.split,
+        "physical_read_audit": args.audit_physical_reads,
         "corpus_sha256": sha256(args.corpus),
         "runner_sha256": sha256(Path(__file__)),
         "synapse_runtime_sha256": sha256(args.synapse_source / "synapse_app/app.py"),
@@ -307,7 +337,8 @@ def execute(args) -> int:
                                                         args.backend.resolve().parent)
                         run["causal_singleton_contract_verified"] = True
                     for row in corpus:
-                        sample = sweep.sample(base, args.tokens, prompt=row["prompt"])
+                        sample = sample_with_read_audit(sweep, base, runtime, args.tokens,
+                                                        row['prompt'], args.audit_physical_reads)
                         sample.update(category=row["category"], prompt_sha256=hashlib.sha256(row["prompt"].encode()).hexdigest())
                         run["samples"].append(sample)
                         print(f"RATE {variant} {row['category']} {sample['wall_decode_tok_s']:.2f}", flush=True)
@@ -359,6 +390,8 @@ def main() -> int:
     parser.add_argument("--corpus", type=Path, default=ROOT / "benchmarks/cpu-decode-corpus.jsonl",
                         help="Explicit synthetic corpus for matched short- or long-input requests.")
     parser.add_argument("--answer-checks", action="store_true")
+    parser.add_argument("--audit-physical-reads", action="store_true",
+                        help="Record Linux /proc backend read_bytes during each timed request.")
     parser.add_argument("--capacity-check", action="store_true",
                         help="Also run Synapse's near-capacity input and anchor-retrieval probe.")
     parser.add_argument("--capacity-timeout", type=int, default=300,
@@ -369,6 +402,8 @@ def main() -> int:
                         help="Verify actual single-slot causal GPU/F16 placement and local library bindings.")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if args.audit_physical_reads and sys.platform != 'linux':
+        parser.error('Physical-read auditing requires Linux /proc.')
     if not 2 <= args.tokens <= 4096 or not 1 <= args.repetitions <= 10 or not 1 <= args.cache_mib <= 65536:
         parser.error("Invalid output length, repetitions, or expert-cache budget.")
     if not 1 <= args.capacity_timeout <= 2700:

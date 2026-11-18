@@ -2,6 +2,7 @@ import importlib.util
 import io
 from pathlib import Path
 import threading
+import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest import mock
@@ -53,6 +54,43 @@ class BaselineTests(unittest.TestCase):
         self.assertEqual(baseline.trial_order(variants, 0), variants)
         self.assertEqual(baseline.trial_order(variants, 1), ["hosted", "classic", "standard"])
         self.assertEqual(variants, ["standard", "classic", "hosted"])
+
+    def test_physical_read_audit_requires_a_valid_counter(self):
+        with tempfile.TemporaryDirectory() as temp:
+            proc = Path(temp)
+            (proc / '42').mkdir()
+            path = proc / '42/io'
+            path.write_text('rchar: 900\nread_bytes: 4096\nwrite_bytes: 0\n')
+            self.assertEqual(baseline.physical_read_bytes(42, proc), 4096)
+            for content in ('rchar: 2\n', 'read_bytes: -1\n', 'read_bytes: 1\nread_bytes: 2\n'):
+                path.write_text(content)
+                with self.assertRaises(RuntimeError):
+                    baseline.physical_read_bytes(42, proc)
+            with self.assertRaises(ValueError):
+                baseline.physical_read_bytes(True, proc)
+            with self.assertRaises(RuntimeError):
+                baseline.physical_read_bytes(999, proc)
+
+    def test_request_read_audit_records_delta_and_rejects_counter_or_process_changes(self):
+        process = SimpleNamespace(pid=42)
+        runtime = SimpleNamespace(process=process)
+        sweep = SimpleNamespace(sample=mock.Mock(return_value={'wall_decode_tok_s': 10}))
+        with mock.patch.object(baseline, 'physical_read_bytes', side_effect=[100, 4196]):
+            sample = baseline.sample_with_read_audit(sweep, 'http://localhost', runtime, 64, 'prompt', True)
+        self.assertEqual(sample['physical_read_bytes'], 4096)
+        with mock.patch.object(baseline, 'physical_read_bytes', side_effect=[100, 99]):
+            with self.assertRaisesRegex(RuntimeError, 'counter decreased'):
+                baseline.sample_with_read_audit(sweep, 'http://localhost', runtime, 64, 'prompt', True)
+        sweep.sample.side_effect = lambda *a, **k: setattr(runtime, 'process', SimpleNamespace(pid=43)) or {}
+        with mock.patch.object(baseline, 'physical_read_bytes', return_value=100):
+            with self.assertRaisesRegex(RuntimeError, 'backend changed'):
+                baseline.sample_with_read_audit(sweep, 'http://localhost', runtime, 64, 'prompt', True)
+        runtime.process = None
+        with self.assertRaisesRegex(RuntimeError, 'owned backend'):
+            baseline.sample_with_read_audit(sweep, 'http://localhost', runtime, 64, 'prompt', True)
+        plain = SimpleNamespace(sample=mock.Mock(return_value={'wall_decode_tok_s': 10}))
+        self.assertNotIn('physical_read_bytes', baseline.sample_with_read_audit(
+            plain, 'http://localhost', runtime, 64, 'prompt', False))
 
     def test_failed_or_partial_trials_do_not_become_successful_medians(self):
         sample = {"category": "coding", "wall_decode_tok_s": 30, "end_to_end_tok_s": 20,

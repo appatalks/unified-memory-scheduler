@@ -162,13 +162,14 @@ def validate_hybrid_plan(path: Path, layout: dict | None = None) -> int:
     return len(selected)
 
 
-def model_metadata(path: Path) -> dict:
+def model_metadata(path: Path, *, extra_keys: set[str] | None = None) -> dict:
     """Read bounded GGUF metadata without mapping weights or allocating vocabulary arrays."""
     limit = min(path.stat().st_size, 64 * 1024 * 1024)
     result = {}
     scalar = {0: "B", 1: "b", 2: "H", 3: "h", 4: "I", 5: "i",
               6: "f", 7: "?", 10: "Q", 11: "q", 12: "d"}
     wanted = {"general.architecture", "general.file_type", "general.name", "split.count"}
+    wanted.update(extra_keys or ())
     dimensions = {"block_count", "embedding_length", "feed_forward_length",
                   "expert_feed_forward_length", "expert_count", "expert_used_count", "context_length"}
     with path.open("rb") as source:

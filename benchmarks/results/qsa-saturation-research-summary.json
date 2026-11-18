@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "study": "experimental_qsa_saturated_mask",
+  "date": "2026-11-14",
+  "decision": "no demonstrated speedup; do not promote",
+  "model": "SC117 Qwen3.8 Flash Next GSQ-RCO abliterated IQ3_S",
+  "model_sha256": [
+    "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c",
+    "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+  ],
+  "backend_commit": "620d2225cc436ab0b001e3200e590e3b286ef9ab",
+  "control_libllama_sha256": "b8fea4499f74a0b45babadff1fa1e80d9fb3455a8a0e619e56f25f5171ffda09",
+  "candidate_libllama_sha256": "60da7cc4b27b8e78b883d54642d6b3567ab1f6a54290b8897ded18b7e0864a39",
+  "cpu_plugin_sha256": "cf5519014d07de5372c3b86f7b61b36ce179b100048ad7c60c9135d553ad3980",
+  "cuda_plugin_sha256": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+  "experimental_patch_sha256": "37623e80bd9ce9ffd454c888532fc3df8d11fdd67a8462ed571e532996a8b9c5",
+  "contract": {
+    "allocated_context": 16384,
+    "cache_k": "f16",
+    "cache_v": "f16",
+    "expert_bank_mib": 4096,
+    "expert_bank": "frozen and empty",
+    "threads": 8,
+    "threads_batch": 16,
+    "logical_batch": 2048,
+    "physical_batch": 512,
+    "routed_layers_covered": "48/48",
+    "gpu_expert_executions": 0,
+    "raw_logit_vocabulary": 248320,
+    "raw_logit_positions": 5,
+    "max_absolute_limit": 0.01,
+    "relative_l2_limit": 0.001
+  },
+  "alias_safe_early_mask_screen": {
+    "prompt_tokens": 2048,
+    "layers": 12,
+    "physical_layer_batches": 48,
+    "query_rows": 24576,
+    "mask_elements": 31457280,
+    "bit_differences": 0,
+    "value_differences": 0,
+    "aliased_output_inputs": 4,
+    "causal_source_differences": 0,
+    "control_repeat_passed_positions": 5,
+    "observer_vs_control_passed_positions": 5,
+    "limitation": "Observer synchronizes and disables guarded overlap; causal masks were captured before aliasing."
+  },
+  "initial_8192_cross_backend": {
+    "control_passed_positions": 5,
+    "candidate_on_passed_positions": 5,
+    "candidate_off_passed_positions": 5,
+    "candidate_on_marker": true,
+    "candidate_off_marker": false,
+    "all_max_absolute": 0,
+    "all_relative_l2": 0
+  },
+  "timing_8192": {
+    "prompt_tokens": 8192,
+    "warmup": "one full matching prompt, excluded",
+    "reference_history": "reference lacked the later full-prompt warmup",
+    "repetitions": [
+      {"control_seconds": 40.097441885, "candidate_seconds": 40.233780408, "control_passed_positions": 0, "candidate_passed_positions": 0},
+      {"control_seconds": 38.995092142, "candidate_seconds": 40.422436477, "control_passed_positions": 0, "candidate_passed_positions": 0},
+      {"control_seconds": 38.561765182, "candidate_seconds": 38.250052020, "control_passed_positions": 5, "candidate_passed_positions": 0}
+    ],
+    "control_median_seconds": 38.995092142,
+    "candidate_median_seconds": 40.233780408,
+    "paired_change_percent": [0.340018, 3.660318, -0.808348],
+    "median_paired_change_percent": 0.340018,
+    "qualification": "unmodified controls fail with unmatched warmup history; numerical attribution inconclusive"
+  },
+  "timing_2048": {
+    "prompt_tokens": 2048,
+    "warmup": "one full matching prompt, excluded",
+    "reference_history": "same full-prompt warmup as compared runs",
+    "repetitions": [
+      {"control_seconds": 9.720037489, "candidate_seconds": 9.260641614, "control_passed_positions": 5, "candidate_passed_positions": 5},
+      {"control_seconds": 9.325335007, "candidate_seconds": 9.565789616, "control_passed_positions": 5, "candidate_passed_positions": 5},
+      {"control_seconds": 9.562627097, "candidate_seconds": 9.498715608, "control_passed_positions": 5, "candidate_passed_positions": 5}
+    ],
+    "control_median_seconds": 9.562627097,
+    "candidate_median_seconds": 9.498715608,
+    "paired_change_percent": [-4.726277, 2.578509, -0.668347],
+    "median_paired_change_percent": -0.668347,
+    "qualification": "all checks pass on this one synthetic workload; changes are mixed and within approximately five percent noise"
+  },
+  "limitations": [
+    "Direct copied-backend probe, not the native server or end-to-end request timing.",
+    "One model family and synthetic inputs only; no long-context or adaptive-bank qualification.",
+    "The baseline itself shows intermittent long-prompt numerical instability.",
+    "No speedup has been established; the candidate remains experimental and default-off."
+  ]
+}

@@ -48,6 +48,16 @@ struct Reference {
 constexpr int kSteps = VRAMBRIDGE_PROBE_STEPS;
 static_assert(kSteps >= 1 && kSteps <= 512, "Decode probe steps must be bounded");
 
+int bounded_env(const char * name, int fallback, int minimum, int maximum) {
+    const char * value = std::getenv(name);
+    if (!value) return fallback;
+    char * end = nullptr;
+    const long parsed = std::strtol(value, &end, 10);
+    require(end != value && *end == '\0' && parsed >= minimum && parsed <= maximum,
+            "Invalid bounded probe setting");
+    return static_cast<int>(parsed);
+}
+
 void add(llama_batch & batch, llama_token token, int position, int sequence, bool output) {
     const int i = batch.n_tokens++;
     batch.token[i] = token;
@@ -84,9 +94,34 @@ std::vector<std::vector<float>> decode(
     return result;
 }
 
-std::vector<float> decode_single(llama_context * context, const Reference & reference, int step, int vocab) {
+std::vector<std::vector<float>> interleaved_prefill(
+        llama_context * context, const std::vector<Reference> & references, int sequences, int vocab) {
+    std::vector<std::vector<float>> outputs(sequences);
+    size_t max_tokens = 0;
+    for (int seq = 0; seq < sequences; ++seq) max_tokens = std::max(max_tokens, references[seq].prompt.size());
     Batch batch(1);
-    add(batch.value, reference.next.at(step), static_cast<int>(reference.prompt.size()) + step, 0, true);
+    for (size_t pos = 0; pos < max_tokens; ++pos) {
+        for (int seq = 0; seq < sequences; ++seq) {
+            const auto & prompt = references[seq].prompt;
+            if (pos >= prompt.size()) continue;
+            batch.value.n_tokens = 0;
+            const bool last = pos + 1 == prompt.size();
+            add(batch.value, prompt[pos], static_cast<int>(pos), seq, last);
+            require(llama_decode(context, batch.value) == 0, "interleaved prefill failed");
+            if (last) {
+                const auto * logits = llama_get_logits_ith(context, 0);
+                require(logits != nullptr, "missing interleaved prefill logits");
+                outputs[seq].assign(logits, logits + vocab);
+            }
+        }
+    }
+    return outputs;
+}
+
+std::vector<float> decode_single(llama_context * context, const Reference & reference, int step, int vocab,
+                                 int sequence = 0) {
+    Batch batch(1);
+    add(batch.value, reference.next.at(step), static_cast<int>(reference.prompt.size()) + step, sequence, true);
     require(llama_decode(context, batch.value) == 0, "single decode failed");
     const auto * logits = llama_get_logits_ith(context, 0);
     require(logits != nullptr, "missing single decode logits");
@@ -112,6 +147,7 @@ bool compare(const char * name, int sequences, int sequence, int step,
     std::printf("{\"case\":\"%s\",\"sequences\":%d,\"sequence\":%d,\"step\":%d,\"max_absolute\":%.9g,"
                 "\"relative_l2\":%.9g,\"passes\":%s,\"top_equal\":%s}\n",
                 name, sequences, sequence, step, maximum, relative, pass ? "true" : "false", top_equal ? "true" : "false");
+    std::fflush(stdout);
     return pass;
 }
 
@@ -191,6 +227,19 @@ int main(int argc, char ** argv) {
         require(!scalar_env || std::strcmp(scalar_env, "0") == 0 || std::strcmp(scalar_env, "1") == 0,
                 "VRAMBRIDGE_PROBE_SERIAL_ONLY must be 0 or 1");
         const bool scalar_only = scalar_env && std::strcmp(scalar_env, "1") == 0;
+        const int slots = bounded_env("VRAMBRIDGE_PROBE_SLOTS", scalar_only ? 1 : 8, 1, 8);
+        const int sequence_context = bounded_env("VRAMBRIDGE_PROBE_CONTEXT", 16384, 512, 16384);
+        const int prompt_count = bounded_env("VRAMBRIDGE_PROBE_PROMPTS", 8, 1, 8);
+        const int parallel_cache = bounded_env("VRAMBRIDGE_PROBE_PARALLEL_CACHE", 0, 0, 1);
+        const int ubatch = bounded_env("VRAMBRIDGE_PROBE_UBATCH", 512, 1, 2048);
+        require((scalar_only && slots == 1) || (!scalar_only && slots >= 2 && prompt_count >= slots),
+                "Probe slots and prompt count do not match its execution mode");
+        if (parallel_cache) {
+            const char * cpu_plugin = std::getenv("VRAMBRIDGE_PROBE_CPU_PLUGIN");
+            const char * cuda_plugin = std::getenv("VRAMBRIDGE_PROBE_CUDA_PLUGIN");
+            require(cpu_plugin && cuda_plugin && ggml_backend_load(cpu_plugin) && ggml_backend_load(cuda_plugin),
+                    "Parallel cache probe requires explicit CPU and CUDA plugins");
+        }
         llama_backend_init();
         ggml_backend_dev_t cpu_devices[] = {nullptr};
         ggml_backend_dev_t gpu_devices[] = {nullptr, nullptr};
@@ -199,6 +248,10 @@ int main(int argc, char ** argv) {
             {nullptr, nullptr}
         };
         auto model_params = llama_model_default_params();
+        if (parallel_cache) {
+            model_params.no_host = true;
+            model_params.use_extra_bufts = false;
+        }
         if (gpu) {
             gpu_devices[0] = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_GPU);
             require(gpu_devices[0] != nullptr && llama_supports_gpu_offload() &&
@@ -215,27 +268,28 @@ int main(int argc, char ** argv) {
             llama_model_load_from_file(argv[1], model_params), llama_model_free);
         require(model != nullptr, "model load failed");
         auto params = llama_context_default_params();
-        params.n_ctx = scalar_only ? 16384 : 131072;
-        params.n_seq_max = scalar_only ? 1 : 8;
+        params.n_ctx = sequence_context * slots;
+        params.n_seq_max = slots;
         params.n_batch = 2048;
-        params.n_ubatch = 512;
+        params.n_ubatch = ubatch;
         params.n_threads = 8;
         params.n_threads_batch = 16;
         params.type_k = GGML_TYPE_F16;
         params.type_v = GGML_TYPE_F16;
         params.offload_kqv = gpu;
-        params.op_offload = gpu;
+        params.op_offload = gpu && !parallel_cache;
         params.kv_unified = false;
         if (const char * cache_env = std::getenv("VRAMBRIDGE_PROBE_MOE_CACHE_MIB")) {
             char * end = nullptr;
             const auto cache_mib = std::strtoull(cache_env, &end, 10);
-            require(scalar_only && gpu && end != cache_env && *end == '\0' && cache_mib <= 8192,
-                    "MoE cache probe requires scalar GPU placement and a bounded cache size");
+            require(gpu && (scalar_only || parallel_cache) && end != cache_env && *end == '\0' && cache_mib <= 8192,
+                    "MoE cache probe requires GPU placement, an explicit parallel opt-in and a bounded cache size");
             params.moe_cache_size = cache_mib * 1024 * 1024;
         }
         std::unique_ptr<llama_context, decltype(&llama_free)> context(
             llama_init_from_model(model.get(), params), llama_free);
-        require(context != nullptr && llama_n_ctx_seq(context.get()) == 16384, "unexpected sequence context");
+        require(context != nullptr && llama_n_ctx_seq(context.get()) == static_cast<uint32_t>(sequence_context),
+                "unexpected sequence context");
         const auto * vocab = llama_model_get_vocab(model.get());
         const int n_vocab = llama_vocab_n_tokens(vocab);
         const std::vector<std::string> prompts = {
@@ -249,7 +303,8 @@ int main(int argc, char ** argv) {
             "Agent: Summarize a safe shutdown strategy."
         };
         std::vector<Reference> refs;
-        for (const auto & prompt : prompts) {
+        for (int prompt_index = 0; prompt_index < prompt_count; ++prompt_index) {
+            const auto & prompt = prompts[prompt_index];
             const int count = -llama_tokenize(vocab, prompt.c_str(), static_cast<int>(prompt.size()), nullptr, 0, true, true);
             require(count >= 3 && count <= 128, "unexpected prompt length");
             Reference ref;
@@ -276,6 +331,7 @@ int main(int argc, char ** argv) {
         }
         std::printf("{\"prompts\":%zu,\"steps\":%d,\"vocabulary\":%d,\"context_per_sequence\":%u,\"placement\":\"%s\"}\n",
                     refs.size(), kSteps, n_vocab, llama_n_ctx_seq(context.get()), gpu ? "gpu-cpu-experts" : "cpu");
+        std::fflush(stdout);
         bool passed = true;
         if (scalar_only) {
             for (size_t seq = 0; seq < refs.size(); ++seq) {
@@ -292,12 +348,53 @@ int main(int argc, char ** argv) {
             llama_backend_free();
             return passed ? 0 : 2;
         }
+        if (bounded_env("VRAMBRIDGE_PROBE_REPEAT_SERIAL", 0, 0, 1)) {
+            for (size_t seq = 0; seq < refs.size(); ++seq) {
+                llama_memory_clear(llama_get_memory(context.get()), true);
+                const auto actual = prefill(context.get(), refs[seq].prompt, 0, n_vocab);
+                passed = compare("scalar_repeat_prefill", 1, seq, -1, refs[seq].prefill, actual) && passed;
+                for (int step = 0; step < kSteps; ++step) {
+                    const auto output = decode_single(context.get(), refs[seq], step, n_vocab);
+                    passed = compare("scalar_repeat_decode", 1, seq, step, refs[seq].decode[step], output) && passed;
+                }
+            }
+        }
         const char * all_widths = std::getenv("VRAMBRIDGE_PROBE_ALL_WIDTHS");
         require(!all_widths || std::strcmp(all_widths, "0") == 0 || std::strcmp(all_widths, "1") == 0,
                 "VRAMBRIDGE_PROBE_ALL_WIDTHS must be 0 or 1");
         const std::vector<int> widths = all_widths && std::strcmp(all_widths, "1") == 0
             ? std::vector<int>{1, 2, 3, 4, 5, 6, 7, 8} : std::vector<int>{2, 4, 8};
+        const bool serial_interleave = bounded_env("VRAMBRIDGE_PROBE_SERIAL_INTERLEAVE", 0, 0, 1);
+        const bool alternating_prefill = bounded_env("VRAMBRIDGE_PROBE_ALTERNATING_PREFILL", 0, 0, 1);
         for (int sequences : widths) {
+            if (sequences > slots) continue;
+            if (alternating_prefill) {
+                llama_memory_clear(llama_get_memory(context.get()), true);
+                const auto outputs = interleaved_prefill(context.get(), refs, sequences, n_vocab);
+                for (int seq = 0; seq < sequences; ++seq) {
+                    passed = compare("alternating_prefill", sequences, seq, -1, refs[seq].prefill, outputs[seq]) && passed;
+                }
+                for (int step = 0; step < kSteps; ++step) {
+                    for (int seq = 0; seq < sequences; ++seq) {
+                        const auto output = decode_single(context.get(), refs[seq], step, n_vocab, seq);
+                        passed = compare("alternating_prefill_decode", sequences, seq, step,
+                                         refs[seq].decode[step], output) && passed;
+                    }
+                }
+            }
+            if (serial_interleave) {
+                llama_memory_clear(llama_get_memory(context.get()), true);
+                for (int seq = 0; seq < sequences; ++seq) {
+                    const auto actual = prefill(context.get(), refs[seq].prompt, seq, n_vocab);
+                    passed = compare("interleaved_prefill", sequences, seq, -1, refs[seq].prefill, actual) && passed;
+                }
+                for (int step = 0; step < kSteps; ++step) {
+                    for (int seq = 0; seq < sequences; ++seq) {
+                        const auto output = decode_single(context.get(), refs[seq], step, n_vocab, seq);
+                        passed = compare("interleaved_decode", sequences, seq, step, refs[seq].decode[step], output) && passed;
+                    }
+                }
+            }
             llama_memory_clear(llama_get_memory(context.get()), true);
             for (int seq = 0; seq < sequences; ++seq) {
                 const auto actual = prefill(context.get(), refs[seq].prompt, seq, n_vocab);

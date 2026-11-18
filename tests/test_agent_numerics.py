@@ -1,5 +1,6 @@
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 
 
@@ -64,6 +65,40 @@ class AgentNumericsTests(unittest.TestCase):
                         log + "I load_tensors: CUDA0 model buffer size = 2.00 MiB\n"):
             with self.assertRaises(RuntimeError):
                 probe.cpu_startup(invalid, 8, 16384)
+
+    def test_hybrid_requires_full_coverage_and_exact_controls(self):
+        log = (
+            "I load_tensors: CPU_Mapped model buffer size = 1234.00 MiB\n"
+            "I load_tensors: CUDA0 model buffer size = 2000.00 MiB\n"
+            "I llama_kv_cache: K (f16): 1.00 MiB, V (f16): 1.00 MiB\n"
+            "I srv load_model: initializing, n_slots = 2, n_ctx_slot = 4096\n"
+            "W EXPERIMENTAL HYBRID enabled\n"
+            "W VRAMBridge decode pipeline configured\n"
+            "W asynchronous GPU ID handoff\n"
+            "W direct asynchronous admissions; immutable registered sources\n"
+            "W tensor-derived hybrid coverage=36/36 routed layers\n"
+            "W hybrid batch limit=1\n"
+            "I llama_context: n_ubatch = 512\n"
+        )
+        self.assertEqual(probe.hybrid_startup(log, 2, 4096, True, 1, 512)["hybrid_routed_layers"], 36)
+        for invalid in (log.replace("coverage=36/36", "coverage=35/36"),
+                        log.replace("batch limit=1", "batch limit=2"),
+                        log.replace("n_ubatch = 512", "n_ubatch = 1"),
+                        log.replace("direct asynchronous admissions", "missing admissions")):
+            with self.assertRaises(RuntimeError):
+                probe.hybrid_startup(invalid, 2, 4096, True, 1, 512)
+
+    def test_model_shards_require_complete_first_shard(self):
+        with tempfile.TemporaryDirectory() as root:
+            first = Path(root) / "model-00001-of-00002.gguf"
+            second = Path(root) / "model-00002-of-00002.gguf"
+            first.touch()
+            with self.assertRaises(FileNotFoundError):
+                probe.model_shards(first)
+            second.touch()
+            self.assertEqual(probe.model_shards(first), [first, second])
+            with self.assertRaises(ValueError):
+                probe.model_shards(second)
 
 
 if __name__ == "__main__":

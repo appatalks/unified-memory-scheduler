@@ -511,6 +511,11 @@ class LocalAppTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Duplicate"):
                     app.model_metadata(self.model)
 
+    def test_metadata_reader_exposes_optional_inventory_fields_only_when_requested(self):
+        write_metadata(self.model, {"general.architecture": "qwen3", "general.author": "Example"})
+        self.assertNotIn("general.author", app.model_metadata(self.model))
+        self.assertEqual(app.model_metadata(self.model, extra_keys={"general.author"})["general.author"], "Example")
+
     def test_invalid_installed_profile_fails_before_binding_or_loading(self):
         path = self.root / "invalid-profile.json"
         path.write_text('{"schema_version": 99}')

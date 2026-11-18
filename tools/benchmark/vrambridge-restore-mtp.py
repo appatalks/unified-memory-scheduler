@@ -11,20 +11,31 @@ from pathlib import Path
 import shutil
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from vrambridge.model_storage import NVME_LIBRARY_ROOT, NVME_MOUNT, check_selected_mount, require_nvme_mount
+
 
 def digest(path):
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def approved_output_parent(output, output_roots=()):
+    check_selected_mount(output.parent, NVME_MOUNT, require_nvme_mount)
+    parent = output.parent.resolve(strict=True)
+    allowed = [root.resolve(strict=True) for root in output_roots]
+    if NVME_MOUNT is not None and NVME_LIBRARY_ROOT is not None and parent.is_relative_to(NVME_MOUNT):
+        allowed.append(NVME_LIBRARY_ROOT.resolve(strict=True))
+    if not any(parent.is_relative_to(root) for root in allowed):
+        raise ValueError("Derivative must be stored under an approved model root.")
+    return parent
+
+
 def restore(args):
     output = args.output
     manifest_output = output.with_suffix(".manifest.json")
     partial = output.with_suffix(".gguf.part")
-    allowed = (Path("/home/mj420/Desktop/TOR/llm").resolve(),
-               Path("/media/mj420/ExpansionXFS1/ai-models").resolve())
-    if not any(output.parent.resolve(strict=True).is_relative_to(root) for root in allowed):
-        raise ValueError("Derivative must be stored under an approved model root.")
+    approved_output_parent(output, args.output_root)
     if any(p.exists() for p in (output, manifest_output, partial)):
         raise ValueError("Refusing to overwrite a derivative, ownership manifest, or partial.")
     if shutil.disk_usage(output.parent).free < 16 * 1024**3 + 4 * 1024**3:
@@ -121,6 +132,7 @@ def restore(args):
         if tensor.name in heads and not np.array_equal(tensor.data, heads[tensor.name].data):
             raise ValueError("Target embedding/output bytes changed in derivative.")
     del reader
+    approved_output_parent(output, args.output_root)
     os.link(partial, output)
     partial.unlink()
     report = {"schema_version": 1, "kind": "owned_native_mtp_derivative", "originals_modified": False,
@@ -142,6 +154,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("source", "target", "backend-source", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
+    parser.add_argument("--output-root", type=Path, action="append", default=[],
+                        help="Approve an existing model directory outside the configured model library, repeatable")
     args = parser.parse_args()
     try:
         restore(args)

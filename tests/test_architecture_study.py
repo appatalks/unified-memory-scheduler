@@ -8,6 +8,7 @@ import struct
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,8 +55,34 @@ class ArchitectureStudyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "model.gguf"
             with self.assertRaisesRegex(ValueError, "approved model root"):
-                restore.restore(SimpleNamespace(output=path))
+                restore.restore(SimpleNamespace(output=path, output_root=[]))
             self.assertFalse(list(Path(directory).iterdir()))
+
+    def test_derivative_accepts_only_explicitly_approved_root(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            approved = root / "approved"
+            approved.mkdir()
+            self.assertEqual(restore.approved_output_parent(approved / "model.gguf", [approved]), approved)
+            with self.assertRaisesRegex(ValueError, "approved model root"):
+                restore.approved_output_parent(root / "model.gguf", [approved])
+
+    def test_derivative_nvme_requires_the_selected_mount(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mount = Path(directory) / "nvme"
+            library = mount / "library"
+            library.mkdir(parents=True)
+            output = library / "model.gguf"
+            with mock.patch.object(restore, "NVME_MOUNT", mount), \
+                    mock.patch.object(restore, "NVME_LIBRARY_ROOT", library), \
+                    mock.patch.object(restore, "require_nvme_mount", side_effect=ValueError("NVMe unavailable")):
+                with self.assertRaisesRegex(ValueError, "NVMe unavailable"):
+                    restore.approved_output_parent(output)
+            with mock.patch.object(restore, "NVME_MOUNT", mount), \
+                    mock.patch.object(restore, "NVME_LIBRARY_ROOT", library), \
+                    mock.patch.object(restore, "require_nvme_mount") as check:
+                self.assertEqual(restore.approved_output_parent(output), library)
+                check.assert_called_once()
 
     def pairs(self):
         common = {"status": "complete", "owned_backend_stopped": True, "engine": "strata", "window_capacity": 2,

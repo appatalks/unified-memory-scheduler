@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import shutil
+import stat
 import struct
 import subprocess
 import sys
@@ -16,6 +17,7 @@ spec = importlib.util.spec_from_file_location("model_staging", SCRIPT)
 assert spec and spec.loader
 staging = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(staging)
+from vrambridge import model_storage
 
 
 def fixture(path: Path, count: int = 1) -> None:
@@ -101,6 +103,79 @@ class ModelStagingTests(unittest.TestCase):
                 mock.patch.object(staging.shutil, "disk_usage",
                                   return_value=type("Usage", (), {"free": boundary})()):
             self.assertEqual(staging.stage(self.root, self.first)["status"], "staged")
+
+    def test_selected_nvme_must_be_mounted_before_initialization(self):
+        mount = self.home / "missing-nvme"
+        root = mount / "model-staging"
+        with mock.patch.object(staging, "NVME_MOUNT", mount), \
+                mock.patch.object(staging, "require_nvme_mount", side_effect=ValueError("NVMe unavailable")):
+            with self.assertRaisesRegex(ValueError, "NVMe unavailable"):
+                staging.initialize(root)
+        self.assertFalse(root.exists())
+
+    def test_selected_nvme_rejects_a_non_block_uuid_target(self):
+        fake_device = self.home / "not-a-block-device"
+        fake_device.write_bytes(b"not a device")
+        with mock.patch.object(model_storage, "NVME_MOUNT", self.home), \
+                mock.patch.object(model_storage, "NVME_UUID_DEVICE", fake_device), \
+                mock.patch.object(model_storage, "NVME_LIBRARY_ROOT", self.home), \
+                mock.patch.object(model_storage, "NVME_MODELS_ROOT", self.root), \
+                mock.patch.object(Path, "is_mount", return_value=True):
+            with self.assertRaisesRegex(ValueError, "not mounted"):
+                model_storage.require_nvme_mount()
+
+    def test_selected_nvme_rejects_a_different_block_device(self):
+        device = mock.Mock()
+        device.stat.return_value = mock.Mock(st_mode=stat.S_IFBLK, st_rdev=-1)
+        with mock.patch.object(model_storage, "NVME_MOUNT", self.home), \
+                mock.patch.object(model_storage, "NVME_UUID_DEVICE", device), \
+                mock.patch.object(model_storage, "NVME_LIBRARY_ROOT", self.home), \
+                mock.patch.object(model_storage, "NVME_MODELS_ROOT", self.root), \
+                mock.patch.object(Path, "is_mount", return_value=True):
+            with self.assertRaisesRegex(ValueError, "not mounted"):
+                model_storage.require_nvme_mount()
+
+    def test_selected_nvme_requires_explicit_mount_configuration(self):
+        with mock.patch.object(model_storage, "NVME_MOUNT", None), \
+                mock.patch.object(model_storage, "NVME_UUID_DEVICE", None):
+            with self.assertRaisesRegex(ValueError, "VRAMBRIDGE_MODEL_MOUNT"):
+                model_storage.require_nvme_mount()
+
+    def test_selected_nvme_rejects_library_outside_the_mount(self):
+        mount = self.home / "mount"
+        mount.mkdir()
+        device = mock.Mock()
+        device.stat.return_value = mock.Mock(st_mode=stat.S_IFBLK, st_rdev=mount.stat().st_dev)
+        with mock.patch.object(model_storage, "NVME_MOUNT", mount), \
+                mock.patch.object(model_storage, "NVME_UUID_DEVICE", device), \
+                mock.patch.object(model_storage, "NVME_LIBRARY_ROOT", self.home), \
+                mock.patch.object(model_storage, "NVME_MODELS_ROOT", self.root), \
+                mock.patch.object(Path, "is_mount", return_value=True):
+            with self.assertRaisesRegex(ValueError, "not mounted"):
+                model_storage.require_nvme_mount()
+
+    def test_disappearing_mount_does_not_clean_unknown_shadow_paths(self):
+        with mock.patch.object(staging, "same_filesystem", return_value=False), \
+                mock.patch.object(staging, "check_selected_mount", side_effect=[None, None, ValueError("unmounted"), ValueError("unmounted")]):
+            with self.assertRaisesRegex(ValueError, "unmounted"):
+                staging.stage(self.root, self.first)
+        self.assertEqual(len(list(self.root.glob(".partial-*"))), 1)
+        self.assertTrue(self.first.is_file())
+
+    def test_publication_collision_never_replaces_existing_directory(self):
+        original_publish = staging.publish_no_replace
+
+        def collide(partial, destination):
+            destination.mkdir()
+            (destination / "unrelated").write_text("preserve")
+            original_publish(partial, destination)
+
+        with mock.patch.object(staging, "same_filesystem", return_value=False), \
+                mock.patch.object(staging, "publish_no_replace", side_effect=collide):
+            with self.assertRaises(FileExistsError):
+                staging.stage(self.root, self.first)
+        self.assertEqual(next(self.root.glob("*/unrelated")).read_text(), "preserve")
+        self.assertFalse(list(self.root.glob(".partial-*")))
 
     def test_failed_readback_or_changed_source_cleans_only_partial_copy(self):
         for failure in ("readback", "source"):

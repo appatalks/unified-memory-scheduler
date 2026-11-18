@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
+import ctypes
 import fcntl
 import hashlib
 import json
@@ -19,13 +20,30 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from vrambridge.app import AppError, model_metadata, readable_gguf
+from vrambridge.model_storage import NVME_MOUNT, NVME_STAGING_ROOT, check_selected_mount as check_model_mount, require_nvme_mount
 
-DEFAULT_ROOT = Path("/home/mj420/Desktop/TOR/llm/model-staging")
+DEFAULT_ROOT = NVME_STAGING_ROOT
 RESERVE = 16 * 1024 ** 3
 COPY_OVERHEAD = 16 * 1024 ** 2
 CHUNK = 8 * 1024 ** 2
 MARKER = ".vrambridge-staging.json"
 ID = re.compile(r"[a-f0-9]{32}")
+
+
+def check_selected_mount(root: Path) -> None:
+    check_model_mount(root, NVME_MOUNT, require_nvme_mount)
+
+
+def publish_no_replace(source: Path, destination: Path) -> None:
+    try:
+        rename = ctypes.CDLL(None, use_errno=True).renameat2
+    except AttributeError as exc:
+        raise RuntimeError("Atomic no-overwrite publication is unavailable.") from exc
+    rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    if rename(-100, os.fsencode(source), -100, os.fsencode(destination), 1):
+        code = ctypes.get_errno()
+        raise OSError(code, os.strerror(code), str(destination))
 
 
 def read_json(path: Path) -> dict:
@@ -48,6 +66,7 @@ def write_json(path: Path, value: dict) -> None:
 
 
 def initialize(root: Path) -> dict:
+    check_selected_mount(root)
     if root.is_symlink():
         raise ValueError("Staging root must not be a symlink.")
     root = root.resolve()
@@ -66,6 +85,7 @@ def initialize(root: Path) -> dict:
 
 
 def configuration(root: Path) -> dict:
+    check_selected_mount(root)
     if root.is_symlink():
         raise ValueError("Staging root must not be a symlink.")
     root = root.resolve(strict=True)
@@ -200,6 +220,7 @@ def stage(root: Path, first: Path) -> dict:
         return verify(root, description["cache_id"])
     if not description["copy_fits_headroom"]:
         raise ValueError("Copy would leave less than the required 16 GiB free; nothing copied.")
+    check_selected_mount(root)
     partial = Path(tempfile.mkdtemp(prefix=".partial-", dir=root))
     owned_files = []
     published = False
@@ -219,6 +240,7 @@ def stage(root: Path, first: Path) -> dict:
             with original.open("rb") as source, target.open("xb") as output:
                 owned_files.append(target)
                 while data := source.read(CHUNK):
+                    check_selected_mount(root)
                     if shutil.disk_usage(root).free < remaining + RESERVE + COPY_OVERHEAD:
                         raise ValueError("Disk headroom changed during copy; stopping.")
                     output.write(data)
@@ -233,18 +255,30 @@ def stage(root: Path, first: Path) -> dict:
                 raise ValueError("Destination readback checksum mismatch.")
         if any(fingerprint(Path(path)) != version for path, version in source_versions.items()):
             raise ValueError("An earlier archive shard changed before publication.")
+        check_selected_mount(root)
         manifest = partial / "manifest.json"
         owned_files.append(manifest)
         write_json(manifest, {"schema_version": 1, "kind": "vrambridge_staged_model",
                              "cache_id": description["cache_id"], "root": str(root),
                              "owner_uid": os.getuid(), "files": description["files"]})
-        partial.rename(destination)
+        publish_no_replace(partial, destination)
         published = True
+        check_selected_mount(root)
+        directory_fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
     finally:
         if not published:
-            for path in owned_files:
-                path.unlink(missing_ok=True)
-            partial.rmdir()
+            try:
+                check_selected_mount(root)
+            except ValueError:
+                pass
+            else:
+                for path in owned_files:
+                    path.unlink(missing_ok=True)
+                partial.rmdir()
     return {"status": "staged", "cache_id": description["cache_id"],
             "model_path": str(destination / description["files"][0]["name"]),
             "copied_bytes": description["required_copy_bytes"],
@@ -263,8 +297,11 @@ def evict(root: Path, cache_id: str, confirm_unloaded: bool) -> dict:
     if result.returncode != 1 or result.stdout.strip() or result.stderr.strip():
         raise RuntimeError("Cannot confirm staged files are unused: " + result.stderr.strip())
     for path in paths:
+        check_selected_mount(root)
         path.unlink()
+    check_selected_mount(root)
     (directory / "manifest.json").unlink()
+    check_selected_mount(root)
     directory.rmdir()
     return {"status": "evicted", "cache_id": cache_id, "originals_preserved": True}
 
@@ -286,7 +323,8 @@ def listing(root: Path) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
+    parser.add_argument("--root", type=Path,
+                        help="Staging root; otherwise use model-staging on the configured model volume")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("init")
     commands.add_parser("list")
@@ -298,6 +336,10 @@ def main() -> int:
     eviction.add_argument("--confirm-unloaded", action="store_true")
     args = parser.parse_args()
     try:
+        if args.root is None:
+            require_nvme_mount()
+            args.root = DEFAULT_ROOT
+        check_selected_mount(args.root)
         if args.command == "init":
             result = initialize(args.root)
         else:

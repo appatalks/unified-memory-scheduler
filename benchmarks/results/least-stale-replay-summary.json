@@ -1,0 +1,1555 @@
+{
+  "date_local": "2026-11-13",
+  "limitations": [
+    "Least-Stale-inspired tie handling and demand admissions are an adaptation, not a complete paper reproduction",
+    "Global byte pool does not model actual backend groups, reserved slots or Classic/LFU admissions",
+    "No prefill, speculative prefetch, real transfer timing, logits or live inference",
+    "One held-out request per category and no verified Coder trace; no median or production claim",
+    "Train-static is a training-only surrogate, not the installed plan; logical bytes omit allocation overhead"
+  ],
+  "paper": "arXiv:2602.03921",
+  "runs": {
+    "gpt120_admit1": {
+      "admit_after": 1,
+      "architecture": "gpt-oss",
+      "model": "gpt-oss-120b-MXFP4-00001-of-00002.gguf",
+      "policy_note": "Least-stale prioritizes stale before current, then layer id and queue-entry order; tie semantics are an implementation choice",
+      "replay_source_sha256": "c483d9e2099fa00b2faa9c2b0daf0cd90b09cfc5193df1c20ffcfa377cf7045f",
+      "results": {
+        "12000": {
+          "least_stale": {
+            "evictions": 63616,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.42476851851851855,
+            "hit_bytes": 622608629760,
+            "hit_fraction": 0.42476851851851855,
+            "hits": 46976,
+            "initial_resident_bytes": 12577818240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 21499,
+                "expert_calls": 36864,
+                "hit_bytes": 203644022400,
+                "hit_fraction": 0.4168023003472222,
+                "hits": 15365,
+                "total_bytes": 488586608640,
+                "upload_bytes": 284942586240
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 20036,
+                "expert_calls": 36864,
+                "hit_bytes": 223034273280,
+                "hit_fraction": 0.4564887152777778,
+                "hits": 16828,
+                "total_bytes": 488586608640,
+                "upload_bytes": 265552335360
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 22081,
+                "expert_calls": 36864,
+                "hit_bytes": 195930334080,
+                "hit_fraction": 0.4010145399305556,
+                "hits": 14783,
+                "total_bytes": 488586608640,
+                "upload_bytes": 292656274560
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 843151196160,
+            "warmup": {
+              "evictions": 56166,
+              "upload_bytes": 756988502400
+            }
+          },
+          "lfu": {
+            "evictions": 1072,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.5920862268518519,
+            "hit_bytes": 867856204800,
+            "hit_fraction": 0.5920862268518519,
+            "hits": 65480,
+            "initial_resident_bytes": 12577818240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 469,
+                "expert_calls": 36864,
+                "hit_bytes": 292073109120,
+                "hit_fraction": 0.5977918836805556,
+                "hits": 22037,
+                "total_bytes": 488586608640,
+                "upload_bytes": 6216013440
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 260,
+                "expert_calls": 36864,
+                "hit_bytes": 324253238400,
+                "hit_fraction": 0.6636555989583334,
+                "hits": 24465,
+                "total_bytes": 488586608640,
+                "upload_bytes": 3445977600
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 343,
+                "expert_calls": 36864,
+                "hit_bytes": 251529857280,
+                "hit_fraction": 0.5148111979166666,
+                "hits": 18978,
+                "total_bytes": 488586608640,
+                "upload_bytes": 4546039680
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 14208030720,
+            "warmup": {
+              "evictions": 4761,
+              "upload_bytes": 75678969600
+            }
+          },
+          "lru": {
+            "evictions": 32996,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.7016420717592593,
+            "hit_bytes": 1028438760960,
+            "hit_fraction": 0.7016420717592593,
+            "hits": 77596,
+            "initial_resident_bytes": 12577818240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 12904,
+                "expert_calls": 36864,
+                "hit_bytes": 317560089600,
+                "hit_fraction": 0.6499565972222222,
+                "hits": 23960,
+                "total_bytes": 488586608640,
+                "upload_bytes": 171026519040
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 8179,
+                "expert_calls": 36864,
+                "hit_bytes": 380184105600,
+                "hit_fraction": 0.7781304253472222,
+                "hits": 28685,
+                "total_bytes": 488586608640,
+                "upload_bytes": 108402503040
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 11913,
+                "expert_calls": 36864,
+                "hit_bytes": 330694565760,
+                "hit_fraction": 0.6768391927083334,
+                "hits": 24951,
+                "total_bytes": 488586608640,
+                "upload_bytes": 157892042880
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 437321064960,
+            "warmup": {
+              "evictions": 30021,
+              "upload_bytes": 410468947200
+            }
+          },
+          "train_static": {
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.5688205295138888,
+            "hit_bytes": 833754280320,
+            "hit_fraction": 0.5688205295138888,
+            "hits": 62907,
+            "initial_resident_bytes": 12577818240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 273650382720,
+                "hit_fraction": 0.5600857204861112,
+                "hits": 20647,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 331741612800,
+                "hit_fraction": 0.6789822048611112,
+                "hits": 25030,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 228362284800,
+                "hit_fraction": 0.4673936631944444,
+                "hits": 17230,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              }
+            },
+            "total_bytes": 1465759825920,
+            "warmup": {}
+          }
+        },
+        "4096": {
+          "least_stale": {
+            "evictions": 76171,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.31124312789351855,
+            "hit_bytes": 456207672960,
+            "hit_fraction": 0.31124312789351855,
+            "hits": 34421,
+            "initial_resident_bytes": 4294218240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 25796,
+                "expert_calls": 36864,
+                "hit_bytes": 146692615680,
+                "hit_fraction": 0.3002387152777778,
+                "hits": 11068,
+                "total_bytes": 488586608640,
+                "upload_bytes": 341893992960
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 23817,
+                "expert_calls": 36864,
+                "hit_bytes": 172921806720,
+                "hit_fraction": 0.3539225260416667,
+                "hits": 13047,
+                "total_bytes": 488586608640,
+                "upload_bytes": 315664801920
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 26558,
+                "expert_calls": 36864,
+                "hit_bytes": 136593250560,
+                "hit_fraction": 0.2795681423611111,
+                "hits": 10306,
+                "total_bytes": 488586608640,
+                "upload_bytes": 351993358080
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 1009552152960,
+            "warmup": {
+              "evictions": 72458,
+              "upload_bytes": 964635160320
+            }
+          },
+          "lfu": {
+            "evictions": 727,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.2855360243055556,
+            "hit_bytes": 418527233280,
+            "hit_fraction": 0.2855360243055556,
+            "hits": 31578,
+            "initial_resident_bytes": 4294218240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 266,
+                "expert_calls": 36864,
+                "hit_bytes": 139482570240,
+                "hit_fraction": 0.2854817708333333,
+                "hits": 10524,
+                "total_bytes": 488586608640,
+                "upload_bytes": 3525500160
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 243,
+                "expert_calls": 36864,
+                "hit_bytes": 163975518720,
+                "hit_fraction": 0.3356119791666667,
+                "hits": 12372,
+                "total_bytes": 488586608640,
+                "upload_bytes": 3220663680
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 218,
+                "expert_calls": 36864,
+                "hit_bytes": 115069144320,
+                "hit_fraction": 0.23551432291666666,
+                "hits": 8682,
+                "total_bytes": 488586608640,
+                "upload_bytes": 2889319680
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 9635483520,
+            "warmup": {
+              "evictions": 3785,
+              "upload_bytes": 54459699840
+            }
+          },
+          "lru": {
+            "evictions": 67591,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.3888255931712963,
+            "hit_bytes": 569924933760,
+            "hit_fraction": 0.3888255931712963,
+            "hits": 43001,
+            "initial_resident_bytes": 4294218240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 23318,
+                "expert_calls": 36864,
+                "hit_bytes": 179535432960,
+                "hit_fraction": 0.3674587673611111,
+                "hits": 13546,
+                "total_bytes": 488586608640,
+                "upload_bytes": 309051175680
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 20227,
+                "expert_calls": 36864,
+                "hit_bytes": 220502805120,
+                "hit_fraction": 0.4513075086805556,
+                "hits": 16637,
+                "total_bytes": 488586608640,
+                "upload_bytes": 268083803520
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 24046,
+                "expert_calls": 36864,
+                "hit_bytes": 169886695680,
+                "hit_fraction": 0.3477105034722222,
+                "hits": 12818,
+                "total_bytes": 488586608640,
+                "upload_bytes": 318699912960
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 895834892160,
+            "warmup": {
+              "evictions": 64862,
+              "upload_bytes": 863959599360
+            }
+          },
+          "train_static": {
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.2695945457175926,
+            "hit_bytes": 395160854400,
+            "hit_fraction": 0.2695945457175926,
+            "hits": 29815,
+            "initial_resident_bytes": 4294218240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 121483964160,
+                "hit_fraction": 0.24864366319444445,
+                "hits": 9166,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 172736254080,
+                "hit_fraction": 0.3535427517361111,
+                "hits": 13033,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 100940636160,
+                "hit_fraction": 0.2065972222222222,
+                "hits": 7616,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              }
+            },
+            "total_bytes": 1465759825920,
+            "warmup": {}
+          }
+        }
+      },
+      "routing_source_sha256": "7db6c460353d6e748cffad7495b0d69dc2cccf7dcac422b6eb718ba8a96e4747",
+      "schema_version": 1,
+      "scope": "global hypothetical byte cache, CPU misses, end-of-layer admissions, no prefetch or prefill",
+      "test_tokens": 768,
+      "trace_sha256": "97af1496c33b9365b0a2d5b52e99ab226cb1308a0caff20e52c1e7e30895c9c3",
+      "train_tokens": 768
+    },
+    "gpt120_admit2": {
+      "admit_after": 2,
+      "architecture": "gpt-oss",
+      "model": "gpt-oss-120b-MXFP4-00001-of-00002.gguf",
+      "policy_note": "Least-stale prioritizes stale before current, then layer id and queue-entry order; tie semantics are an implementation choice",
+      "replay_source_sha256": "c483d9e2099fa00b2faa9c2b0daf0cd90b09cfc5193df1c20ffcfa377cf7045f",
+      "results": {
+        "12000": {
+          "least_stale": {
+            "evictions": 62772,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.4300491898148148,
+            "hit_bytes": 630348825600,
+            "hit_fraction": 0.4300491898148148,
+            "hits": 47560,
+            "initial_resident_bytes": 12577818240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 21082,
+                "expert_calls": 36864,
+                "hit_bytes": 207686419200,
+                "hit_fraction": 0.4250759548611111,
+                "hits": 15670,
+                "total_bytes": 488586608640,
+                "upload_bytes": 279415768320
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 19939,
+                "expert_calls": 36864,
+                "hit_bytes": 223802991360,
+                "hit_fraction": 0.4580620659722222,
+                "hits": 16886,
+                "total_bytes": 488586608640,
+                "upload_bytes": 264266720640
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 21751,
+                "expert_calls": 36864,
+                "hit_bytes": 198859415040,
+                "hit_fraction": 0.4070095486111111,
+                "hits": 15004,
+                "total_bytes": 488586608640,
+                "upload_bytes": 288282533760
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 831965022720,
+            "warmup": {
+              "evictions": 52023,
+              "upload_bytes": 702078174720
+            }
+          },
+          "lfu": {
+            "evictions": 1072,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.5920862268518519,
+            "hit_bytes": 867856204800,
+            "hit_fraction": 0.5920862268518519,
+            "hits": 65480,
+            "initial_resident_bytes": 12577818240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 469,
+                "expert_calls": 36864,
+                "hit_bytes": 292073109120,
+                "hit_fraction": 0.5977918836805556,
+                "hits": 22037,
+                "total_bytes": 488586608640,
+                "upload_bytes": 6216013440
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 260,
+                "expert_calls": 36864,
+                "hit_bytes": 324253238400,
+                "hit_fraction": 0.6636555989583334,
+                "hits": 24465,
+                "total_bytes": 488586608640,
+                "upload_bytes": 3445977600
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 343,
+                "expert_calls": 36864,
+                "hit_bytes": 251529857280,
+                "hit_fraction": 0.5148111979166666,
+                "hits": 18978,
+                "total_bytes": 488586608640,
+                "upload_bytes": 4546039680
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 14208030720,
+            "warmup": {
+              "evictions": 4034,
+              "upload_bytes": 66043486080
+            }
+          },
+          "lru": {
+            "evictions": 32681,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.7021393952546297,
+            "hit_bytes": 1029167717760,
+            "hit_fraction": 0.7021393952546297,
+            "hits": 77651,
+            "initial_resident_bytes": 12577818240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 12756,
+                "expert_calls": 36864,
+                "hit_bytes": 318037224960,
+                "hit_fraction": 0.6509331597222222,
+                "hits": 23996,
+                "total_bytes": 488586608640,
+                "upload_bytes": 169064962560
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 8130,
+                "expert_calls": 36864,
+                "hit_bytes": 380316643200,
+                "hit_fraction": 0.7784016927083334,
+                "hits": 28695,
+                "total_bytes": 488586608640,
+                "upload_bytes": 107753068800
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 11795,
+                "expert_calls": 36864,
+                "hit_bytes": 330813849600,
+                "hit_fraction": 0.6770833333333334,
+                "hits": 24960,
+                "total_bytes": 488586608640,
+                "upload_bytes": 156328099200
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 433146130560,
+            "warmup": {
+              "evictions": 26647,
+              "upload_bytes": 365750760960
+            }
+          },
+          "train_static": {
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.5688205295138888,
+            "hit_bytes": 833754280320,
+            "hit_fraction": 0.5688205295138888,
+            "hits": 62907,
+            "initial_resident_bytes": 12577818240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 273650382720,
+                "hit_fraction": 0.5600857204861112,
+                "hits": 20647,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 331741612800,
+                "hit_fraction": 0.6789822048611112,
+                "hits": 25030,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 228362284800,
+                "hit_fraction": 0.4673936631944444,
+                "hits": 17230,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              }
+            },
+            "total_bytes": 1465759825920,
+            "warmup": {}
+          }
+        },
+        "4096": {
+          "least_stale": {
+            "evictions": 76289,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.30782515914351855,
+            "hit_bytes": 451197751680,
+            "hit_fraction": 0.30782515914351855,
+            "hits": 34043,
+            "initial_resident_bytes": 4294218240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 25772,
+                "expert_calls": 36864,
+                "hit_bytes": 145526284800,
+                "hit_fraction": 0.2978515625,
+                "hits": 10980,
+                "total_bytes": 488586608640,
+                "upload_bytes": 341575902720
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 23942,
+                "expert_calls": 36864,
+                "hit_bytes": 170748190080,
+                "hit_fraction": 0.3494737413194444,
+                "hits": 12883,
+                "total_bytes": 488586608640,
+                "upload_bytes": 317321521920
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 26575,
+                "expert_calls": 36864,
+                "hit_bytes": 134923276800,
+                "hit_fraction": 0.2761501736111111,
+                "hits": 10180,
+                "total_bytes": 488586608640,
+                "upload_bytes": 352218672000
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 1011116096640,
+            "warmup": {
+              "evictions": 71748,
+              "upload_bytes": 955224990720
+            }
+          },
+          "lfu": {
+            "evictions": 727,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.2855360243055556,
+            "hit_bytes": 418527233280,
+            "hit_fraction": 0.2855360243055556,
+            "hits": 31578,
+            "initial_resident_bytes": 4294218240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 266,
+                "expert_calls": 36864,
+                "hit_bytes": 139482570240,
+                "hit_fraction": 0.2854817708333333,
+                "hits": 10524,
+                "total_bytes": 488586608640,
+                "upload_bytes": 3525500160
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 243,
+                "expert_calls": 36864,
+                "hit_bytes": 163975518720,
+                "hit_fraction": 0.3356119791666667,
+                "hits": 12372,
+                "total_bytes": 488586608640,
+                "upload_bytes": 3220663680
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 218,
+                "expert_calls": 36864,
+                "hit_bytes": 115069144320,
+                "hit_fraction": 0.23551432291666666,
+                "hits": 8682,
+                "total_bytes": 488586608640,
+                "upload_bytes": 2889319680
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 9635483520,
+            "warmup": {
+              "evictions": 3165,
+              "upload_bytes": 46242368640
+            }
+          },
+          "lru": {
+            "evictions": 67313,
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.38898835358796297,
+            "hit_bytes": 570163501440,
+            "hit_fraction": 0.38898835358796297,
+            "hits": 43019,
+            "initial_resident_bytes": 4294218240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 23206,
+                "expert_calls": 36864,
+                "hit_bytes": 179535432960,
+                "hit_fraction": 0.3674587673611111,
+                "hits": 13546,
+                "total_bytes": 488586608640,
+                "upload_bytes": 307566754560
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 20170,
+                "expert_calls": 36864,
+                "hit_bytes": 220741372800,
+                "hit_fraction": 0.4517957899305556,
+                "hits": 16655,
+                "total_bytes": 488586608640,
+                "upload_bytes": 267328339200
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 23937,
+                "expert_calls": 36864,
+                "hit_bytes": 169886695680,
+                "hit_fraction": 0.3477105034722222,
+                "hits": 12818,
+                "total_bytes": 488586608640,
+                "upload_bytes": 317255253120
+              }
+            },
+            "total_bytes": 1465759825920,
+            "upload_bytes": 892150346880,
+            "warmup": {
+              "evictions": 60670,
+              "upload_bytes": 808399837440
+            }
+          },
+          "train_static": {
+            "expert_calls": 110592,
+            "hit_byte_fraction": 0.2695945457175926,
+            "hit_bytes": 395160854400,
+            "hit_fraction": 0.2695945457175926,
+            "hits": 29815,
+            "initial_resident_bytes": 4294218240,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 121483964160,
+                "hit_fraction": 0.24864366319444445,
+                "hits": 9166,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 172736254080,
+                "hit_fraction": 0.3535427517361111,
+                "hits": 13033,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 0,
+                "expert_calls": 36864,
+                "hit_bytes": 100940636160,
+                "hit_fraction": 0.2065972222222222,
+                "hits": 7616,
+                "total_bytes": 488586608640,
+                "upload_bytes": 0
+              }
+            },
+            "total_bytes": 1465759825920,
+            "warmup": {}
+          }
+        }
+      },
+      "routing_source_sha256": "7db6c460353d6e748cffad7495b0d69dc2cccf7dcac422b6eb718ba8a96e4747",
+      "schema_version": 1,
+      "scope": "global hypothetical byte cache, CPU misses, end-of-layer admissions, no prefetch or prefill",
+      "test_tokens": 768,
+      "trace_sha256": "97af1496c33b9365b0a2d5b52e99ab226cb1308a0caff20e52c1e7e30895c9c3",
+      "train_tokens": 768
+    },
+    "qwen38_admit1": {
+      "admit_after": 1,
+      "architecture": "qwen4exp",
+      "model": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf",
+      "policy_note": "Least-stale prioritizes stale before current, then layer id and queue-entry order; tie semantics are an implementation choice",
+      "replay_source_sha256": "c483d9e2099fa00b2faa9c2b0daf0cd90b09cfc5193df1c20ffcfa377cf7045f",
+      "results": {
+        "4096": {
+          "least_stale": {
+            "evictions": 55735,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.4049078055772739,
+            "hit_bytes": 76364083200,
+            "hit_fraction": 0.39546440972222224,
+            "hits": 36446,
+            "initial_resident_bytes": 4292838400,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 18994,
+                "expert_calls": 30720,
+                "hit_bytes": 24679961600,
+                "hit_fraction": 0.3819661458333333,
+                "hits": 11734,
+                "total_bytes": 62865408000,
+                "upload_bytes": 38185446400
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 18536,
+                "expert_calls": 30720,
+                "hit_bytes": 25545651200,
+                "hit_fraction": 0.39674479166666665,
+                "hits": 12188,
+                "total_bytes": 62865408000,
+                "upload_bytes": 37319756800
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 18205,
+                "expert_calls": 30720,
+                "hit_bytes": 26138470400,
+                "hit_fraction": 0.40768229166666664,
+                "hits": 12524,
+                "total_bytes": 62865408000,
+                "upload_bytes": 36726937600
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 112232140800,
+            "warmup": {
+              "evictions": 50720,
+              "upload_bytes": 105626086400
+            }
+          },
+          "lfu": {
+            "evictions": 3219,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.4960750857875076,
+            "hit_bytes": 93557888000,
+            "hit_fraction": 0.49529079861111114,
+            "hits": 45646,
+            "initial_resident_bytes": 4293427200,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 1304,
+                "expert_calls": 30720,
+                "hit_bytes": 35339238400,
+                "hit_fraction": 0.56162109375,
+                "hits": 17253,
+                "total_bytes": 62865408000,
+                "upload_bytes": 2612736000
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 920,
+                "expert_calls": 30720,
+                "hit_bytes": 29457843200,
+                "hit_fraction": 0.4671875,
+                "hits": 14352,
+                "total_bytes": 62865408000,
+                "upload_bytes": 1816038400
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 995,
+                "expert_calls": 30720,
+                "hit_bytes": 28760806400,
+                "hit_fraction": 0.45706380208333336,
+                "hits": 14041,
+                "total_bytes": 62865408000,
+                "upload_bytes": 1969536000
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 6398310400,
+            "warmup": {
+              "evictions": 10415,
+              "upload_bytes": 25416576000
+            }
+          },
+          "lru": {
+            "evictions": 37947,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.5873477000260621,
+            "hit_bytes": 110771558400,
+            "hit_fraction": 0.5878797743055556,
+            "hits": 54179,
+            "initial_resident_bytes": 4294886400,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 13119,
+                "expert_calls": 30720,
+                "hit_bytes": 35978470400,
+                "hit_fraction": 0.5723307291666667,
+                "hits": 17582,
+                "total_bytes": 62865408000,
+                "upload_bytes": 26886937600
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 12858,
+                "expert_calls": 30720,
+                "hit_bytes": 36530841600,
+                "hit_fraction": 0.5809895833333333,
+                "hits": 17848,
+                "total_bytes": 62865408000,
+                "upload_bytes": 26334566400
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 11970,
+                "expert_calls": 30720,
+                "hit_bytes": 38262246400,
+                "hit_fraction": 0.6103190104166667,
+                "hits": 18749,
+                "total_bytes": 62865408000,
+                "upload_bytes": 24603161600
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 77824665600,
+            "warmup": {
+              "evictions": 38335,
+              "upload_bytes": 82756454400
+            }
+          },
+          "train_static": {
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.46209549561289204,
+            "hit_bytes": 87149465600,
+            "hit_fraction": 0.46311848958333335,
+            "hits": 42681,
+            "initial_resident_bytes": 4293811200,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 33268121600,
+                "hit_fraction": 0.5305013020833333,
+                "hits": 16297,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 28373913600,
+                "hit_fraction": 0.4517578125,
+                "hits": 13878,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 25507430400,
+                "hit_fraction": 0.4070963541666667,
+                "hits": 12506,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              }
+            },
+            "total_bytes": 188596224000,
+            "warmup": {}
+          }
+        },
+        "8192": {
+          "least_stale": {
+            "evictions": 45656,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.516941539614282,
+            "hit_bytes": 97493222400,
+            "hit_fraction": 0.5051106770833333,
+            "hits": 46551,
+            "initial_resident_bytes": 8588288000,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 15217,
+                "expert_calls": 30720,
+                "hit_bytes": 32565171200,
+                "hit_fraction": 0.5052083333333334,
+                "hits": 15520,
+                "total_bytes": 62865408000,
+                "upload_bytes": 30300236800
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 15507,
+                "expert_calls": 30720,
+                "hit_bytes": 31933696000,
+                "hit_fraction": 0.49560546875,
+                "hits": 15225,
+                "total_bytes": 62865408000,
+                "upload_bytes": 30931712000
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 14932,
+                "expert_calls": 30720,
+                "hit_bytes": 32994355200,
+                "hit_fraction": 0.5145182291666667,
+                "hits": 15806,
+                "total_bytes": 62865408000,
+                "upload_bytes": 29871052800
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 91103001600,
+            "warmup": {
+              "evictions": 32892,
+              "upload_bytes": 73274777600
+            }
+          },
+          "lfu": {
+            "evictions": 4110,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.7043366128051429,
+            "hit_bytes": 132835225600,
+            "hit_fraction": 0.7040473090277778,
+            "hits": 64885,
+            "initial_resident_bytes": 8588364800,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 1484,
+                "expert_calls": 30720,
+                "hit_bytes": 47761254400,
+                "hit_fraction": 0.7598307291666667,
+                "hits": 23342,
+                "total_bytes": 62865408000,
+                "upload_bytes": 2947916800
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 1227,
+                "expert_calls": 30720,
+                "hit_bytes": 43530496000,
+                "hit_fraction": 0.6918619791666667,
+                "hits": 21254,
+                "total_bytes": 62865408000,
+                "upload_bytes": 2458521600
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 1399,
+                "expert_calls": 30720,
+                "hit_bytes": 41543475200,
+                "hit_fraction": 0.66044921875,
+                "hits": 20289,
+                "total_bytes": 62865408000,
+                "upload_bytes": 2790656000
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 8197094400,
+            "warmup": {
+              "evictions": 9353,
+              "upload_bytes": 27512192000
+            }
+          },
+          "lru": {
+            "evictions": 22785,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.7526186908174789,
+            "hit_bytes": 141941043200,
+            "hit_fraction": 0.7524522569444444,
+            "hits": 69346,
+            "initial_resident_bytes": 8589158400,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 7412,
+                "expert_calls": 30720,
+                "hit_bytes": 47648844800,
+                "hit_fraction": 0.7580403645833333,
+                "hits": 23287,
+                "total_bytes": 62865408000,
+                "upload_bytes": 15216563200
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 7334,
+                "expert_calls": 30720,
+                "hit_bytes": 47863270400,
+                "hit_fraction": 0.7609049479166666,
+                "hits": 23375,
+                "total_bytes": 62865408000,
+                "upload_bytes": 15002137600
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 8039,
+                "expert_calls": 30720,
+                "hit_bytes": 46428928000,
+                "hit_fraction": 0.7384114583333333,
+                "hits": 22684,
+                "total_bytes": 62865408000,
+                "upload_bytes": 16436480000
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 46655180800,
+            "warmup": {
+              "evictions": 18680,
+              "upload_bytes": 46751385600
+            }
+          },
+          "train_static": {
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.6611802026322647,
+            "hit_bytes": 124696089600,
+            "hit_fraction": 0.6626193576388889,
+            "hits": 61067,
+            "initial_resident_bytes": 8589849600,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 45683712000,
+                "hit_fraction": 0.7283854166666667,
+                "hits": 22376,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 42401510400,
+                "hit_fraction": 0.67587890625,
+                "hits": 20763,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 36610867200,
+                "hit_fraction": 0.58359375,
+                "hits": 17928,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              }
+            },
+            "total_bytes": 188596224000,
+            "warmup": {}
+          }
+        }
+      },
+      "routing_source_sha256": "7db6c460353d6e748cffad7495b0d69dc2cccf7dcac422b6eb718ba8a96e4747",
+      "schema_version": 1,
+      "scope": "global hypothetical byte cache, CPU misses, end-of-layer admissions, no prefetch or prefill",
+      "test_tokens": 192,
+      "trace_sha256": "eaf00288e22cd0128c13b4080fef7393dea77b66c044f6829e25235a93c50700",
+      "train_tokens": 192
+    },
+    "qwen38_admit2": {
+      "admit_after": 2,
+      "architecture": "qwen4exp",
+      "model": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf",
+      "policy_note": "Least-stale prioritizes stale before current, then layer id and queue-entry order; tie semantics are an implementation choice",
+      "replay_source_sha256": "c483d9e2099fa00b2faa9c2b0daf0cd90b09cfc5193df1c20ffcfa377cf7045f",
+      "results": {
+        "4096": {
+          "least_stale": {
+            "evictions": 56439,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.3762956356962905,
+            "hit_bytes": 70967936000,
+            "hit_fraction": 0.3646484375,
+            "hits": 33606,
+            "initial_resident_bytes": 4294553600,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 19012,
+                "expert_calls": 30720,
+                "hit_bytes": 23405081600,
+                "hit_fraction": 0.35983072916666664,
+                "hits": 11054,
+                "total_bytes": 62865408000,
+                "upload_bytes": 38070963200
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 18852,
+                "expert_calls": 30720,
+                "hit_bytes": 24093465600,
+                "hit_fraction": 0.3717447916666667,
+                "hits": 11420,
+                "total_bytes": 62865408000,
+                "upload_bytes": 37844300800
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 18575,
+                "expert_calls": 30720,
+                "hit_bytes": 23469388800,
+                "hit_fraction": 0.36236979166666666,
+                "hits": 11132,
+                "total_bytes": 62865408000,
+                "upload_bytes": 37322137600
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 113237401600,
+            "warmup": {
+              "evictions": 42703,
+              "upload_bytes": 89286272000
+            }
+          },
+          "lfu": {
+            "evictions": 3216,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.4960750857875076,
+            "hit_bytes": 93557888000,
+            "hit_fraction": 0.49529079861111114,
+            "hits": 45646,
+            "initial_resident_bytes": 4293427200,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 1302,
+                "expert_calls": 30720,
+                "hit_bytes": 35339238400,
+                "hit_fraction": 0.56162109375,
+                "hits": 17253,
+                "total_bytes": 62865408000,
+                "upload_bytes": 2609254400
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 920,
+                "expert_calls": 30720,
+                "hit_bytes": 29457843200,
+                "hit_fraction": 0.4671875,
+                "hits": 14352,
+                "total_bytes": 62865408000,
+                "upload_bytes": 1816038400
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 994,
+                "expert_calls": 30720,
+                "hit_bytes": 28760806400,
+                "hit_fraction": 0.45706380208333336,
+                "hits": 14041,
+                "total_bytes": 62865408000,
+                "upload_bytes": 1967564800
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 6392857600,
+            "warmup": {
+              "evictions": 7878,
+              "upload_bytes": 20244710400
+            }
+          },
+          "lru": {
+            "evictions": 35850,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.5870448646946399,
+            "hit_bytes": 110714444800,
+            "hit_fraction": 0.5875108506944444,
+            "hits": 54145,
+            "initial_resident_bytes": 4293196800,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 12379,
+                "expert_calls": 30720,
+                "hit_bytes": 36118092800,
+                "hit_fraction": 0.5745442708333334,
+                "hits": 17650,
+                "total_bytes": 62865408000,
+                "upload_bytes": 25357952000
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 12377,
+                "expert_calls": 30720,
+                "hit_bytes": 36601011200,
+                "hit_fraction": 0.5819986979166667,
+                "hits": 17879,
+                "total_bytes": 62865408000,
+                "upload_bytes": 25336755200
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 11094,
+                "expert_calls": 30720,
+                "hit_bytes": 37995340800,
+                "hit_fraction": 0.6059895833333333,
+                "hits": 18616,
+                "total_bytes": 62865408000,
+                "upload_bytes": 22796185600
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 73490892800,
+            "warmup": {
+              "evictions": 27932,
+              "upload_bytes": 61434368000
+            }
+          },
+          "train_static": {
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.46209549561289204,
+            "hit_bytes": 87149465600,
+            "hit_fraction": 0.46311848958333335,
+            "hits": 42681,
+            "initial_resident_bytes": 4293811200,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 33268121600,
+                "hit_fraction": 0.5305013020833333,
+                "hits": 16297,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 28373913600,
+                "hit_fraction": 0.4517578125,
+                "hits": 13878,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 25507430400,
+                "hit_fraction": 0.4070963541666667,
+                "hits": 12506,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              }
+            },
+            "total_bytes": 188596224000,
+            "warmup": {}
+          }
+        },
+        "8192": {
+          "least_stale": {
+            "evictions": 42644,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.5271685778820259,
+            "hit_bytes": 99422003200,
+            "hit_fraction": 0.5142252604166667,
+            "hits": 47391,
+            "initial_resident_bytes": 8588492800,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 13743,
+                "expert_calls": 30720,
+                "hit_bytes": 34225382400,
+                "hit_fraction": 0.5299479166666666,
+                "hits": 16280,
+                "total_bytes": 62865408000,
+                "upload_bytes": 27250662400
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 14741,
+                "expert_calls": 30720,
+                "hit_bytes": 32602240000,
+                "hit_fraction": 0.50546875,
+                "hits": 15528,
+                "total_bytes": 62865408000,
+                "upload_bytes": 29335526400
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 14160,
+                "expert_calls": 30720,
+                "hit_bytes": 32594380800,
+                "hit_fraction": 0.5072591145833333,
+                "hits": 15583,
+                "total_bytes": 62865408000,
+                "upload_bytes": 28197145600
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 84783334400,
+            "warmup": {
+              "evictions": 22561,
+              "upload_bytes": 52380236800
+            }
+          },
+          "lfu": {
+            "evictions": 4089,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.7043366128051429,
+            "hit_bytes": 132835225600,
+            "hit_fraction": 0.7040473090277778,
+            "hits": 64885,
+            "initial_resident_bytes": 8588364800,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 1477,
+                "expert_calls": 30720,
+                "hit_bytes": 47761254400,
+                "hit_fraction": 0.7598307291666667,
+                "hits": 23342,
+                "total_bytes": 62865408000,
+                "upload_bytes": 2935296000
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 1221,
+                "expert_calls": 30720,
+                "hit_bytes": 43530496000,
+                "hit_fraction": 0.6918619791666667,
+                "hits": 21254,
+                "total_bytes": 62865408000,
+                "upload_bytes": 2446182400
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 1391,
+                "expert_calls": 30720,
+                "hit_bytes": 41543475200,
+                "hit_fraction": 0.66044921875,
+                "hits": 20289,
+                "total_bytes": 62865408000,
+                "upload_bytes": 2776012800
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 8157491200,
+            "warmup": {
+              "evictions": 6454,
+              "upload_bytes": 21597926400
+            }
+          },
+          "lru": {
+            "evictions": 20447,
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.754877942837286,
+            "hit_bytes": 142367129600,
+            "hit_fraction": 0.7546440972222223,
+            "hits": 69548,
+            "initial_resident_bytes": 8589491200,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 6747,
+                "expert_calls": 30720,
+                "hit_bytes": 47637094400,
+                "hit_fraction": 0.75771484375,
+                "hits": 23277,
+                "total_bytes": 62865408000,
+                "upload_bytes": 13838950400
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 6782,
+                "expert_calls": 30720,
+                "hit_bytes": 48085683200,
+                "hit_fraction": 0.7642903645833333,
+                "hits": 23479,
+                "total_bytes": 62865408000,
+                "upload_bytes": 13852083200
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 6918,
+                "expert_calls": 30720,
+                "hit_bytes": 46644352000,
+                "hit_fraction": 0.7419270833333333,
+                "hits": 22792,
+                "total_bytes": 62865408000,
+                "upload_bytes": 14147174400
+              }
+            },
+            "total_bytes": 188596224000,
+            "upload_bytes": 41838208000,
+            "warmup": {
+              "evictions": 11591,
+              "upload_bytes": 32190976000
+            }
+          },
+          "train_static": {
+            "expert_calls": 92160,
+            "hit_byte_fraction": 0.6611802026322647,
+            "hit_bytes": 124696089600,
+            "hit_fraction": 0.6626193576388889,
+            "hits": 61067,
+            "initial_resident_bytes": 8589849600,
+            "requests": {
+              "coding-test": {
+                "category": "coding",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 45683712000,
+                "hit_fraction": 0.7283854166666667,
+                "hits": 22376,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              },
+              "prose-test": {
+                "category": "prose",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 42401510400,
+                "hit_fraction": 0.67587890625,
+                "hits": 20763,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              },
+              "reasoning-test": {
+                "category": "reasoning",
+                "evictions": 0,
+                "expert_calls": 30720,
+                "hit_bytes": 36610867200,
+                "hit_fraction": 0.58359375,
+                "hits": 17928,
+                "total_bytes": 62865408000,
+                "upload_bytes": 0
+              }
+            },
+            "total_bytes": 188596224000,
+            "warmup": {}
+          }
+        }
+      },
+      "routing_source_sha256": "7db6c460353d6e748cffad7495b0d69dc2cccf7dcac422b6eb718ba8a96e4747",
+      "schema_version": 1,
+      "scope": "global hypothetical byte cache, CPU misses, end-of-layer admissions, no prefetch or prefill",
+      "test_tokens": 192,
+      "trace_sha256": "eaf00288e22cd0128c13b4080fef7393dea77b66c044f6829e25235a93c50700",
+      "train_tokens": 192
+    }
+  },
+  "schema_version": 1,
+  "status": "offline_simulation_negative_screen"
+}

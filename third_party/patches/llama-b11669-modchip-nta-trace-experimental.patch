@@ -1,0 +1,30 @@
+diff --git a/ggml/src/ggml-cpu/arch/x86/quants.c b/ggml/src/ggml-cpu/arch/x86/quants.c
+--- a/ggml/src/ggml-cpu/arch/x86/quants.c
++++ b/ggml/src/ggml-cpu/arch/x86/quants.c
+@@ -1008,6 +1008,8 @@
+     for (; ib + 1 < nb; ib += 2) {
+ #if defined(VRAMBRIDGE_EXPERIMENTAL_NTA)
+         if (ib + 6 < nb) {
++            static int seen = 0;
++            if (!__atomic_exchange_n(&seen, 1, __ATOMIC_RELAXED)) fprintf(stderr, "VRAMBRIDGE_NTA_ACTIVE mxfp4\n");
+             _mm_prefetch((const char *) &x[ib + 6], _MM_HINT_NTA);
+         }
+ #endif
+@@ -2133,6 +2135,8 @@
+    for (int i = 0; i < nb; ++i) {
+ #if defined(VRAMBRIDGE_EXPERIMENTAL_NTA)
+         if (i + 2 < nb) {
++            static int seen = 0;
++            if (!__atomic_exchange_n(&seen, 1, __ATOMIC_RELAXED)) fprintf(stderr, "VRAMBRIDGE_NTA_ACTIVE q4_k\n");
+             _mm_prefetch((const char *) &x[i + 2], _MM_HINT_NTA);
+             _mm_prefetch((const char *) &x[i + 2] + 64, _MM_HINT_NTA);
+             _mm_prefetch((const char *) &x[i + 2] + 128, _MM_HINT_NTA);
+@@ -3497,6 +3501,8 @@
+     for (int i = 0; i < nb; ++i) {
+ #if defined(VRAMBRIDGE_EXPERIMENTAL_NTA)
+         if (i + 2 < nb) {
++            static int seen = 0;
++            if (!__atomic_exchange_n(&seen, 1, __ATOMIC_RELAXED)) fprintf(stderr, "VRAMBRIDGE_NTA_ACTIVE iq3_s\n");
+             _mm_prefetch((const char *) &x[i + 2], _MM_HINT_NTA);
+             _mm_prefetch((const char *) &x[i + 2] + 64, _MM_HINT_NTA);
+         }

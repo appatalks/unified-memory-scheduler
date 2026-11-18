@@ -1,5 +1,8 @@
 import importlib.util
+import json
 from pathlib import Path
+import subprocess
+import tempfile
 import threading
 import time
 import unittest
@@ -11,6 +14,12 @@ spec = importlib.util.spec_from_file_location("agent_concurrency", SCRIPT)
 assert spec and spec.loader
 bench = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bench)
+
+speed_spec = importlib.util.spec_from_file_location(
+    "bevy_scalar_speed", SCRIPT.with_name("vrambridge-bevy-scalar-speed.py"))
+assert speed_spec is not None and speed_spec.loader is not None
+speed = importlib.util.module_from_spec(speed_spec)
+speed_spec.loader.exec_module(speed)
 
 
 class AgentConcurrencyTests(unittest.TestCase):
@@ -100,6 +109,67 @@ class AgentConcurrencyTests(unittest.TestCase):
         summary = bench.summarize(runs, [2], 2)[0]
         self.assertEqual(summary["completed_runs"], 1)
         self.assertNotIn("aggregate_end_to_end_output_tok_s", summary)
+
+    def test_scalar_speed_requires_exact_outputs_and_hybrid_activation(self):
+        raw = {"concurrency": 2, "requests": 8, "output_tokens_per_request": 2,
+               "context_per_sequence": 4096, "warmup_decode_tokens": 64, "serial_tokens": True,
+               "aggregate_decode_tok_s": 10.0, "aggregate_end_to_end_tok_s": 9.0, "cohort_seconds": 2.0,
+               "first_token_seconds": [0.1] * 8, "completion_seconds": [1.0] * 8,
+               "tokens": [[1, 2]] * 8}
+        log = ("EXPERIMENTAL HYBRID enabled\nhybrid batch limit=1\n"
+               "tensor-derived hybrid coverage=36/36 routed layers\n"
+               "hybrid dispatches=30 CPU experts=20 GPU experts=10 prior hits=8\n")
+        with tempfile.TemporaryDirectory() as root:
+            output, log_path = Path(root) / "out.json", Path(root) / "out.log"
+            output.write_text(json.dumps(raw)); log_path.write_text(log)
+            result = speed.checked_sample(output, log_path, 2, 2, 4096)
+            self.assertEqual(len(result["request_token_sha256"]), 8)
+            raw["decode_graph_reuses"] = 4
+            output.write_text(json.dumps(raw))
+            self.assertEqual(speed.checked_sample(output, log_path, 2, 2, 4096)["decode_graph_reuses"], 4)
+            log_path.write_text(log.replace("coverage=36/36", "coverage=35/36"))
+            with self.assertRaises(ValueError):
+                speed.checked_sample(output, log_path, 2, 2, 4096)
+            log_path.write_text(log)
+            log_path.write_text(log + "graph reuse disabled\n")
+            self.assertEqual(len(speed.checked_sample(output, log_path, 2, 2, 4096, True)["request_token_sha256"]), 8)
+            with self.assertRaises(ValueError):
+                speed.checked_sample(output, log_path, 2, 2, 4096)
+            log_path.write_text(log)
+            raw["decode_graph_reuses"] = -1
+            output.write_text(json.dumps(raw))
+            with self.assertRaises(ValueError):
+                speed.checked_sample(output, log_path, 2, 2, 4096)
+            del raw["decode_graph_reuses"]
+            raw["tokens"][0] = [1]
+            output.write_text(json.dumps(raw))
+            with self.assertRaises(ValueError):
+                speed.checked_sample(output, log_path, 2, 2, 4096)
+
+    def test_scalar_speed_summary_checks_paired_token_identity(self):
+        base = {"aggregate_decode_tok_s": 10.0, "aggregate_end_to_end_tok_s": 9.0,
+                "median_first_token_seconds": 1.0, "median_completion_seconds": 2.0,
+                "request_token_sha256": ["a"] * 8, "repetition": 1}
+        samples = [{**base, "level": 1}, {**base, "level": 2}]
+        self.assertEqual(speed.summarize(samples, 1)["paired_token_matches"], 1)
+        samples[1]["request_token_sha256"] = ["b"] * 8
+        self.assertEqual(speed.summarize(samples, 1)["paired_token_matches"], 0)
+        self.assertFalse(speed.summarize(samples, 1)["all_outputs_repeat_across_runs"])
+
+    def test_scalar_speed_memory_guard_requires_measured_fields(self):
+        self.assertEqual(speed.memory_kib("MemTotal: 42 kB\nMemAvailable: 30 kB\n", "MemAvailable"), 30)
+        for text in ("", "MemAvailable: 30 MB\n", "MemAvailable: -1 kB\n"):
+            with self.assertRaises(RuntimeError):
+                speed.memory_kib(text, "MemAvailable")
+
+    def test_scalar_speed_process_exit_is_not_a_memory_failure(self):
+        process = mock.Mock(pid=42)
+        process.wait.return_value = 0
+        with mock.patch.object(Path, "read_text", return_value="State: Z (zombie)\n"):
+            self.assertIsNone(speed.process_swap_kib(process))
+            process.wait.side_effect = subprocess.TimeoutExpired("probe", 2)
+            with self.assertRaises(RuntimeError):
+                speed.process_swap_kib(process)
 
 
 if __name__ == "__main__":

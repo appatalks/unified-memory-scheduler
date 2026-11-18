@@ -1,0 +1,34 @@
+diff --git a/src/models/qwen4exp.cpp b/src/models/qwen4exp.cpp
+index e055abd..e87d62c 100644
+--- a/src/models/qwen4exp.cpp
++++ b/src/models/qwen4exp.cpp
+@@ -4,7 +4,10 @@
+ #include "llama-memory-recurrent.h"
+ 
+ #include <algorithm>
++#include <atomic>
+ #include <cinttypes>
++#include <cstdlib>
++#include <cstring>
+ 
+ // bad metadata must be catchable: GGML_ASSERT aborts the whole process
+ static void qwen4exp_require_nonzero(const llama_model_loader & ml, llm_kv kid, uint32_t value) {
+@@ -787,6 +790,18 @@ ggml_tensor * llama_model_qwen4exp::graph::build_qsa_sel(
+     // scatter the fresh pooled keys into their rep rows, then gather all n_pool of them by cell:
+     // the older pools come from the rows earlier ubatches wrote
+     ggml_build_forward_expand(gf, kpool_cache.scatter_pooled(pooled_new, inp_kpool->new_pool_rep));
++
++    static const bool saturated_mask = [] {
++        const char * value = std::getenv("VRAMBRIDGE_QSA_SATURATED_MASK");
++        return value && std::strcmp(value, "1") == 0;
++    }();
++    if (saturated_mask && n_pool <= hparams.indexer_top_k / kpool) {
++        static std::atomic_flag logged = ATOMIC_FLAG_INIT;
++        if (!logged.test_and_set()) {
++            LLAMA_LOG_WARN("VRAMBridge experimental saturated QSA mask active\n");
++        }
++        return kq_mask;
++    }
+     ggml_tensor * pooled = kpool_cache.gather_pooled(inp_kpool->pool_cells);
+     pooled = ggml_reshape_3d(ctx0, pooled, idx_dim, 1, n_pool);
+     cb(pooled, "indexer_k", il);

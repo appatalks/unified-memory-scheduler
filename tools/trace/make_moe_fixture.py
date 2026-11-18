@@ -14,7 +14,7 @@ import sys
 
 PINNED_COMMIT = "620d2225cc436ab0b001e3200e590e3b286ef9ab"
 ARCHITECTURES = ("llama", "qwen2moe", "qwen3moe", "gpt-oss", "llama4", "cohere2moe", "grok")
-TYPES = ("F32", "F16", "BF16", "Q4_0", "Q4_K", "Q8_0", "MXFP4")
+TYPES = ("F32", "F16", "BF16", "Q4_0", "Q4_K", "Q6_K", "Q8_0", "IQ4_NL", "MXFP4")
 
 
 def generate(args) -> dict:
@@ -55,7 +55,7 @@ def generate(args) -> dict:
     writer.add_layer_norm_eps(1e-5)
     writer.add_uint32(f"{args.architecture}.vocab_size", 259)
     writer.add_file_type({"F32": 0, "F16": 1, "BF16": 32, "Q4_0": 2,
-                          "Q4_K": 15, "Q8_0": 7, "MXFP4": 38}[args.expert_type])
+                          "Q4_K": 15, "Q6_K": 18, "Q8_0": 7, "IQ4_NL": 25, "MXFP4": 38}[args.expert_type])
     writer.add_tokenizer_model("llama")
     writer.add_token_list(["<unk>", "<s>", "</s>"] + [f"<0x{i:02X}>" for i in range(256)])
     writer.add_token_types([2, 3, 3] + [6]*256)
@@ -170,7 +170,7 @@ def main() -> int:
     parser.add_argument("--active", type=int, default=2)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
-    block = 256 if args.expert_type == "Q4_K" else 32
+    block = 256 if args.expert_type in ("Q4_K", "Q6_K") else 32
     if (not 2 <= args.layers <= 4 or not 2 <= args.experts <= 16 or not 1 <= args.active <= args.experts or
             not 32 <= args.embedding <= 512 or not 32 <= args.feed_forward <= 1024 or
             args.embedding % block or args.feed_forward % block or not 0 <= args.seed < 2**32):

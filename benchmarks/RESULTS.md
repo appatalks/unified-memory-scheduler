@@ -24,6 +24,251 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## Independent Inference Control: Correctness Foundation Only
+
+The [prototype and controls](../docs/research/independent-inference-control.md)
+exercise an independently managed single-sequence prefill and greedy-decode
+loop using pinned llama.cpp/GGML libraries. Matched-shape full-logit checks
+pass for three untrained MoE fixtures and three positions of an LFM2-1.2B CPU
+smoke test. Different prefill partitions produce small numerical changes even
+in the reference loop.
+
+The subsequent [exact expert-execution screen](results/independent-exact-expert-summary.json)
+uses real selected weights and observer-qualified activations. One replaced
+CPU-resident layer at a time preserves all five checked logit positions in
+9/9 decode-only controls each for SC117, Qwen3-Coder and GPT-OSS. GPU-resident
+GPT layers are explicitly rejected. Coder's attempted prefill replacement
+fails 5/9 default controls. Warm, isolated layer timing is mixed against two
+CPU workers and does not establish a model-level speedup. The original graph
+still executes before every diagnostic replacement; this is not a ready engine.
+
+## Selected NVMe: Direct Model Read
+
+In the [reviewed read-only screen](results/model-nvme-read-comparison-summary.json),
+three alternating 1 GiB sequential direct reads of the same SC117 shard had
+median throughput of 526 MiB/s on the root SATA SSD and 5,476 MiB/s on the
+selected NVMe. Separate device counters confirmed physical reads. This is not
+a model-loading, cached-read or inference-speed result.
+
+## FLE Prefill Lending: Source Audit Only
+
+The [source audit](../docs/research/fle-prefill-audit.md) identifies an
+experimental prefill technique that lends per-layer GPU expert-cache buffers
+to larger compute buffers and later reallocates and refills them. Our shared
+Hybrid banks do not have the same per-layer allocation lifetime. This is not
+a port or local benchmark; the refill and memory tradeoffs remain unmeasured.
+
+## Prompt Checkpoint Raw-Logit Attribution: Blocked
+
+In the [16K frozen-bank attribution probe](../docs/research/prompt-checkpoint-logits-attribution.md),
+the initial SC117 unchanged cold-recompute control failed 5/5 raw-logit
+positions; an independent fresh-process repeat passed 5/5. Full and partial
+checkpoint controls also failed against the initial cold reference. The
+mixed baseline prevents attributing the discrepancy to checkpointing or
+promoting the 96K server experiment. In separate 96K/6 GiB frozen-bank
+controls, normal and graph-reuse-disabled runs each passed only 1/3 repeated
+full recomputations and failed their fresh-context comparison. This is not a
+throughput result or proof of the underlying cause.
+
+## QSA Determinism and Graph-Stable Bank Lending
+
+The [QSA screen](../docs/research/qsa-selection-determinism.md) found valid
+GPU top-k set variation on synthetic cutoff ties, but no live equal-score
+finite-tie explanation for SC117's discrepancy. A deterministic diagnostic
+still failed its fresh-context raw-logit gate. It is not a deployable fix.
+
+The [graph-stable bank-lending feasibility test](../docs/research/graph-stable-bank-lending.md)
+remapped isolated GPU backing and replayed the same read graph after refill.
+Across three processes per size, the 1 GiB median refill was 72.642 ms; no
+model speedup or production allocator has been tested. Separate SC117 2K
+screens with physical ubatches 1,024 and 2,048 each failed 0/5 raw-logit
+positions against the matched-warmup 512 reference.
+
+The opt-in [early-QSA saturation experiment](../docs/research/qsa-early-saturation.md)
+matched one 8K full-logit control and default-off sample, and all 2K
+matched-warmup comparisons. Three 2K and three 8K paired prompt timings were
+mixed within noise; the 8K numerical controls failed intermittently. It is
+not a qualified speedup or release.
+
+## Commit-Late Staging: GPT-OSS Entry Gate Failed
+
+The [reviewed aggregate](results/commit-late-staging-summary.json) and
+[study](../docs/research/commit-late-staging.md) reanalyze four existing,
+profiler-perturbed GPT-OSS-120B Hybrid requests at 16K/12,000 MiB/8+16.
+Pre-admission misses minus observed CPU-executed experts infer promotions;
+the inferred three projection copies match CUDA H2D launches **per dispatcher**.
+The current Classic path admits before dispatch, so an admitted miss can execute
+on GPU in that same layer. A candidate must preserve that placement and order.
+
+Expert-sized H2D copies occupy 319-375 ms of the four observed 128-output
+envelopes; 131-144 ms has no overlapping recorded CPU graph, kernel, other
+copy, memset or observer range. These are profiler intervals, not measured
+removable latency or a speed bound.
+
+After 64 complete-token history warmup, a causal previous-cold predictor with
+four modeled scratch slots covers **60/693** observed coding/reasoning/prose
+admissions and would add **6.38 GiB** of unused projection transfers over the
+three 59-token scoring windows. The optimistic model omits baseline DMA,
+shared-memory contention, biases and GPU-to-GPU commit. A small predictor
+trained only on the separate technical trace catches **14/693** held-out
+admissions at its 0.1 threshold while making 129 predictions; an earlier
+adjacent-layer signal does not improve the match count. None is a live staging
+or throughput measurement.
+
+**Decision:** do not implement this staging prototype from these signals.
+Only GPT-OSS was evaluated; short traces and limited features do not rule out
+better predictors or benefits on other models.
+
+## Bevy: Offline Routing Feasibility Screen
+
+The [study](../docs/research/bevy-runahead-screen.md) and
+[reviewed aggregate](results/bevy-routing-screen-summary.json) align separately
+recorded requests by token and layer using fixed expert residency. A mixed frame
+has at least one request with every selected expert resident and at least one
+request with a missing expert. This is neither a Bevy scheduler nor a measured
+concurrency/latency result.
+
+| Trace / residency | Two requests: mixed frames | Three requests: mixed frames |
+| --- | ---: | ---: |
+| GPT-OSS-120B / 944-expert seed | 26.31% | 39.46% |
+| GPT-OSS-120B / 12,000 MiB training-static | 26.53% | 39.79% |
+| Qwen3.8 GSQ-RCO IQ3_S / 8,192 MiB training-static | 14.50% | 21.74% |
+
+The two-request values pool three category pairs; three requests represent one
+coding/reasoning/prose combination. GPT supplies 256 and Qwen 64 held-out tokens
+per request. Traces are serial, use short prompts and have no model SHA, live
+residency or event timings. Partially resident requests can still use both CPU
+and GPU; "missing" does not mean blocked. Dynamic admissions, actual grouped
+cache constraints and asynchronous job progress are not modeled. No Coder trace
+or local Bevy implementation was found, and no throughput, numerical or product
+qualification is established. The GPT seed is validated by plan hash, not by a
+trace-recorded weight hash.
+
+## Bevy: Live Hybrid Numerical Gate
+
+The [reviewed live evidence](results/bevy-live-numerical-summary.json) uses the
+copied b11669 Hybrid backend, two 4K/F16 slots, a 4 GiB bank and fixed
+synthetic seeds. Across Coder, SC117 Qwen3.8 and GPT-OSS-120B, serial repeats
+and scalar-token interleaving each match **16/16** held teacher-forced full
+raw-logit positions exactly. Width-two decode with the hybrid batch limit set
+to two passes **0/16** on each
+family under the unchanged 0.01 absolute / 0.001 relative-L2 limits. With
+physical microbatch one, alternating scalar prefill/decode remains exact, but
+the two-position logical batch still fails 16/16 per family and can use a
+fallback path. This is not a Bevy implementation or proof of its behavior.
+
+Independent HTTP first-token full-vocabulary diagnostics match 2/2 sequential
+repeats and fail 2/2 concurrent comparisons on each family. Coder's separate
+microbatch-one screen passes 2/4 concurrent cases while 4/4 sequential
+repeats pass. Active slots do not prove graph-level overlap and log
+probabilities are not raw logits. An experimental scalar-shaped Coder bundle
+also changes its scalar reference. No batch-two or concurrent Hybrid rollout
+is qualified. See the [study](../docs/research/bevy-runahead-screen.md) for
+the bounded workload, partial-trace failures and runtime limitations.
+
+## Bevy: Scalar Interleave Timing And Graph Reuse
+
+The [reviewed timing aggregate](results/bevy-live-scalar-speed-summary.json)
+compares one active request with two requests alternating one token at a time,
+not Bevy's layer-runahead scheduler. Each cohort reserves two 4K/F16 slots,
+uses a fixed 4 GiB synthetic expert bank and eight synthetic requests, excludes
+32 warm-up decode steps per active sequence and reports three fresh-load
+medians. All eight complete token sequences match within every pair and
+across loads.
+
+| Model / outputs per request | Aggregate decode tok/s, 1 -> 2 | Change | Median completion seconds, 1 -> 2 |
+| --- | ---: | ---: | ---: |
+| Coder / 128 | 37.58 -> 16.04 | -57.3% | 15.95 -> 40.34 |
+| SC117 Qwen3.8 / 64 | 26.70 -> 13.10 | -51.0% | 11.48 -> 24.92 |
+| GPT-OSS-120B / 64 | 21.98 -> 13.99 | -36.4% | 14.06 -> 23.76 |
+
+Completion times include queueing from the same eight-request arrival burst;
+this direct token probe is not HTTP latency. GPT combines two complete pairs
+with one replacement pair after an exit-time memory-monitor error; the failed
+attempt remains recorded. Coder did not record per-process swap; Qwen and GPT
+had zero sampled owned-process swap. Generation-time disk reads were not
+measured. These fixed-seed, short-context results are not a Bevy performance
+claim or a model throughput ceiling.
+
+A separate one-sample Coder ablation observes **496/504** llama.cpp decode graph
+reuses with one active sequence and **0/504** with two alternating sequences.
+Disabling graph reuse reduces the one-sequence rate from **36.27 to 16.23
+tok/s**, near the two-sequence rate of **15.93 tok/s**; all complete output
+tokens match. This supports graph reuse as a major contributor in this
+control, not a measured Bevy speedup or a qualified graph-pool implementation.
+
+## Least-Stale: Offline Decode Replay
+
+The [reviewed replay](results/least-stale-replay-summary.json) compares a
+Least-Stale-inspired global eviction adaptation with generic LRU, LFU and a
+training-static hotset. The source paper is
+[SpecMD](https://arxiv.org/abs/2602.03921). This is a fixed-routing simulation,
+not an implementation of the paper's prefetch loop or the current backend's
+grouped admissions. Two-observation admission, a warmed cache and held-out
+decode requests give:
+
+| Trace and cache | Training-static hits | LRU hits / uploads | LFU hits / uploads | Least-Stale hits / uploads |
+| --- | ---: | ---: | ---: | ---: |
+| GPT-OSS-120B, 12,000 MiB | 56.88% | 70.21% / 403.40 GiB | 59.21% / 13.23 GiB | 43.00% / 774.83 GiB |
+| GPT-OSS-120B, 4,096 MiB | 26.96% | 38.90% / 830.88 GiB | 28.55% / 8.97 GiB | 30.78% / 941.68 GiB |
+| Qwen3.8 GSQ-RCO IQ3_S, 8,192 MiB | 66.26% | 75.46% / 38.97 GiB | 70.40% / 7.60 GiB | 51.42% / 78.96 GiB |
+| Qwen3.8 GSQ-RCO IQ3_S, 4,096 MiB | 46.31% | 58.75% / 68.44 GiB | 49.53% / 5.95 GiB | 36.46% / 105.46 GiB |
+
+Uploads are total simulated bytes over held-out decode, not measured PCIe
+traffic; initial and training uploads are separate in the report. One-observation
+admission produces the same qualitative ranking. Each trace has one coding,
+reasoning and prose request per split: GPT has 256 output tokens per request,
+Qwen has 64. All six observer-equivalence checks pass for each trace. There is
+no available verified Coder trace; there are no repeated runs, live timing,
+logit checks or inference-quality claims. Prefill, prediction, actual bank
+grouping/reserved slots and existing Classic/LFU admissions are not simulated.
+The static comparator is training-derived, not the installed trained plan.
+The replay therefore does not rule out other Least-Stale implementations or
+prefetch regimes, but it does not justify backend promotion.
+
+## llama-modchip-Inspired CPU Prefetch
+
+The [reviewed aggregate](results/modchip-nta-prefetch-summary.json) and
+[study](../docs/research/modchip-nta-prefetch.md) test a separate x86 NTA
+overlay on the 9950X/5070 Ti. Matched 4 GiB Synapse Hybrid runs show 512-output
+Coder medians of 83.23 -> 85.25 coding, 90.57 -> 93.95 reasoning and
+111.18 -> 114.44 prose tok/s: all below the approximately 5% selection margin.
+SC117's 128-output paired changes are between -0.72% and +2.46%; its clean
+96K-capacity/256-output paired changes are between -1.22% and +1.38%.
+Both models pass 96/96 full-logit positions with zero error. The candidate is
+not promoted, and these
+short-input results do not rule out other hardware or prefetch strategies.
+The existing default-off CPU preparation reuse also receives a Coder screen:
+three 128-output pairs are mixed and within noise; all 96 held-out logit rows
+match exactly with 4,752 observed reuses. No new cache behavior is promoted.
+
+The [mounted GPT-OSS-120B follow-up](results/modchip-gpt120-prefetch-summary.json)
+tests both 4 GiB staged and 12,000 MiB trained direct-DMA banks. Three 512-output
+pairs per profile show all workload median changes below 5%, despite a mixed
+larger gain in the 256-output direct reasoning screen. All 72 timed requests
+have zero backend physical reads; both profiles pass 96/96 full-logit positions
+with zero error. The first traced direct probe failed its output-count gate and
+is retained; a later traced retry confirmed activation but was not timed.
+
+## Prompt Reuse: Repeated Latency Gain, Numerical Gate Blocked
+
+The [reviewed aggregate](results/prompt-reuse-checkpoint-summary.json) and
+[full study](../docs/research/prompt-reuse-checkpoints.md) preserve 96K/F16,
+6 GiB expert bank and 8/16 threads on SC117. Three alternating 256-output
+pairs show an experimental periodic-checkpoint policy reduces middle-edit
+prefill from **42.78 to 22.28 seconds** and full-request time from **49.72 to
+29.32 seconds**. It reuses 4,096 of the 8,192 synthetic input tokens.
+Cold, exact-repeat and append timings are approximately unchanged; paired
+decode-rate differences remain within approximately 5%.
+
+The original default-off server and denser-boundary-only controls reproduce
+full recomputation. Approximately 340 MiB extra RSS is observed in the
+candidate. All timed edited output hashes match uncached controls, but
+complete-vocabulary log-probability diagnostics fail both candidate and
+unchanged controls, including fixed empty-bank attribution.
+**No numerical equivalence, production promotion or broad speed claim.**
+The installed engine/profile and original96K settings remain unchanged.
+
 ## Upstream b12484 Decode Screen: Cache Policy Depends On The Model
 
 The [reviewed runs](results/upstream-b12484-decode-screen-summary.json) use

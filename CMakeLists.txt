@@ -13,9 +13,16 @@ option(VRAMBRIDGE_CPU_RESEARCH "Build Linux x86 CPU graph profiler and MXFP4 VNN
 option(VRAMBRIDGE_CPU_PROFILE_NVTX "Annotate research CPU graph calls for CUDA timeline alignment" OFF)
 option(VRAMBRIDGE_TEST_ATTENTION_WINDOW "Build the default-off native Flash Attention query-window research interposer" OFF)
 option(VRAMBRIDGE_TEST_EXACT_PACKED_CPU "Build the AVX512 native-contract packed MXFP4 CPU research tests" OFF)
+option(VRAMBRIDGE_TEST_NTA_PREFETCH "Build the experimental CPU prefetch parity test" OFF)
 option(VRAMBRIDGE_TEST_KV_COLD_TIER "Build the default-off managed KV cold-page staging experiment" OFF)
 option(VRAMBRIDGE_TEST_STRATA_CAPTURE "Build the diagnostic-only Strata CUDA transfer observer" OFF)
+option(VRAMBRIDGE_EXPERIMENTAL_ENGINE "Build the independent inference-control research prototype" OFF)
 set(VRAMBRIDGE_CPU_REFERENCE_LIBRARY "" CACHE FILEPATH "Exact installed CPU plugin for packed-kernel reference tests")
+set(VRAMBRIDGE_NTA_CANDIDATE_LIBRARY "" CACHE FILEPATH "Experimental CPU plugin for prefetch parity tests")
+
+if(VRAMBRIDGE_TEST_NTA_PREFETCH AND (NOT VRAMBRIDGE_LLAMA_SOURCE OR NOT VRAMBRIDGE_LLAMA_LIBRARY_DIR))
+    message(FATAL_ERROR "Prefetch parity tests require the pinned llama.cpp source and matching libraries")
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -101,6 +108,65 @@ if(VRAMBRIDGE_LLAMA_SOURCE OR VRAMBRIDGE_LLAMA_LIBRARY_DIR)
     get_target_property(VRAMBRIDGE_RENDER_INCLUDES vrambridge-trace INCLUDE_DIRECTORIES)
     target_include_directories(vrambridge-render-corpus PRIVATE ${VRAMBRIDGE_RENDER_INCLUDES})
     target_link_libraries(vrambridge-render-corpus PRIVATE ${VRAMBRIDGE_TRACE_LIBRARIES} Threads::Threads)
+    if(VRAMBRIDGE_EXPERIMENTAL_ENGINE)
+        add_library(vrambridge-expert-dispatch STATIC tools/engine/expert_dispatch.cpp tools/engine/f32_experts.cpp)
+        target_include_directories(vrambridge-expert-dispatch PUBLIC tools/engine)
+        target_link_libraries(vrambridge-expert-dispatch PUBLIC Threads::Threads)
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+            target_compile_options(vrambridge-expert-dispatch PRIVATE -ffp-contract=off)
+        elseif(MSVC)
+            target_compile_options(vrambridge-expert-dispatch PRIVATE /fp:strict)
+        endif()
+        add_library(vrambridge-gguf-experts STATIC tools/engine/gguf_experts.cpp)
+        target_include_directories(vrambridge-gguf-experts PUBLIC tools/engine ${VRAMBRIDGE_LLAMA_SOURCE}/ggml/include)
+        target_link_libraries(vrambridge-gguf-experts PUBLIC vrambridge-expert-dispatch ${VRAMBRIDGE_ggml_base_LIBRARY})
+        if(UNIX)
+            add_library(vrambridge-native-experts STATIC tools/engine/native_cpu.cpp)
+            target_link_libraries(vrambridge-native-experts PUBLIC vrambridge-gguf-experts ${CMAKE_DL_LIBS})
+            if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+                target_compile_options(vrambridge-native-experts PRIVATE -ffp-contract=off)
+            endif()
+            add_executable(vrambridge-native-experts-test tests/test_native_experts.cpp)
+            target_link_libraries(vrambridge-native-experts-test PRIVATE vrambridge-native-experts)
+        endif()
+        add_executable(vrambridge-gguf-experts-inspect tests/inspect_gguf_experts.cpp)
+        target_link_libraries(vrambridge-gguf-experts-inspect PRIVATE vrambridge-gguf-experts)
+        add_executable(vrambridge-engine tools/engine/main.cpp)
+        target_include_directories(vrambridge-engine PRIVATE ${VRAMBRIDGE_LLAMA_SOURCE}/include ${VRAMBRIDGE_LLAMA_SOURCE}/ggml/include)
+        target_link_libraries(vrambridge-engine PRIVATE ${VRAMBRIDGE_TRACE_LIBRARIES})
+        add_executable(vrambridge-engine-reference tests/engine_reference.cpp)
+        target_include_directories(vrambridge-engine-reference PRIVATE ${VRAMBRIDGE_LLAMA_SOURCE}/include ${VRAMBRIDGE_LLAMA_SOURCE}/ggml/include)
+        target_link_libraries(vrambridge-engine-reference PRIVATE ${VRAMBRIDGE_TRACE_LIBRARIES})
+        add_executable(vrambridge-expert-dispatch-test tests/test_expert_dispatch.cpp)
+        target_link_libraries(vrambridge-expert-dispatch-test PRIVATE vrambridge-expert-dispatch)
+        add_executable(vrambridge-f32-experts-test tests/test_f32_experts.cpp)
+        target_link_libraries(vrambridge-f32-experts-test PRIVATE vrambridge-expert-dispatch)
+        if(VRAMBRIDGE_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
+            add_library(vrambridge-f32-cuda STATIC tools/engine/f32_cuda.cu)
+            target_include_directories(vrambridge-f32-cuda PUBLIC tools/engine)
+            target_link_libraries(vrambridge-f32-cuda PUBLIC vrambridge-expert-dispatch CUDA::cudart)
+            set_target_properties(vrambridge-f32-cuda PROPERTIES CUDA_ARCHITECTURES native CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED ON)
+            target_compile_options(vrambridge-f32-cuda PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:--fmad=false>")
+            add_executable(vrambridge-f32-cuda-test tests/test_f32_cuda.cpp)
+            target_link_libraries(vrambridge-f32-cuda-test PRIVATE vrambridge-f32-cuda)
+            add_executable(vrambridge-expert-probe tools/engine/expert_probe.cpp)
+            target_link_libraries(vrambridge-expert-probe PRIVATE vrambridge-gguf-experts vrambridge-f32-cuda)
+            add_executable(vrambridge-actual-expert-probe tools/engine/actual_expert_probe.cpp)
+            target_include_directories(vrambridge-actual-expert-probe PRIVATE ${VRAMBRIDGE_LLAMA_SOURCE}/include ${VRAMBRIDGE_LLAMA_SOURCE}/ggml/include)
+            target_link_libraries(vrambridge-actual-expert-probe PRIVATE vrambridge-gguf-experts vrambridge-f32-cuda ${VRAMBRIDGE_TRACE_LIBRARIES} ${CMAKE_DL_LIBS})
+            if(TARGET vrambridge-native-experts)
+                target_link_libraries(vrambridge-actual-expert-probe PRIVATE vrambridge-native-experts)
+                target_compile_definitions(vrambridge-actual-expert-probe PRIVATE VRAMBRIDGE_NATIVE_EXPERTS=1)
+                add_library(vrambridge-quantized-cuda STATIC tools/engine/quantized_cuda.cu)
+                target_link_libraries(vrambridge-quantized-cuda PUBLIC vrambridge-gguf-experts CUDA::cudart)
+                set_target_properties(vrambridge-quantized-cuda PROPERTIES CUDA_ARCHITECTURES native CUDA_STANDARD 20 CUDA_STANDARD_REQUIRED ON)
+                target_compile_options(vrambridge-quantized-cuda PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:--ftz=false;--fmad=false>")
+                target_link_libraries(vrambridge-actual-expert-probe PRIVATE vrambridge-quantized-cuda)
+                add_executable(vrambridge-quantized-cuda-test tests/test_quantized_cuda.cpp)
+                target_link_libraries(vrambridge-quantized-cuda-test PRIVATE vrambridge-quantized-cuda vrambridge-native-experts)
+            endif()
+        endif()
+    endif()
     if(VRAMBRIDGE_TEST_KV_COLD_TIER)
         find_path(VRAMBRIDGE_CUDA12_RUNTIME_INCLUDE cuda_runtime_api.h
             PATHS /usr/local/cuda-12/targets/x86_64-linux/include NO_DEFAULT_PATH REQUIRED)
@@ -152,6 +218,16 @@ if(VRAMBRIDGE_LLAMA_SOURCE OR VRAMBRIDGE_LLAMA_LIBRARY_DIR)
         target_compile_definitions(vrambridge-exact-packed-cpu PRIVATE
             VRAMBRIDGE_EXACT_PACKED_SOURCE_SHA256="${VRAMBRIDGE_EXACT_PACKED_SOURCE_SHA256}"
             VRAMBRIDGE_EXACT_PACKED_HEADER_SHA256="${VRAMBRIDGE_EXACT_PACKED_HEADER_SHA256}")
+    endif()
+    if(VRAMBRIDGE_TEST_NTA_PREFETCH)
+        if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$" OR
+           NOT EXISTS "${VRAMBRIDGE_CPU_REFERENCE_LIBRARY}" OR NOT EXISTS "${VRAMBRIDGE_NTA_CANDIDATE_LIBRARY}")
+            message(FATAL_ERROR "Prefetch parity tests require Linux x86_64 and two explicit CPU plugins")
+        endif()
+        add_executable(vrambridge-nta-prefetch-test tests/test_nta_prefetch.cpp)
+        target_include_directories(vrambridge-nta-prefetch-test PRIVATE
+            ${VRAMBRIDGE_LLAMA_SOURCE}/ggml/include ${VRAMBRIDGE_LLAMA_SOURCE}/ggml/src)
+        target_link_libraries(vrambridge-nta-prefetch-test PRIVATE ${VRAMBRIDGE_ggml_base_LIBRARY} ${CMAKE_DL_LIBS})
     endif()
     if(VRAMBRIDGE_TEST_ATTENTION_WINDOW)
         if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -313,6 +389,9 @@ endif()
 if(VRAMBRIDGE_TEST_COMPATIBLE_DOWN AND NOT TARGET vrambridge-hybrid-layer)
     message(FATAL_ERROR "Compatible-down research requires pinned llama.cpp source and matching libraries")
 endif()
+if(VRAMBRIDGE_EXPERIMENTAL_ENGINE AND NOT TARGET vrambridge-engine)
+    message(FATAL_ERROR "Experimental engine requires the pinned llama.cpp source and matching libraries")
+endif()
 if(VRAMBRIDGE_CPU_RESEARCH AND NOT TARGET vrambridge-cpu-graph-profile)
     message(FATAL_ERROR "CPU research requires pinned llama.cpp source and matching libraries")
 endif()
@@ -340,6 +419,40 @@ install(DIRECTORY tools/vrambridge/web DESTINATION share/vrambridge)
 
 if(BUILD_TESTING)
     find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    if(TARGET vrambridge-engine)
+        add_test(NAME vrambridge-expert-dispatch COMMAND vrambridge-expert-dispatch-test)
+        add_test(NAME vrambridge-f32-experts COMMAND vrambridge-f32-experts-test)
+        add_test(NAME vrambridge-gguf-experts
+            COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_gguf_experts.py
+                $<TARGET_FILE:vrambridge-gguf-experts-inspect> ${VRAMBRIDGE_LLAMA_SOURCE} ${VRAMBRIDGE_ggml_base_LIBRARY})
+        if(TARGET vrambridge-native-experts-test)
+            add_test(NAME vrambridge-native-experts
+                COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_native_experts.py
+                    $<TARGET_FILE:vrambridge-native-experts-test> ${VRAMBRIDGE_LLAMA_SOURCE} ${VRAMBRIDGE_ggml_base_LIBRARY})
+        endif()
+        if(TARGET vrambridge-f32-cuda-test)
+            add_test(NAME vrambridge-f32-cuda COMMAND vrambridge-f32-cuda-test)
+            set_tests_properties(vrambridge-f32-cuda PROPERTIES SKIP_RETURN_CODE 77)
+        endif()
+        if(TARGET vrambridge-actual-expert-probe AND TARGET vrambridge-native-experts)
+            add_test(NAME vrambridge-actual-expert-probe
+                COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_actual_expert_probe.py
+                    $<TARGET_FILE:vrambridge-actual-expert-probe> $<TARGET_FILE:vrambridge-f32-cuda-test>
+                    ${VRAMBRIDGE_LLAMA_SOURCE} ${VRAMBRIDGE_ggml_base_LIBRARY})
+            set_tests_properties(vrambridge-actual-expert-probe PROPERTIES SKIP_RETURN_CODE 77)
+        endif()
+        if(TARGET vrambridge-quantized-cuda-test)
+            add_test(NAME vrambridge-quantized-cuda
+                COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_quantized_cuda.py
+                    $<TARGET_FILE:vrambridge-quantized-cuda-test> $<TARGET_FILE:vrambridge-f32-cuda-test>
+                    ${VRAMBRIDGE_LLAMA_SOURCE} ${VRAMBRIDGE_ggml_base_LIBRARY})
+            set_tests_properties(vrambridge-quantized-cuda PROPERTIES SKIP_RETURN_CODE 77)
+        endif()
+        add_test(NAME vrambridge-experimental-engine
+            COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_experimental_engine.py
+                $<TARGET_FILE:vrambridge-engine> $<TARGET_FILE:vrambridge-engine-reference>
+                ${VRAMBRIDGE_LLAMA_SOURCE} ${VRAMBRIDGE_ggml_base_LIBRARY})
+    endif()
     add_test(NAME vrambridge-prefill-seed
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_prefill_seed.py)
     add_test(NAME vrambridge-cache-window
@@ -370,6 +483,10 @@ if(BUILD_TESTING)
             COMMAND vrambridge-exact-packed-cpu-test ${VRAMBRIDGE_CPU_REFERENCE_LIBRARY})
         set_tests_properties(vrambridge-exact-packed-cpu PROPERTIES SKIP_RETURN_CODE 77)
     endif()
+    if(TARGET vrambridge-nta-prefetch-test)
+        add_test(NAME vrambridge-nta-prefetch
+            COMMAND vrambridge-nta-prefetch-test ${VRAMBRIDGE_CPU_REFERENCE_LIBRARY} ${VRAMBRIDGE_NTA_CANDIDATE_LIBRARY})
+    endif()
     if(TARGET vrambridge-kv-cold-tier-test)
         add_test(NAME vrambridge-kv-cold-tier-roles COMMAND vrambridge-kv-cold-tier-test)
     endif()
@@ -398,6 +515,9 @@ if(BUILD_TESTING)
             COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_model_staging.py
                 ${CMAKE_CURRENT_SOURCE_DIR}/tools/benchmark/vrambridge-model-staging.py
         )
+        add_test(NAME vrambridge-model-inventory
+            COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_model_inventory.py
+        )
     endif()
     add_test(NAME vrambridge-execution-sweep
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_execution_sweep.py
@@ -417,6 +537,12 @@ if(BUILD_TESTING)
     )
     add_test(NAME vrambridge-synapse-critical-path
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_synapse_critical_path.py
+    )
+    add_test(NAME vrambridge-prompt-reuse
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_prompt_reuse.py
+    )
+    add_test(NAME vrambridge-prefetch-screen
+        COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_prefetch_screen.py
     )
     add_test(NAME vrambridge-model-matrix
         COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_model_matrix.py

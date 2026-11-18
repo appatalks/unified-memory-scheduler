@@ -57,6 +57,8 @@ class SweepTests(unittest.TestCase):
         for count, elapsed, done in ((511, 21, True), (512, 0, True), (512, 21, False)):
             with self.assertRaises(ValueError):
                 sweep.validate_sample(timings, {"completion_tokens": count}, 512, elapsed, done)
+        with self.assertRaisesRegex(ValueError, "completion_tokens=511, predicted_n=512, requested=512"):
+            sweep.validate_sample(timings, {"completion_tokens": 511}, 512, 21, True)
 
     def test_private_server_auth_headers_are_sent_but_not_recorded(self):
         event = {"choices": [{"delta": {"content": "public output"}}],

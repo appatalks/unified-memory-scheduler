@@ -81,6 +81,47 @@ def cpu_startup(log: str, slots: int, context: int) -> dict:
     return {"actual_slots": slots, "actual_context_per_slot": context, "placement": "CPU", "kv_cache": "f16"}
 
 
+def hybrid_startup(log: str, slots: int, context: int, adaptive: bool, batch_limit: int,
+                   ubatch_size: int) -> dict:
+    result = bench.parse_startup(log, slots, context)
+    markers = ["EXPERIMENTAL HYBRID enabled", "VRAMBridge decode pipeline configured",
+               "asynchronous GPU ID handoff"]
+    if adaptive:
+        markers.append("direct asynchronous admissions; immutable registered sources")
+    coverage = re.search(r"tensor-derived hybrid coverage=(\d+)/(\d+) routed layers", log)
+    batch = re.search(r"hybrid batch limit=(\d+)", log)
+    ubatch = re.search(r"n_ubatch\s*=\s*(\d+)", log)
+    if (any(marker not in log for marker in markers) or coverage is None
+            or int(coverage[1]) <= 0 or coverage[1] != coverage[2]
+            or batch is None or int(batch[1]) != batch_limit
+            or ubatch is None or int(ubatch[1]) != ubatch_size):
+        raise RuntimeError("Hybrid startup markers, routing coverage or batch settings were not confirmed.")
+    result.update(hybrid_routed_layers=int(coverage[1]), hybrid_batch_limit=batch_limit,
+                  adaptive_admission=adaptive, ubatch_size=ubatch_size)
+    return result
+
+
+def model_shards(first: Path) -> list[Path]:
+    match = re.fullmatch(r"(.+)-(\d{5})-of-(\d{5})\.gguf", first.name, re.IGNORECASE)
+    if not match:
+        return [first.resolve(strict=True)]
+    if int(match[2]) != 1 or int(match[3]) < 1:
+        raise ValueError("A split GGUF must begin with the first shard.")
+    return [first.with_name(f"{match[1]}-{index:05d}-of-{int(match[3]):05d}.gguf").resolve(strict=True)
+            for index in range(1, int(match[3]) + 1)]
+
+
+def check_mapped_libraries(pid: int, libraries: list[Path]) -> None:
+    mappings = Path(f"/proc/{pid}/maps").read_text()
+    loaded = set()
+    for line in mappings.splitlines():
+        fields = line.split(maxsplit=5)
+        if len(fields) == 6 and fields[5].startswith("/"):
+            loaded.add(Path(fields[5]).resolve())
+    if any(path.resolve(strict=True) not in loaded for path in libraries):
+        raise RuntimeError("The owned server did not map the requested CPU, CUDA and core libraries.")
+
+
 def complete(base: str, key: str, prompt: str, vocabulary: int) -> dict:
     payload = {
         "prompt": prompt, "n_predict": 1, "temperature": 0, "seed": 42,
@@ -108,6 +149,8 @@ def execute(args) -> int:
     model = args.model.resolve(strict=True)
     rows = [json.loads(line) for line in args.corpus.read_text().splitlines()]
     corpus = [row for row in rows if row["split"] == args.split]
+    if args.request_count is not None:
+        corpus = corpus[:args.request_count]
     if len(corpus) < max(args.levels):
         raise ValueError("Corpus needs at least one distinct request per concurrent client.")
     if len({row["prompt"] for row in corpus}) != len(corpus):
@@ -135,17 +178,40 @@ def execute(args) -> int:
         command += ["--n-gpu-layers", "auto", "--fit", "on", "--fit-target", str(args.fit_target)]
     elif args.placement == "gpu-cpu-experts":
         command += ["--n-gpu-layers", "all", "--cpu-moe", "--fit", "off"]
+    elif args.placement == "hybrid":
+        command += ["--n-gpu-layers", "all", "--cpu-moe", "--fit", "off", "--no-repack",
+                    "--no-host", "--no-op-offload", "--moe-cache-mib", str(args.cache_mib),
+                    "--ubatch-size", str(args.ubatch_size)]
     else:
         command += ["--n-gpu-layers", "0", "--device", "none", "--fit", "off"]
-    environment = bench.comparison.clean_environment()
+    environment = {key: value for key, value in bench.comparison.clean_environment().items()
+                   if not key.startswith("LLAMA_")}
     environment["GGML_OP_OFFLOAD_MIN_BATCH"] = "32"
+    cpu_plugin = backend.parent / "libggml-cpu.so"
+    cuda_plugin = backend.parent / "libggml-cuda.so"
+    if args.placement == "hybrid":
+        cpu_plugin = args.cpu_plugin.resolve(strict=True)
+        cuda_plugin = args.cuda_plugin.resolve(strict=True)
+        environment.update(LD_LIBRARY_PATH=str(backend.parent), GGML_BACKEND_PATH=str(cuda_plugin),
+                           VRAMBRIDGE_HYBRID_PLAN=args.hybrid_plan,
+                           VRAMBRIDGE_HYBRID_ADAPT="1" if args.hybrid_adapt else "0",
+                           VRAMBRIDGE_HYBRID_ASYNC="1" if args.hybrid_adapt else "0",
+                           VRAMBRIDGE_HYBRID_DIRECT="1" if args.hybrid_adapt else "0",
+                           VRAMBRIDGE_HYBRID_STAGE_INPUT="1", VRAMBRIDGE_HYBRID_OVERLAP="1",
+                           VRAMBRIDGE_HYBRID_BOUNDARY="gpu", VRAMBRIDGE_HYBRID_FUSE_GATE_UP="1",
+                           VRAMBRIDGE_HYBRID_ASYNC_IDS="1", VRAMBRIDGE_HYBRID_BATCH=str(args.hybrid_batch))
+        if args.hybrid_adapt:
+            environment["GGML_CUDA_REGISTER_HOST"] = "1"
+        if args.hybrid_plan != "auto":
+            environment["VRAMBRIDGE_HYBRID_PLAN"] = str(Path(args.hybrid_plan).resolve(strict=True))
+    shards = ([{"name": shard.name, "sha256": bench.sha256(shard)} for shard in model_shards(model)]
+              if args.placement == "hybrid" else None)
     report = {
         "schema_version": 1, "kind": "agent-first-token-logprob-diagnostic",
         "started_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
-        "model": model.name, "model_sha256": bench.sha256(model),
+        "model": model.name, "model_sha256": shards[0]["sha256"] if shards else bench.sha256(model),
         "backend_sha256": {path.name: bench.sha256(path) for path in
-                           (backend, backend.parent / "libllama.so", backend.parent / "libggml-cpu.so",
-                            backend.parent / "libggml-cuda.so")},
+                           (backend, backend.parent / "libllama.so", cpu_plugin, cuda_plugin)},
         "corpus_sha256": bench.sha256(args.corpus), "runner_sha256": bench.sha256(Path(__file__)),
         "placement": args.placement, "context_per_slot": args.context, "backend_slots": args.backend_slots,
         "levels": args.levels, "vocabulary": args.vocabulary, "requests": [],
@@ -155,8 +221,16 @@ def execute(args) -> int:
             "Full-vocabulary pre-sampling log probabilities, not raw logits or broad answer quality.",
             "Backend slot overlap does not prove that every request was evaluated in the same graph batch.",
             "One-second GPU sampling may miss transient competing processes.",
+            "Active slots do not prove simultaneous decode or hybrid dispatch at every graph width.",
+            "Adaptive residency may change placement between sequential and concurrent requests.",
         ],
     }
+    if args.placement == "hybrid":
+        report["hybrid"] = {"cache_mib": args.cache_mib, "adaptive_admission": args.hybrid_adapt,
+                            "batch_limit": args.hybrid_batch, "ubatch_size": args.ubatch_size,
+                            "plan_sha256": None if args.hybrid_plan == "auto" else
+                                bench.sha256(Path(args.hybrid_plan)),
+                            "model_shards_sha256": shards}
     bench.sweep.save_report(args.output, report)
     process = None
     monitor = None
@@ -167,11 +241,19 @@ def execute(args) -> int:
             text = log_path.read_text()
             report["startup"] = (bench.parse_startup(text, args.backend_slots, args.context)
                                  if args.placement != "cpu" else cpu_startup(text, args.backend_slots, args.context))
+            if args.placement == "hybrid":
+                report["startup"] = hybrid_startup(text, args.backend_slots, args.context,
+                                                   args.hybrid_adapt, args.hybrid_batch, args.ubatch_size)
+                check_mapped_libraries(process.pid, [backend.parent / "libllama.so", cpu_plugin, cuda_plugin])
+                report["hybrid"]["library_mappings_verified"] = True
             if args.placement != "cpu":
                 bench.check_gpu_processes(bench.gpu_processes(), process.pid)
                 monitor = bench.GpuMonitor(process.pid)
                 monitor.start()
-            complete(base, key, corpus[0]["prompt"], 0)
+            if args.placement == "hybrid":
+                bench.sweep.sample(base, 8, {"Authorization": f"Bearer {key}"}, prompt=corpus[0]["prompt"])
+            else:
+                complete(base, key, corpus[0]["prompt"], 0)
             first = [complete(base, key, row["prompt"], args.vocabulary) for row in corpus]
             second = [complete(base, key, row["prompt"], args.vocabulary) for row in corpus]
             report["requests"] = [
@@ -218,6 +300,14 @@ def execute(args) -> int:
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait()
+        if args.placement == "hybrid" and report["status"] == "completed":
+            log_text = log_path.read_text(errors="replace")
+            dispatch = re.findall(r"hybrid dispatches=(\d+) CPU experts=(\d+) GPU experts=(\d+) prior hits=(\d+)", log_text)
+            if not dispatch or not all(int(value) > 0 for value in dispatch[-1][:3]):
+                report.update(status="failed", error="Hybrid CPU and GPU expert dispatch were not confirmed at shutdown.")
+            else:
+                report["hybrid"]["dispatch"] = dict(zip(("calls", "cpu_experts", "gpu_experts", "prior_hits"),
+                                                        map(int, dispatch[-1])))
         bench.sweep.save_report(args.output, report)
     print(json.dumps({"status": report["status"], "numerical_pass": report.get("numerical_pass"),
                       "peak_active_slots": report.get("peak_active_slots"), "error": report.get("error")}))
@@ -235,7 +325,15 @@ def main() -> int:
     parser.add_argument("--levels", type=int, nargs="+", default=[2, 4, 8])
     parser.add_argument("--backend-slots", type=int, default=8)
     parser.add_argument("--context", type=int, default=16384)
-    parser.add_argument("--placement", choices=("auto", "cpu", "gpu-cpu-experts"), default="auto")
+    parser.add_argument("--placement", choices=("auto", "cpu", "gpu-cpu-experts", "hybrid"), default="auto")
+    parser.add_argument("--cuda-plugin", type=Path)
+    parser.add_argument("--cpu-plugin", type=Path)
+    parser.add_argument("--cache-mib", type=int, default=4096)
+    parser.add_argument("--hybrid-plan", default="auto")
+    parser.add_argument("--hybrid-adapt", action="store_true")
+    parser.add_argument("--hybrid-batch", type=int, default=1)
+    parser.add_argument("--ubatch-size", type=int, default=512)
+    parser.add_argument("--request-count", type=int)
     parser.add_argument("--threads", type=int, default=8)
     parser.add_argument("--batch-threads", type=int, default=16)
     parser.add_argument("--fit-target", type=int, default=1024)
@@ -244,7 +342,11 @@ def main() -> int:
     if (not args.levels or len(set(args.levels)) != len(args.levels) or min(args.levels) < 2
             or not max(args.levels) <= args.backend_slots <= 64 or not 512 <= args.context <= 131072
             or not 1 <= args.vocabulary <= 1000000
-            or min(args.threads, args.batch_threads, args.fit_target, args.load_timeout) < 1):
+            or min(args.threads, args.batch_threads, args.fit_target, args.load_timeout) < 1
+            or args.request_count is not None and args.request_count < max(args.levels)
+            or args.placement == "hybrid" and (args.cuda_plugin is None or args.cpu_plugin is None
+                                                or args.cache_mib < 1 or not 1 <= args.hybrid_batch <= 32
+                                                or not 1 <= args.ubatch_size <= 2048)):
         parser.error("Invalid level, context, vocabulary or timing setting.")
     return execute(args)
 

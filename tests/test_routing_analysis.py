@@ -6,6 +6,7 @@ import importlib.util
 import itertools
 import json
 from pathlib import Path
+import random
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,18 @@ assert spec is not None and spec.loader is not None
 routing = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = routing
 spec.loader.exec_module(routing)
+
+stale_spec = importlib.util.spec_from_file_location("least_stale", SCRIPT.with_name("vrambridge-least-stale.py"))
+assert stale_spec is not None and stale_spec.loader is not None
+least_stale = importlib.util.module_from_spec(stale_spec)
+sys.modules[stale_spec.name] = least_stale
+stale_spec.loader.exec_module(least_stale)
+
+bevy_spec = importlib.util.spec_from_file_location("bevy_screen", SCRIPT.with_name("vrambridge-bevy-screen.py"))
+assert bevy_spec is not None and bevy_spec.loader is not None
+bevy_screen = importlib.util.module_from_spec(bevy_spec)
+sys.modules[bevy_spec.name] = bevy_screen
+bevy_spec.loader.exec_module(bevy_screen)
 
 
 def records(layers=None, training=None, testing=None):
@@ -328,6 +341,174 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("Trace line", result.stderr)
         self.assertFalse(output.exists())
+
+    def test_least_stale_retains_future_layer_not_recent_layer(self):
+        layers = {i: routing.Layer(3, 1, 10, 10) for i in range(3)}
+        caches = {name: least_stale.Cache(name, layers, 20, 1) for name in ("lru", "least_stale")}
+        events = [routing.Event("r", 0, 1, (0,)), routing.Event("r", 1, 0, (0,)),
+                  routing.Event("r", 2, 0, (1,))]
+        for event in events:
+            for cache in caches.values():
+                cache.update(event)
+        self.assertIn((1, 0), caches["least_stale"].resident)
+        self.assertNotIn((1, 0), caches["lru"].resident)
+
+    def test_replay_preserves_byte_budget_and_selected_experts(self):
+        layers = {0: routing.Layer(4, 2, 10, 10), 1: routing.Layer(4, 2, 25, 25)}
+        events = [routing.Event("r", i // 2, i % 2, pair) for i, pair in enumerate(
+            [(0, 1), (0, 1), (1, 2), (1, 2), (2, 3), (2, 3)])]
+        for policy in ("lru", "lfu", "least_stale"):
+            cache = least_stale.Cache(policy, layers, 50, 1)
+            for event in events:
+                before = set(cache.resident)
+                hits, uploads, evictions = cache.update(event)
+                self.assertEqual(hits, len(before.intersection(event.keys())))
+                self.assertLessEqual(cache.used, 50)
+                self.assertEqual(cache.used, sum(layers[k[0]].size for k in cache.resident))
+                self.assertTrue(before.intersection(event.keys()).issubset(cache.resident))
+                self.assertGreaterEqual(uploads, 0)
+                self.assertGreaterEqual(evictions, 0)
+
+    def test_replay_heap_matches_simple_reference(self):
+        rng = random.Random(42)
+        layers = {0: routing.Layer(6, 2, 10, 10), 1: routing.Layer(6, 2, 15, 15)}
+        events = [routing.Event("r", token, layer, tuple(rng.sample(range(6), 2)))
+                  for token in range(80) for layer in layers]
+        for policy in ("lru", "lfu", "least_stale"):
+            cache = least_stale.Cache(policy, layers, 60, 2)
+            resident, counts, current = {}, defaultdict(int), set()
+            last, serial, cycle = {}, 0, None
+            for event in events:
+                now = (event.request, event.token)
+                if now != cycle and policy == "least_stale":
+                    for key in sorted(current, key=lambda key: resident[key]):
+                        serial += 1
+                        resident[key] = serial
+                    current.clear()
+                cycle = now
+                keys, protected = event.keys(), set(event.keys())
+                hits = sum(key in resident for key in keys)
+                for key in keys:
+                    counts[key] += 1
+                    if key in resident:
+                        last[key] = (event.token, event.layer)
+                        if policy == "least_stale":
+                            current.add(key)
+                        serial += 1
+                        resident[key] = serial
+                uploads = evictions = 0
+                for key in keys:
+                    size = layers[key[0]].size
+                    if key in resident or counts[key] < 2 or size > 60:
+                        continue
+                    def priority(victim):
+                        if policy == "least_stale":
+                            return (victim in current, victim[0], resident[victim])
+                        if policy == "lfu":
+                            return (counts[victim], last[victim], resident[victim])
+                        return (last[victim], resident[victim])
+                    candidates = [v for v in resident if v not in protected and
+                                  (policy != "lfu" or counts[v] <= counts[key])]
+                    candidates.sort(key=priority)
+                    available = 60 - sum(layers[v[0]].size for v in resident)
+                    victims = []
+                    for victim in candidates:
+                        if available >= size:
+                            break
+                        available += layers[victim[0]].size
+                        victims.append(victim)
+                    if available < size:
+                        continue
+                    for victim in victims:
+                        del resident[victim]
+                        current.discard(victim)
+                    evictions += len(victims)
+                    uploads += size
+                    last[key] = (event.token, event.layer)
+                    if policy == "least_stale":
+                        current.add(key)
+                    serial += 1
+                    resident[key] = serial
+                self.assertEqual(cache.update(event), (hits, uploads, evictions))
+                self.assertEqual(set(cache.resident), set(resident))
+
+    def test_replay_rejects_unverified_and_does_not_peek(self):
+        data = self.read()
+        result = least_stale.run(data, 20, 2)
+        self.assertEqual(set(result), {"train_static", "lru", "lfu", "least_stale"})
+        self.assertEqual(result["train_static"]["expert_calls"], 6)
+        self.assertEqual(result["train_static"]["hits"], 2)
+        data.requests["test"].verified = False
+        with self.assertRaisesRegex(ValueError, "verified observer"):
+            least_stale.run(data, 20, 2)
+
+    def test_least_stale_cli_no_overwrite(self):
+        self.read()
+        output = self.root / "least-stale.json"
+        command = [sys.executable, str(SCRIPT.with_name("vrambridge-least-stale.py")), str(self.trace),
+                   "--cache-mib", "1", "--output", str(output)]
+        subprocess.run(command, capture_output=True, text=True, check=True)
+        report = json.loads(output.read_text())
+        self.assertEqual(report["test_tokens"], 3)
+        self.assertIn("least_stale", report["results"]["1"])
+        self.assertNotEqual(subprocess.run(command, capture_output=True).returncode, 0)
+
+    def test_bevy_screen_counts_mixed_frames_and_shared_misses(self):
+        layers = {0: routing.Layer(4, 2, 10, 10)}
+        requests = {name: routing.Request(name, "test", name, 1, 1, tokens=1, verified=True)
+                    for name in ("a", "b", "c")}
+        events = [routing.Event("a", 0, 0, (0, 1)), routing.Event("b", 0, 0, (1, 2)),
+                  routing.Event("c", 0, 0, (2, 3))]
+        data = routing.Dataset({}, layers, requests, events, "test")
+        result = bevy_screen.screen(data, {(0, 0), (0, 1)})
+        self.assertAlmostEqual(result["2"]["mixed_fraction"], 2 / 3)
+        self.assertEqual(result["3"]["mixed_fraction"], 1)
+        self.assertEqual(result["3"]["selected_cpu_experts"], 3)
+        self.assertEqual(result["3"]["unique_cpu_experts"], 2)
+        requests["c"].verified = False
+        with self.assertRaisesRegex(ValueError, "verified observer"):
+            bevy_screen.screen(data, set())
+
+    def test_bevy_screen_plan_validation(self):
+        layers = {0: routing.Layer(3, 1, 10, 10)}
+        plan = self.root / "plan.txt"
+        plan.write_text("# frozen\n0 0\n0 2\n")
+        selected, digest = bevy_screen.load_plan(plan, layers)
+        self.assertEqual(selected, {(0, 0), (0, 2)})
+        self.assertEqual(len(digest), 64)
+        for contents in ("0 0\n0 0\n", "0 3\n", "2 0\n", "", "0 0 extra\n"):
+            plan.write_text(contents)
+            with self.subTest(contents=contents), self.assertRaises(ValueError):
+                bevy_screen.load_plan(plan, layers)
+
+    def test_bevy_screen_cli_and_capacity_gate(self):
+        values = records()
+        start = next(i for i, row in enumerate(values) if row.get("type") == "request_start" and row.get("split") == "test")
+        duplicate = copy.deepcopy(values[start:-1])
+        for row in duplicate:
+            if row.get("id") == "test":
+                row["id"] = "test-2"
+            if row.get("request") == "test":
+                row["request"] = "test-2"
+        values[-1]["requests"] = 3
+        data = self.read(values[:-1] + duplicate + values[-1:])
+        self.assertEqual(len(data.requests), 3)
+        output = self.root / "bevy.json"
+        command = [sys.executable, str(SCRIPT.with_name("vrambridge-bevy-screen.py")), str(self.trace),
+                   "--cache-mib", "1", "--output", str(output)]
+        subprocess.run(command, capture_output=True, text=True, check=True)
+        report = json.loads(output.read_text())
+        self.assertEqual(report["residencies"]["training_static"]["levels"]["2"]["frames"], 6)
+        self.assertNotEqual(subprocess.run(command, capture_output=True).returncode, 0)
+        plan = self.root / "plan.txt"
+        plan.write_text("0 0\n")
+        bad_output = self.root / "too-small.json"
+        result = subprocess.run([sys.executable, str(SCRIPT.with_name("vrambridge-bevy-screen.py")),
+                                 str(self.trace), "--cache-mib", "0", "--seed-plan", str(plan),
+                                 "--output", str(bad_output)], capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("exceeds", result.stderr)
+        self.assertFalse(bad_output.exists())
 
 
 if __name__ == "__main__":

@@ -1,0 +1,346 @@
+{
+  "date_local": "2026-11-13",
+  "paper": "arXiv:2611.04794",
+  "runs": {
+    "gpt120": {
+      "architecture": "gpt-oss",
+      "cache_mib": 12000,
+      "limitations": [
+        "No Bevy scheduler, cache updates, timing, prefetch, prefill, KV or backend execution",
+        "A partly resident request can execute on both CPU and GPU; missing does not prove a stall",
+        "Aligned tokens are an artificial pairing and do not predict asynchronous progress",
+        "Fixed seed plan is not the dynamic runtime state; traces do not include model hashes"
+      ],
+      "model": "gpt-oss-120b-MXFP4-00001-of-00002.gguf",
+      "residencies": {
+        "fixed_seed_plan": {
+          "levels": {
+            "2": {
+              "all_missing_fraction": 0.7081886574074074,
+              "all_missing_frames": 19580,
+              "all_resident_fraction": 0.028718171296296297,
+              "all_resident_frames": 794,
+              "frames": 27648,
+              "groups": [
+                {
+                  "all_missing_frames": 7339,
+                  "all_resident_frames": 149,
+                  "categories": [
+                    "coding",
+                    "reasoning"
+                  ],
+                  "frames": 9216,
+                  "jobs": 18432,
+                  "mixed_fraction": 0.1875,
+                  "mixed_frames": 1728,
+                  "ready_jobs": 2026,
+                  "selected_cpu_experts": 36006,
+                  "unique_cpu_experts": 35412
+                },
+                {
+                  "all_missing_frames": 5980,
+                  "all_resident_frames": 401,
+                  "categories": [
+                    "coding",
+                    "prose"
+                  ],
+                  "frames": 9216,
+                  "jobs": 18432,
+                  "mixed_fraction": 0.3076171875,
+                  "mixed_frames": 2835,
+                  "ready_jobs": 3637,
+                  "selected_cpu_experts": 28198,
+                  "unique_cpu_experts": 27552
+                },
+                {
+                  "all_missing_frames": 6261,
+                  "all_resident_frames": 244,
+                  "categories": [
+                    "reasoning",
+                    "prose"
+                  ],
+                  "frames": 9216,
+                  "jobs": 18432,
+                  "mixed_fraction": 0.2941623263888889,
+                  "mixed_frames": 2711,
+                  "ready_jobs": 3199,
+                  "selected_cpu_experts": 31610,
+                  "unique_cpu_experts": 31005
+                }
+              ],
+              "jobs": 55296,
+              "mixed_fraction": 0.2630931712962963,
+              "mixed_frames": 7274,
+              "ready_jobs": 8862,
+              "resident_job_fraction": 0.16026475694444445,
+              "selected_cpu_experts": 95814,
+              "unique_cpu_experts": 93969
+            },
+            "3": {
+              "all_missing_fraction": 0.5989583333333334,
+              "all_missing_frames": 5520,
+              "all_resident_fraction": 0.006401909722222222,
+              "all_resident_frames": 59,
+              "frames": 9216,
+              "groups": [
+                {
+                  "all_missing_frames": 5520,
+                  "all_resident_frames": 59,
+                  "categories": [
+                    "coding",
+                    "reasoning",
+                    "prose"
+                  ],
+                  "frames": 9216,
+                  "jobs": 27648,
+                  "mixed_fraction": 0.3946397569444444,
+                  "mixed_frames": 3637,
+                  "ready_jobs": 4431,
+                  "selected_cpu_experts": 47907,
+                  "unique_cpu_experts": 46310
+                }
+              ],
+              "jobs": 27648,
+              "mixed_fraction": 0.3946397569444444,
+              "mixed_frames": 3637,
+              "ready_jobs": 4431,
+              "resident_job_fraction": 0.16026475694444445,
+              "selected_cpu_experts": 47907,
+              "unique_cpu_experts": 46310
+            }
+          },
+          "plan_sha256": "6a679bec76f1a410ed65fa79c186d164a388fc76419d96dcad5978782343949c",
+          "resident_bytes": 12511549440,
+          "resident_experts": 944
+        },
+        "training_static": {
+          "levels": {
+            "2": {
+              "all_missing_fraction": 0.7053674768518519,
+              "all_missing_frames": 19502,
+              "all_resident_fraction": 0.02936921296296296,
+              "all_resident_frames": 812,
+              "frames": 27648,
+              "groups": [
+                {
+                  "all_missing_frames": 7313,
+                  "all_resident_frames": 157,
+                  "categories": [
+                    "coding",
+                    "reasoning"
+                  ],
+                  "frames": 9216,
+                  "jobs": 18432,
+                  "mixed_fraction": 0.189453125,
+                  "mixed_frames": 1746,
+                  "ready_jobs": 2060,
+                  "selected_cpu_experts": 35851,
+                  "unique_cpu_experts": 35261
+                },
+                {
+                  "all_missing_frames": 5953,
+                  "all_resident_frames": 407,
+                  "categories": [
+                    "coding",
+                    "prose"
+                  ],
+                  "frames": 9216,
+                  "jobs": 18432,
+                  "mixed_fraction": 0.3098958333333333,
+                  "mixed_frames": 2856,
+                  "ready_jobs": 3670,
+                  "selected_cpu_experts": 28051,
+                  "unique_cpu_experts": 27410
+                },
+                {
+                  "all_missing_frames": 6236,
+                  "all_resident_frames": 248,
+                  "categories": [
+                    "reasoning",
+                    "prose"
+                  ],
+                  "frames": 9216,
+                  "jobs": 18432,
+                  "mixed_fraction": 0.2964409722222222,
+                  "mixed_frames": 2732,
+                  "ready_jobs": 3228,
+                  "selected_cpu_experts": 31468,
+                  "unique_cpu_experts": 30864
+                }
+              ],
+              "jobs": 55296,
+              "mixed_fraction": 0.2652633101851852,
+              "mixed_frames": 7334,
+              "ready_jobs": 8958,
+              "resident_job_fraction": 0.16200086805555555,
+              "selected_cpu_experts": 95370,
+              "unique_cpu_experts": 93535
+            },
+            "3": {
+              "all_missing_fraction": 0.5954861111111112,
+              "all_missing_frames": 5488,
+              "all_resident_fraction": 0.006618923611111111,
+              "all_resident_frames": 61,
+              "frames": 9216,
+              "groups": [
+                {
+                  "all_missing_frames": 5488,
+                  "all_resident_frames": 61,
+                  "categories": [
+                    "coding",
+                    "reasoning",
+                    "prose"
+                  ],
+                  "frames": 9216,
+                  "jobs": 27648,
+                  "mixed_fraction": 0.3978949652777778,
+                  "mixed_frames": 3667,
+                  "ready_jobs": 4479,
+                  "selected_cpu_experts": 47685,
+                  "unique_cpu_experts": 46098
+                }
+              ],
+              "jobs": 27648,
+              "mixed_fraction": 0.3978949652777778,
+              "mixed_frames": 3667,
+              "ready_jobs": 4479,
+              "resident_job_fraction": 0.16200086805555555,
+              "selected_cpu_experts": 47685,
+              "unique_cpu_experts": 46098
+            }
+          },
+          "resident_bytes": 12577818240,
+          "resident_experts": 949
+        }
+      },
+      "routing_source_sha256": "7db6c460353d6e748cffad7495b0d69dc2cccf7dcac422b6eb718ba8a96e4747",
+      "schema_version": 1,
+      "scope": "Fixed hypothetical residency; align independent serial traces by token and layer, not measured concurrency",
+      "screen_source_sha256": "2e38318b0cfde07d9c37860be66ff714ee9f7b8172238ae9019b06a3c921a7c9",
+      "test_tokens": 768,
+      "trace_sha256": "97af1496c33b9365b0a2d5b52e99ab226cb1308a0caff20e52c1e7e30895c9c3",
+      "train_tokens": 768
+    },
+    "qwen38": {
+      "architecture": "qwen4exp",
+      "cache_mib": 8192,
+      "limitations": [
+        "No Bevy scheduler, cache updates, timing, prefetch, prefill, KV or backend execution",
+        "A partly resident request can execute on both CPU and GPU; missing does not prove a stall",
+        "Aligned tokens are an artificial pairing and do not predict asynchronous progress",
+        "Fixed seed plan is not the dynamic runtime state; traces do not include model hashes"
+      ],
+      "model": "Qwen3.8-Flash-Next-GSQ-RCO-IQ3_S-00001-of-00002.gguf",
+      "residencies": {
+        "training_static": {
+          "levels": {
+            "2": {
+              "all_missing_fraction": 0.8409288194444444,
+              "all_missing_frames": 7750,
+              "all_resident_fraction": 0.014105902777777778,
+              "all_resident_frames": 130,
+              "frames": 9216,
+              "groups": [
+                {
+                  "all_missing_frames": 2515,
+                  "all_resident_frames": 54,
+                  "categories": [
+                    "coding",
+                    "reasoning"
+                  ],
+                  "frames": 3072,
+                  "jobs": 6144,
+                  "mixed_fraction": 0.16373697916666666,
+                  "mixed_frames": 503,
+                  "ready_jobs": 611,
+                  "selected_cpu_experts": 21136,
+                  "unique_cpu_experts": 20719
+                },
+                {
+                  "all_missing_frames": 2525,
+                  "all_resident_frames": 46,
+                  "categories": [
+                    "coding",
+                    "prose"
+                  ],
+                  "frames": 3072,
+                  "jobs": 6144,
+                  "mixed_fraction": 0.1630859375,
+                  "mixed_frames": 501,
+                  "ready_jobs": 593,
+                  "selected_cpu_experts": 18301,
+                  "unique_cpu_experts": 17786
+                },
+                {
+                  "all_missing_frames": 2710,
+                  "all_resident_frames": 30,
+                  "categories": [
+                    "reasoning",
+                    "prose"
+                  ],
+                  "frames": 3072,
+                  "jobs": 6144,
+                  "mixed_fraction": 0.10807291666666667,
+                  "mixed_frames": 332,
+                  "ready_jobs": 392,
+                  "selected_cpu_experts": 22749,
+                  "unique_cpu_experts": 22303
+                }
+              ],
+              "jobs": 18432,
+              "mixed_fraction": 0.1449652777777778,
+              "mixed_frames": 1336,
+              "ready_jobs": 1596,
+              "resident_job_fraction": 0.08658854166666667,
+              "selected_cpu_experts": 62186,
+              "unique_cpu_experts": 60808
+            },
+            "3": {
+              "all_missing_fraction": 0.7763671875,
+              "all_missing_frames": 2385,
+              "all_resident_fraction": 0.006184895833333333,
+              "all_resident_frames": 19,
+              "frames": 3072,
+              "groups": [
+                {
+                  "all_missing_frames": 2385,
+                  "all_resident_frames": 19,
+                  "categories": [
+                    "coding",
+                    "reasoning",
+                    "prose"
+                  ],
+                  "frames": 3072,
+                  "jobs": 9216,
+                  "mixed_fraction": 0.21744791666666666,
+                  "mixed_frames": 668,
+                  "ready_jobs": 798,
+                  "selected_cpu_experts": 31093,
+                  "unique_cpu_experts": 29918
+                }
+              ],
+              "jobs": 9216,
+              "mixed_fraction": 0.21744791666666666,
+              "mixed_frames": 668,
+              "ready_jobs": 798,
+              "resident_job_fraction": 0.08658854166666667,
+              "selected_cpu_experts": 31093,
+              "unique_cpu_experts": 29918
+            }
+          },
+          "resident_bytes": 8589849600,
+          "resident_experts": 4222
+        }
+      },
+      "routing_source_sha256": "7db6c460353d6e748cffad7495b0d69dc2cccf7dcac422b6eb718ba8a96e4747",
+      "schema_version": 1,
+      "scope": "Fixed hypothetical residency; align independent serial traces by token and layer, not measured concurrency",
+      "screen_source_sha256": "2e38318b0cfde07d9c37860be66ff714ee9f7b8172238ae9019b06a3c921a7c9",
+      "test_tokens": 192,
+      "trace_sha256": "eaf00288e22cd0128c13b4080fef7393dea77b66c044f6829e25235a93c50700",
+      "train_tokens": 192
+    }
+  },
+  "schema_version": 1,
+  "status": "offline_fixed_residency_screen_not_scheduler_or_timing"
+}

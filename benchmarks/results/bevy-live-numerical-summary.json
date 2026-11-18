@@ -1,0 +1,988 @@
+{
+  "coder_adaptive_http": {
+    "backend_sha256": {
+      "libggml-cpu-zen4.so": "d6393353c9c99a97016231e09fb278bc05a852a5ece6085f4645f0b4ee31cb35",
+      "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+      "libllama.so": "b5c5203b346768964c8cd3b9cdd366329ef6d0f9508ee0d94df25f5171ffda09",
+      "llama-server": "2f730a568406f8d5d81983e8bfe858c94ec7ce104467072e8c8c39087517361d"
+    },
+    "hybrid": {
+      "adaptive_admission": true,
+      "batch_limit": 1,
+      "cache_mib": 4096,
+      "dispatch": {
+        "calls": 345,
+        "cpu_experts": 2271,
+        "gpu_experts": 489,
+        "prior_hits": 272
+      },
+      "library_mappings_verified": true,
+      "model_shards_sha256": [
+        {
+          "name": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+          "sha256": "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+        }
+      ],
+      "plan_sha256": null
+    },
+    "model_shards": [
+      {
+        "name": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+        "sha256": "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+      }
+    ],
+    "numerical_pass": false,
+    "peak_active_slots": {
+      "2": 2
+    },
+    "report_sha256": "5cadafed9d2de040560a674e93f4fcbd75956bf8ca586f3516d47c5ec33c19b3",
+    "requests": [
+      {
+        "2": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.5294971466064453,
+          "passes": false,
+          "relative_l2_logprob_error": 0.006637220108800076,
+          "vocabulary": 151936
+        },
+        "id": "agent-code-review",
+        "sequential_repeat": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.15048789978027344,
+          "passes": false,
+          "relative_l2_logprob_error": 0.001493177365923099,
+          "vocabulary": 151936
+        }
+      },
+      {
+        "2": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.7533607482910156,
+          "passes": false,
+          "relative_l2_logprob_error": 0.007509517317170664,
+          "vocabulary": 151936
+        },
+        "id": "agent-api-design",
+        "sequential_repeat": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.12424468994140625,
+          "passes": false,
+          "relative_l2_logprob_error": 0.0013474452351172532,
+          "vocabulary": 151936
+        }
+      }
+    ],
+    "runner_sha256": "a7faf0aa2c43fa025265cf9ccf97b2f0b5c2bac4e6792bbb2df5c39ddf978ccc",
+    "startup": {
+      "actual_context_per_slot": 4096,
+      "actual_slots": 2,
+      "adaptive_admission": true,
+      "hybrid_batch_limit": 1,
+      "hybrid_routed_layers": 48,
+      "kv_cache": "f16",
+      "model_buffer_mib": {
+        "CPU_Mapped": 16906.92,
+        "CUDA0": 784.42
+      }
+    }
+  },
+  "coder_canonical_candidate": {
+    "backend_log_sha256": "9fdf713e0062adf3e8f5f887ea73cb55aa828b9747ae6e2927819259e8998cb5",
+    "cases": {
+      "batched_decode": {
+        "max_absolute": 1.39649773,
+        "max_relative_l2": 0.15628124,
+        "passed": 0,
+        "top_matches": 14,
+        "total": 16
+      },
+      "scalar_repeat_decode": {
+        "max_absolute": 1.39649773,
+        "max_relative_l2": 0.15628124,
+        "passed": 0,
+        "top_matches": 14,
+        "total": 16
+      },
+      "scalar_repeat_prefill": {
+        "max_absolute": 0.57131052,
+        "max_relative_l2": 0.0534682057,
+        "passed": 0,
+        "top_matches": 2,
+        "total": 2
+      },
+      "serial_prefill": {
+        "max_absolute": 0.57131052,
+        "max_relative_l2": 0.0534682057,
+        "passed": 0,
+        "top_matches": 2,
+        "total": 2
+      }
+    },
+    "flags": [
+      "VRAMBRIDGE_HYBRID_SCALAR_LINEAR=1",
+      "VRAMBRIDGE_HYBRID_SCALAR_EXPERT=1",
+      "VRAMBRIDGE_HYBRID_SCALAR_ATTN=1"
+    ],
+    "metadata": {
+      "context_per_sequence": 4096,
+      "placement": "gpu-cpu-experts",
+      "prompts": 2,
+      "steps": 8,
+      "vocabulary": 151936
+    },
+    "raw_output_sha256": "09cc777c7d62152fc8aed45e188aa59521e411fae5eb724e4da185444d1d5c0f"
+  },
+  "coder_microbatch1_http": {
+    "backend_sha256": {
+      "libggml-cpu-zen4.so": "d6393353c9c99a97016231e09fb278bc05a852a5ece6085f4645f0b4ee31cb35",
+      "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+      "libllama.so": "b5c5203b346768964c8cd3b9cdd366329ef6d0f9508ee0d94df25f5171ffda09",
+      "llama-server": "2f730a568406f8d5d81983e8bfe858c94ec7ce104467072e8c8c39087517361d"
+    },
+    "hybrid": {
+      "adaptive_admission": false,
+      "batch_limit": 1,
+      "cache_mib": 4096,
+      "dispatch": {
+        "calls": 37575,
+        "cpu_experts": 268027,
+        "gpu_experts": 32573,
+        "prior_hits": 32573
+      },
+      "library_mappings_verified": true,
+      "model_shards_sha256": [
+        {
+          "name": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+          "sha256": "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+        }
+      ],
+      "plan_sha256": "b679a55eaf52bc8f973c87134a13853cc1c5c13e55c481e0f87becb69acc45c3",
+      "ubatch_size": 1
+    },
+    "model_shards": [
+      {
+        "name": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+        "sha256": "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+      }
+    ],
+    "numerical_pass": false,
+    "peak_active_slots": {
+      "2": 2
+    },
+    "report_sha256": "cc955df9644e9c0a793281ddba695ec5cff0f9abffd963f44073f45bf6db2bb5",
+    "requests": [
+      {
+        "2": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.3977222442626953,
+          "passes": false,
+          "relative_l2_logprob_error": 0.003751727765861962,
+          "vocabulary": 151936
+        },
+        "id": "agent-code-review",
+        "sequential_repeat": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.0,
+          "passes": true,
+          "relative_l2_logprob_error": 0.0,
+          "vocabulary": 151936
+        }
+      },
+      {
+        "2": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.6205558776855469,
+          "passes": false,
+          "relative_l2_logprob_error": 0.006245253165762392,
+          "vocabulary": 151936
+        },
+        "id": "agent-api-design",
+        "sequential_repeat": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.0,
+          "passes": true,
+          "relative_l2_logprob_error": 0.0,
+          "vocabulary": 151936
+        }
+      },
+      {
+        "2": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.0,
+          "passes": true,
+          "relative_l2_logprob_error": 0.0,
+          "vocabulary": 151936
+        },
+        "id": "agent-test-plan",
+        "sequential_repeat": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.0,
+          "passes": true,
+          "relative_l2_logprob_error": 0.0,
+          "vocabulary": 151936
+        }
+      },
+      {
+        "2": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.0,
+          "passes": true,
+          "relative_l2_logprob_error": 0.0,
+          "vocabulary": 151936
+        },
+        "id": "agent-debugging",
+        "sequential_repeat": {
+          "finite_entries": 151936,
+          "first_token_matches": true,
+          "max_absolute_logprob_error": 0.0,
+          "passes": true,
+          "relative_l2_logprob_error": 0.0,
+          "vocabulary": 151936
+        }
+      }
+    ],
+    "runner_sha256": "0113e41dbb2516c1997f47878bd76b5dcf2f290aedc5ad4aebae576e7bceed48",
+    "startup": {
+      "actual_context_per_slot": 4096,
+      "actual_slots": 2,
+      "adaptive_admission": false,
+      "hybrid_batch_limit": 1,
+      "hybrid_routed_layers": 48,
+      "kv_cache": "f16",
+      "model_buffer_mib": {
+        "CPU_Mapped": 16906.92,
+        "CUDA0": 784.42
+      },
+      "ubatch_size": 1
+    }
+  },
+  "date_local": "2026-11-13",
+  "failed_coder_trace_attempts": [
+    {
+      "log_sha256": "3776adc5c91c20c4b42b1f9b42a27160e9e7799a524c9a2817f5c320852f7a24",
+      "partial_sha256": "a8f0401185b9e8edc0326aa7e5ed724e8487d1549b6abcc94132dd5b6f0999c4",
+      "reason": "observer and callback-inactive reference differed during second training request"
+    },
+    {
+      "log_sha256": "24c4464f2518c113eaf19fd73b6d8a38329022bf0b0a17339f95db961e0bb1f4",
+      "partial_sha256": "80dae4879890e01d4ea1eb82c377853b08463b66fc69aa0b11909f4d3886bbd2",
+      "reason": "observer and callback-inactive reference differed during second training request"
+    }
+  ],
+  "hardware": "Ryzen 9 9950X / RTX 5070 Ti 16 GiB",
+  "limitations": [
+    "No Bevy scheduler, live layer-runahead, long contexts or per-agent performance claim",
+    "Raw gates use two short prompts and eight teacher-forced decode steps",
+    "HTTP compares full-vocabulary log probabilities, not raw logits; active slots do not prove graph-level overlap",
+    "Microbatch-one logical batching can use the native fallback, not the width-two Hybrid path",
+    "Frozen synthetic seeds are not trained or production residency plans",
+    "Coder partial trace data was not used for route predictions or training"
+  ],
+  "models": {
+    "coder": {
+      "batch1_ubatch1": {
+        "backend_log_sha256": "1c981c0fc2667a05762609d8cb35de2e2ce9a1e4fc0df6c8e719a7a7bd8226d3",
+        "cases": {
+          "alternating_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "alternating_prefill_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "batched_decode": {
+            "max_absolute": 1.10700274,
+            "max_relative_l2": 0.0706024595,
+            "passed": 0,
+            "top_matches": 13,
+            "total": 16
+          },
+          "interleaved_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "interleaved_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "scalar_repeat_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "scalar_repeat_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "serial_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          }
+        },
+        "metadata": {
+          "context_per_sequence": 4096,
+          "placement": "gpu-cpu-experts",
+          "prompts": 2,
+          "steps": 8,
+          "vocabulary": 151936
+        },
+        "private_reference_sha256": "bfb4798b6138111f0d429367c7e8fbeca00cc93c30d55b2ce26a1aa630b43067",
+        "raw_output_sha256": "5ff1c53c8d7048303157094afe342fb72dd0b6fd05b5a8a3523f0229879ece44"
+      },
+      "batch2_ubatch512": {
+        "backend_log_sha256": "233c007e5073c44c6d522cd315d267552b049a458a92bf79702c56db2a0db7cd",
+        "cases": {
+          "batched_decode": {
+            "max_absolute": 1.35587406,
+            "max_relative_l2": 0.136728035,
+            "passed": 0,
+            "top_matches": 16,
+            "total": 16
+          },
+          "interleaved_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "interleaved_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "scalar_repeat_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "scalar_repeat_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "serial_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          }
+        },
+        "metadata": {
+          "context_per_sequence": 4096,
+          "placement": "gpu-cpu-experts",
+          "prompts": 2,
+          "steps": 8,
+          "vocabulary": 151936
+        },
+        "private_reference_sha256": "57eec351fde28a26190328c9b600a014f8668e955ede3fd8a4127dc4f08df6e1",
+        "raw_output_sha256": "03e9467b2f58f715f3c8b325221170756e2f0c86437280878c8b89440ac1d9b8"
+      },
+      "frozen_http": {
+        "backend_sha256": {
+          "libggml-cpu-zen4.so": "d6393353c9c99a97016231e09fb278bc05a852a5ece6085f4645f0b4ee31cb35",
+          "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+          "libllama.so": "b5c5203b346768964c8cd3b9cdd366329ef6d0f9508ee0d94df25f5171ffda09",
+          "llama-server": "2f730a568406f8d5d81983e8bfe858c94ec7ce104467072e8c8c39087517361d"
+        },
+        "hybrid": {
+          "adaptive_admission": false,
+          "batch_limit": 1,
+          "cache_mib": 4096,
+          "dispatch": {
+            "calls": 345,
+            "cpu_experts": 2466,
+            "gpu_experts": 294,
+            "prior_hits": 294
+          },
+          "library_mappings_verified": true,
+          "model_shards_sha256": [
+            {
+              "name": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+              "sha256": "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+            }
+          ],
+          "plan_sha256": "b679a55eaf52bc8f973c87134a13853cc1c5c13e55c481e0f87becb69acc45c3"
+        },
+        "model_shards": [
+          {
+            "name": "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf",
+            "sha256": "fadc3e5f8d42bf7e894a785b05082e47daee4df26680389817e2093056f088ad"
+          }
+        ],
+        "numerical_pass": false,
+        "peak_active_slots": {
+          "2": 2
+        },
+        "report_sha256": "9833497498282c635a3ca3de959cd41d2ebd545d3414ee22bca1c2eedd926116",
+        "requests": [
+          {
+            "2": {
+              "finite_entries": 151936,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 0.5794506072998047,
+              "passes": false,
+              "relative_l2_logprob_error": 0.006489667858593553,
+              "vocabulary": 151936
+            },
+            "id": "agent-code-review",
+            "sequential_repeat": {
+              "finite_entries": 151936,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 0.0,
+              "passes": true,
+              "relative_l2_logprob_error": 0.0,
+              "vocabulary": 151936
+            }
+          },
+          {
+            "2": {
+              "finite_entries": 151936,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 0.6585235595703125,
+              "passes": false,
+              "relative_l2_logprob_error": 0.006813813720048571,
+              "vocabulary": 151936
+            },
+            "id": "agent-api-design",
+            "sequential_repeat": {
+              "finite_entries": 151936,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 0.0,
+              "passes": true,
+              "relative_l2_logprob_error": 0.0,
+              "vocabulary": 151936
+            }
+          }
+        ],
+        "runner_sha256": "a7faf0aa2c43fa025265cf9ccf97b2f0b5c2bac4e6792bbb2df5c39ddf978ccc",
+        "startup": {
+          "actual_context_per_slot": 4096,
+          "actual_slots": 2,
+          "adaptive_admission": false,
+          "hybrid_batch_limit": 1,
+          "hybrid_routed_layers": 48,
+          "kv_cache": "f16",
+          "model_buffer_mib": {
+            "CPU_Mapped": 16906.92,
+            "CUDA0": 784.42
+          }
+        }
+      }
+    },
+    "gpt": {
+      "batch1_ubatch1": {
+        "backend_log_sha256": "b8b3ba395eee27adcb0a5291f54c64acfb02f4b0168ce75639e6fef2b967ebfc",
+        "cases": {
+          "alternating_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "alternating_prefill_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "batched_decode": {
+            "max_absolute": 0.413414419,
+            "max_relative_l2": 0.0185382616,
+            "passed": 0,
+            "top_matches": 16,
+            "total": 16
+          },
+          "interleaved_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "interleaved_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "scalar_repeat_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "scalar_repeat_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "serial_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          }
+        },
+        "metadata": {
+          "context_per_sequence": 4096,
+          "placement": "gpu-cpu-experts",
+          "prompts": 2,
+          "steps": 8,
+          "vocabulary": 201088
+        },
+        "private_reference_sha256": "d3f38e42b6350ce92667e1bd02a68e8e96c2a26f4b7d62038348553aa7d3df4b",
+        "raw_output_sha256": "c7a4650e983880f28dc46fb13b79f4f1de5fbaefdc3b20dbe881d14ad6a22705"
+      },
+      "batch2_ubatch512": {
+        "backend_log_sha256": "1e8a82180a7410e8b44b3389d391340a8195569b765d787ef051b0080d3a9247",
+        "cases": {
+          "batched_decode": {
+            "max_absolute": 0.946858406,
+            "max_relative_l2": 0.0639160954,
+            "passed": 0,
+            "top_matches": 16,
+            "total": 16
+          },
+          "interleaved_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "interleaved_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "scalar_repeat_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "scalar_repeat_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "serial_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          }
+        },
+        "metadata": {
+          "context_per_sequence": 4096,
+          "placement": "gpu-cpu-experts",
+          "prompts": 2,
+          "steps": 8,
+          "vocabulary": 201088
+        },
+        "private_reference_sha256": "e81dd1e8cf1c03049dcc24978c897514d822bdcd55e861bb3d9c90057fa92941",
+        "raw_output_sha256": "c8d618c8ccbf8d36df31683962383af1debdb7586560c3111441ae79f05d6d13"
+      },
+      "frozen_http": {
+        "backend_sha256": {
+          "libggml-cpu-zen4.so": "d6393353c9c99a97016231e09fb278bc05a852a5ece6085f4645f0b4ee31cb35",
+          "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+          "libllama.so": "b5c5203b346768964c8cd3b9cdd366329ef6d0f9508ee0d94df25f5171ffda09",
+          "llama-server": "2f730a568406f8d5d81983e8bfe858c94ec7ce104467072e8c8c39087517361d"
+        },
+        "hybrid": {
+          "adaptive_admission": false,
+          "batch_limit": 1,
+          "cache_mib": 4096,
+          "dispatch": {
+            "calls": 259,
+            "cpu_experts": 995,
+            "gpu_experts": 41,
+            "prior_hits": 41
+          },
+          "library_mappings_verified": true,
+          "model_shards_sha256": [
+            {
+              "name": "gpt-oss-120b-MXFP4-00001-of-00002.gguf",
+              "sha256": "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3"
+            },
+            {
+              "name": "gpt-oss-120b-MXFP4-00002-of-00002.gguf",
+              "sha256": "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+            }
+          ],
+          "plan_sha256": "0efad75d1e7178326b1e0e475edded9c8dc01c35f08672c2ab2874881908b0a2"
+        },
+        "model_shards": [
+          {
+            "name": "gpt-oss-120b-MXFP4-00001-of-00002.gguf",
+            "sha256": "01d8a3bc7efdaa331112e8a0a42ec9046fcee2a1dce910452aafaccb996759f3"
+          },
+          {
+            "name": "gpt-oss-120b-MXFP4-00002-of-00002.gguf",
+            "sha256": "b7bf9fba295115d0e32951ce54911b3020dd92459b88a3908ad58479be6f7676"
+          }
+        ],
+        "numerical_pass": false,
+        "peak_active_slots": {
+          "2": 2
+        },
+        "report_sha256": "ae68134cbc42b7216449a50287b31606d77c71bc6dcb57f22a3c55645782d19a",
+        "requests": [
+          {
+            "2": {
+              "finite_entries": 201088,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 0.8293333053588867,
+              "passes": false,
+              "relative_l2_logprob_error": 0.008258090540755998,
+              "vocabulary": 201088
+            },
+            "id": "agent-code-review",
+            "sequential_repeat": {
+              "finite_entries": 201088,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 0.0,
+              "passes": true,
+              "relative_l2_logprob_error": 0.0,
+              "vocabulary": 201088
+            }
+          },
+          {
+            "2": {
+              "finite_entries": 201088,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 1.8210430145263672,
+              "passes": false,
+              "relative_l2_logprob_error": 0.03503204761873489,
+              "vocabulary": 201088
+            },
+            "id": "agent-api-design",
+            "sequential_repeat": {
+              "finite_entries": 201088,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 0.0,
+              "passes": true,
+              "relative_l2_logprob_error": 0.0,
+              "vocabulary": 201088
+            }
+          }
+        ],
+        "runner_sha256": "a7faf0aa2c43fa025265cf9ccf97b2f0b5c2bac4e6792bbb2df5c39ddf978ccc",
+        "startup": {
+          "actual_context_per_slot": 4096,
+          "actual_slots": 2,
+          "adaptive_admission": false,
+          "hybrid_batch_limit": 1,
+          "hybrid_routed_layers": 36,
+          "kv_cache": "f16",
+          "model_buffer_mib": {
+            "CPU_Mapped": 58830.859999999986,
+            "CUDA0": 1607.61
+          }
+        }
+      }
+    },
+    "qwen": {
+      "batch1_ubatch1": {
+        "backend_log_sha256": "3157020c1f7458699e90bd6f9624109a63f98b471a4171418652edcc8e171188",
+        "cases": {
+          "alternating_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "alternating_prefill_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "batched_decode": {
+            "max_absolute": 2.28137374,
+            "max_relative_l2": 0.175736171,
+            "passed": 0,
+            "top_matches": 13,
+            "total": 16
+          },
+          "interleaved_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "interleaved_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "scalar_repeat_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "scalar_repeat_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "serial_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          }
+        },
+        "metadata": {
+          "context_per_sequence": 4096,
+          "placement": "gpu-cpu-experts",
+          "prompts": 2,
+          "steps": 8,
+          "vocabulary": 248320
+        },
+        "private_reference_sha256": "210ee297b7c943751afc5f5b4a9623a440efbd93abbb5e0cc1fb0138a86ba78e",
+        "raw_output_sha256": "37317c28e0ded5db052aadecc26db9cb49658e9ed5e96f515c1863893e9be0b5"
+      },
+      "batch2_ubatch512": {
+        "backend_log_sha256": "d534d49bb7b7100c3aa01e714bac1727245ec7f3e7df4b7382d0f27f36b0604f",
+        "cases": {
+          "batched_decode": {
+            "max_absolute": 2.4974134,
+            "max_relative_l2": 0.169277837,
+            "passed": 0,
+            "top_matches": 15,
+            "total": 16
+          },
+          "interleaved_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "interleaved_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "scalar_repeat_decode": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 16,
+            "top_matches": 16,
+            "total": 16
+          },
+          "scalar_repeat_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          },
+          "serial_prefill": {
+            "max_absolute": 0,
+            "max_relative_l2": 0,
+            "passed": 2,
+            "top_matches": 2,
+            "total": 2
+          }
+        },
+        "metadata": {
+          "context_per_sequence": 4096,
+          "placement": "gpu-cpu-experts",
+          "prompts": 2,
+          "steps": 8,
+          "vocabulary": 248320
+        },
+        "private_reference_sha256": "d9a7192738037d7275e12f7899458ec0ac37c0196951e8fe3c31a077dee32ebf",
+        "raw_output_sha256": "e87ac9b936ec9c2a0f72df59d04e7e4138d2517e028e96706949d198796a7c27"
+      },
+      "frozen_http": {
+        "backend_sha256": {
+          "libggml-cpu-zen4.so": "d6393353c9c99a97016231e09fb278bc05a852a5ece6085f4645f0b4ee31cb35",
+          "libggml-cuda.so": "a9b36c7c5ae20b5c25f6ec0303016c9dafdd63118bab68aba1c874a56cc4757e",
+          "libllama.so": "b5c5203b346768964c8cd3b9cdd366329ef6d0f9508ee0d94df25f5171ffda09",
+          "llama-server": "2f730a568406f8d5d81983e8bfe858c94ec7ce104467072e8c8c39087517361d"
+        },
+        "hybrid": {
+          "adaptive_admission": false,
+          "batch_limit": 1,
+          "cache_mib": 4096,
+          "dispatch": {
+            "calls": 343,
+            "cpu_experts": 3330,
+            "gpu_experts": 100,
+            "prior_hits": 100
+          },
+          "library_mappings_verified": true,
+          "model_shards_sha256": [
+            {
+              "name": "Qwen3.8-Flash-Next-GSQ-RCO-abliterated-IQ3_S-00001-of-00002.gguf",
+              "sha256": "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c"
+            },
+            {
+              "name": "Qwen3.8-Flash-Next-GSQ-RCO-abliterated-IQ3_S-00002-of-00002.gguf",
+              "sha256": "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+            }
+          ],
+          "plan_sha256": "b679a55eaf52bc8f973c87134a13853cc1c5c13e55c481e0f87becb69acc45c3"
+        },
+        "model_shards": [
+          {
+            "name": "Qwen3.8-Flash-Next-GSQ-RCO-abliterated-IQ3_S-00001-of-00002.gguf",
+            "sha256": "40f369eca301ec6ea318dbb671b3132c26a2f0b89aa5458a7051b33215ee296c"
+          },
+          {
+            "name": "Qwen3.8-Flash-Next-GSQ-RCO-abliterated-IQ3_S-00002-of-00002.gguf",
+            "sha256": "316b46f3a2dbd68c900f43136ab9449f9dcc3725dfd8c794847c204bc161e113"
+          }
+        ],
+        "numerical_pass": false,
+        "peak_active_slots": {
+          "2": 2
+        },
+        "report_sha256": "96140c6ce566cf9d87c1699e285e6fbf809672bb8618c5e00ad7359bca9dfd73",
+        "requests": [
+          {
+            "2": {
+              "finite_entries": 248320,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 4.966209411621094,
+              "passes": false,
+              "relative_l2_logprob_error": 0.03589850136721095,
+              "vocabulary": 248320
+            },
+            "id": "agent-code-review",
+            "sequential_repeat": {
+              "finite_entries": 248320,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 0.0,
+              "passes": true,
+              "relative_l2_logprob_error": 0.0,
+              "vocabulary": 248320
+            }
+          },
+          {
+            "2": {
+              "finite_entries": 248320,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 1.9782543182373047,
+              "passes": false,
+              "relative_l2_logprob_error": 0.019499125889105115,
+              "vocabulary": 248320
+            },
+            "id": "agent-api-design",
+            "sequential_repeat": {
+              "finite_entries": 248320,
+              "first_token_matches": true,
+              "max_absolute_logprob_error": 0.0,
+              "passes": true,
+              "relative_l2_logprob_error": 0.0,
+              "vocabulary": 248320
+            }
+          }
+        ],
+        "runner_sha256": "a7faf0aa2c43fa025265cf9ccf97b2f0b5c2bac4e6792bbb2df5c39ddf978ccc",
+        "startup": {
+          "actual_context_per_slot": 4096,
+          "actual_slots": 2,
+          "adaptive_admission": false,
+          "hybrid_batch_limit": 1,
+          "hybrid_routed_layers": 48,
+          "kv_cache": "f16",
+          "model_buffer_mib": {
+            "CPU_Mapped": 75750.52,
+            "CUDA0": 4217.54
+          }
+        }
+      }
+    }
+  },
+  "protocol": {
+    "batch_threads": 16,
+    "cache_mib": 4096,
+    "context_per_slot": 4096,
+    "kv": "f16",
+    "max_absolute_threshold": 0.01,
+    "prompts": 2,
+    "relative_l2_threshold": 0.001,
+    "seed": "synthetic fixed first 16 IDs per layer for Coder/Qwen, first 6 for GPT; adaptive admission off",
+    "slots": 2,
+    "teacher_forced_steps": 8,
+    "threads": 8
+  },
+  "raw_probe_provenance": {
+    "batch1_ubatch1_binary_sha256": "7d9dd32a56e418ec02bb58439d1247b8a151623b386c3e0674284f4af6c6930b",
+    "batch1_ubatch1_source_sha256": "77b8b7b95d35952452fcdc42d39d893aad216ad91c52b2b3d3b7c8e30162580c",
+    "batch2_ubatch512_binary_sha256": "f1ef398d9c173ecf0d95ee71d96be7623fa9501d0c950305e651b6e92dba3ffb",
+    "batch2_ubatch512_source_sha256": "7e132a9afe69254f707e4b2b044435fa8e40bed5b0d439c3649ce57a0a2f4b1e"
+  },
+  "schema_version": 1,
+  "status": "bounded_concurrent_hybrid_numerical_gate_failed_bevy_not_implemented"
+}
