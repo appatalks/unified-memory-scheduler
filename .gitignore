@@ -42,6 +42,7 @@ htmlcov/
 # Only explicitly reviewed benchmark evidence should be published.
 /benchmarks/results/**
 !/benchmarks/results/.gitkeep
+!/benchmarks/results/upstream-b12484-decode-screen-summary.json
 !/benchmarks/results/hardware-20260822.json
 !/benchmarks/results/20260822T153227Z-calme-3_2-instruct-78b-Q4_0.json
 !/benchmarks/results/20260822T153837Z-calme-3_2-instruct-78b-Q4_0.json

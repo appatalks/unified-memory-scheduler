@@ -24,6 +24,52 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## Upstream b12484 Decode Screen: Cache Policy Depends On The Model
+
+The [reviewed runs](results/upstream-b12484-decode-screen-summary.json) use
+the upstream b12484 CUDA 12.8 release on the 9950X/5070 Ti, not a change to
+the installed backend. Upstream [CPU miss execution](https://github.com/ggml-org/llama.cpp/pull/30966),
+[decayed-frequency eviction](https://github.com/ggml-org/llama.cpp/pull/31233),
+and [CPU/GPU dependency ordering](https://github.com/ggml-org/llama.cpp/pull/31888)
+motivate a shared technique with per-model cache sizing and miss handling.
+The comparison is not an ablation of any single upstream PR.
+
+At 16K/F16, one slot, 8/16 threads, and 512/512 batch/ubatch, each fresh
+load excludes one 80-output warmup request, then runs the three held-out
+short prompts with 128 outputs each. Rates are `(outputs - 1) / (request
+wall time - backend prompt time)`. SC117's 8 GiB follow-up uses the local
+original weights and brackets its candidate loads with same-build Auto Fit
+controls. Coder has one load per setting.
+
+| Model / placement | Loads | Coding tok/s | Reasoning tok/s | Prose tok/s |
+|---|---:|---:|---:|---:|
+| SC117 Auto Fit, no cache | 2 | 31.36 | 31.58 | 31.33 |
+| SC117 8 GiB, GPU handles all misses | 1 | 35.03 | 35.76 | 33.29 |
+| SC117 8 GiB, CPU share 0.95 | 2 | 42.21 | 40.74 | 39.97 |
+| Coder Q4_K_M Auto Fit, no cache | 1 | 76.84 | 76.74 | 77.37 |
+| Coder Q4_K_M 8 GiB, GPU handles all misses | 1 | 97.42 | 99.74 | 140.60 |
+| Coder Q4_K_M 8 GiB, CPU share 0.95 | 1 | 89.21 | 102.56 | 132.05 |
+
+Values are per-workload medians. SC117 CPU-share whole-request throughput
+improves 22%-33% over Auto Fit. The backend reports about 13,011 MiB of
+uploads with CPU misses versus 99,871 MiB with GPU-only misses at ubatch
+<=8; these counters include warmup and are not an independent bus trace.
+Coder's CPU share reduces recorded uploads too but loses on coding and prose
+versus the GPU-only cache. The earlier, separate 4 GiB SC117 screen showed
+GPU-only misses regressing compared with both Auto Fit and fixed CPU MoE
+without a cache; CPU share 0.95 was faster than both. None of these short
+requests fills the allocated context.
+
+The two SC117 CPU-share loads repeat their output hashes, but only coding
+matches Auto Fit; the two Auto Fit controls also differ on reasoning and
+prose. Coder's cache outputs are not all identical to Auto Fit. No answer
+or full-logit equivalence, matched improvement over the best existing
+Classic/Hosted profiles, or production suitability is established. GPT-OSS-120B
+was not tested because the existing shard links did not resolve with the
+archive volume unmounted. Compare each candidate against the strongest
+qualified baseline, add fixed-placement full-logit and answer gates, and
+repeat 512-output tests including SC117 at 96K/128K before any Auto Tune trial.
+
 ## Synapse Native Expert-Cache Auto Tune
 
 The [reviewed application evidence](results/synapse-native-cache-autotune-summary.json)
