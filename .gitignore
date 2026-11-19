@@ -137,3 +137,4 @@ htmlcov/
 !/benchmarks/results/deepseek-v41-expert-attribution-summary.json
 !/benchmarks/results/deepseek-v41-live-cache-v1-summary.json
 !/benchmarks/results/deepseek-v41-live-cache-final-summary.json
+!/benchmarks/results/decode-worker-sweep-summary.json

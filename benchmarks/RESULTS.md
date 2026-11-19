@@ -24,6 +24,56 @@ Unless a row states otherwise, measurements use three repetitions, a 512-token
 prompt, a 32-token generation, and a 1,024 MiB auto-fit margin at a 4,096-token
 fit context.
 
+## Decode Workers: Lower CPU Use, No Broad Speedup
+
+The [November 18 worker sweep](results/decode-worker-sweep-summary.json) uses
+the canonical hybrid patch on llama.cpp b11669, GCC 14.2, CUDA 13.1 and driver
+595.58.03, on a Ryzen 9 9950X (16 cores, 32 logical CPUs, one NUMA node,
+123.5 GiB RAM) and RTX 5070 Ti. Backend and GGUF shard digests, exact launch
+arguments with local paths redacted, and per-request timing and CPU/GPU
+observations are retained. The dirty research checkout was not used as the
+backend source: the isolated backend used the pinned base and canonical patch.
+
+The same build held 16K context, F16 KV, Flash Attention, a single slot,
+an 8 GiB adaptive bank, 16 batch threads and 512/512 batch/ubatch fixed.
+Use the held-out coding and reasoning entries from
+[`cpu-decode-corpus.jsonl`](cpu-decode-corpus.jsonl), sending their `prompt`
+values directly to `/completion` with streaming, temperature 0, seed 42,
+`ignore_eos=true`, `cache_prompt=false` and `return_tokens=true`. Each fresh
+process ran 64 outputs (first coding request), 256 outputs (warm same coding
+prompt) and 128 outputs (reasoning topic change). Decode is `(outputs - 1) /
+(wall time - TTFT)`; TTFT is the first nonempty text or token event. No OS
+cache purge was used. Paired request windows reported zero process-attributed
+physical reads; the SC117 32-worker pilot reported nonzero reads, another
+reason not to attribute the full pilot slowdown to worker count alone.
+GPU snapshots are request-boundary observations, not profiles.
+
+| Model | Workers | Warm decode median +/- sample SD (tok/s) | Warm TTFT | Warm process core equivalents |
+|---|---:|---:|---:|---:|
+| Coder Q4_K_M | 8 | 75.91 +/- 2.34 | 405 ms | 8.88 |
+| Coder Q4_K_M | 4 | 76.91 +/- 1.32 | 392 ms | 5.26 |
+| SC117 Qwen3.8 IQ3_S | 8 | 40.03 +/- 0.50 | 958 ms | 8.99 |
+| SC117 Qwen3.8 IQ3_S | 4 | 37.56 +/- 0.50 | 973 ms | 5.46 |
+
+Five counterbalanced fresh-process pairs per model give a paired median change
+of **+0.21%** for Coder (range **-5.20% to +1.71%**) and **-6.18%** for SC117
+(range **-7.32% to -5.10%**). Coder warm whole-request latency stayed at
+3.76 s. For SC117, median first-request latency rose from 3.23 to 3.55 s and
+topic-change latency rose from 4.72 to 5.02 s. Roughly 40% less process CPU
+use is a real resource tradeoff, not a throughput or power win. The separate
+one-load pilots at 16 workers had no convincing advantage, and at 32 workers
+warm decode was only 27.20 tok/s for Coder and 20.93 tok/s for SC117. Neither
+the pilots nor the five paired trials establish p95 or a kernel-level cause.
+
+Fresh 8/8 controls and 4/16/32 worker comparisons matched full-vocabulary
+teacher-forced logits exactly at 96 short and 32 long/repeated-prompt
+positions per comparison and model. Structured tool-call smoke tests and
+timed token/text checksums matched; the isolated masked-expert fixture and
+22 selected configured tests passed. This is not a full test or quality
+qualification. **Reject a universal worker-count change and retain eight as
+the control.** No GPT-OSS rerun, backend patch, downstream change, or wider
+qualification was warranted by this screen.
+
 ## Independent Inference Control: Correctness Foundation Only
 
 The [prototype and controls](../docs/research/independent-inference-control.md)
